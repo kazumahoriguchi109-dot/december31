@@ -1,0 +1,30 @@
+{
+  "name": "december31",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "12月31日 — original escape-puzzle adventure (local development build)",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test": "vitest run",
+    "check:content": "node tools/check-content.mjs",
+    "check:bundle": "node tools/check-bundle.mjs",
+    "check:static": "python3 -I scripts/verify_puzzles.py --report /dev/null && python3 -I scripts/verify_technical.py && python3 -I scripts/verify_package.py && python3 -I scripts/verify_dialogue_model.py && python3 -I scripts/verify_storage_contract.py",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/three": "0.186.0",
+    "ajv": "8.20.0",
+    "fake-indexeddb": "6.2.7",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "4.1.12"
+  }
+}

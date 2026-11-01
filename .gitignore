@@ -1,0 +1,18 @@
+# dependencies / build output
+node_modules/
+dist/
+.vite/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+# research-only references and recoverable-copy archives stay local, never committed
+research/reference_only/
+backups/
+# personal save exports
+*.save.json
+december31-save-*.json
+# local environment / secrets
+.env
+.env.*
+*.pem

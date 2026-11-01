@@ -1,0 +1,692 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:december31:save:1",
+  "title": "12月31日 export envelope schema 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "exportedAt",
+    "unsaved",
+    "slot",
+    "settings"
+  ],
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "december31-save"
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "unsaved": {
+      "type": "boolean"
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "contentVersion",
+        "slotId",
+        "runId",
+        "revision",
+        "createdAt",
+        "updatedAt",
+        "playTimeMs",
+        "game"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 1
+        },
+        "contentVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "slotId": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "manual-1",
+            "manual-2",
+            "manual-3"
+          ]
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "playTimeMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "game": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "progress",
+            "player",
+            "toto",
+            "puzzles",
+            "dialogue",
+            "hints"
+          ],
+          "properties": {
+            "progress": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "milestone",
+                "activeManualSlot"
+              ],
+              "properties": {
+                "milestone": {
+                  "type": "string",
+                  "enum": [
+                    "ROOM",
+                    "ARRIVAL",
+                    "P01_DONE",
+                    "P02_DONE",
+                    "P03_DONE",
+                    "P04_DONE",
+                    "P05_DONE",
+                    "RETURN_OPEN",
+                    "ENDING"
+                  ]
+                },
+                "activeManualSlot": {
+                  "type": "string",
+                  "enum": [
+                    "manual-1",
+                    "manual-2",
+                    "manual-3"
+                  ]
+                }
+              }
+            },
+            "player": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "anchor",
+                "view"
+              ],
+              "properties": {
+                "anchor": {
+                  "type": "string",
+                  "enum": [
+                    "room",
+                    "arrival",
+                    "p01_panel",
+                    "mill",
+                    "gate_near",
+                    "gate_far",
+                    "wall_base",
+                    "wall_top",
+                    "observatory",
+                    "castle",
+                    "portal_front",
+                    "portal_back",
+                    "home"
+                  ]
+                },
+                "view": {
+                  "type": "string",
+                  "enum": [
+                    "front",
+                    "wall_side",
+                    "observe",
+                    "apparatus_side",
+                    "portal_front",
+                    "portal_back"
+                  ]
+                }
+              }
+            },
+            "toto": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "anchor"
+              ],
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "follow",
+                    "wait"
+                  ]
+                },
+                "anchor": {
+                  "type": "string",
+                  "enum": [
+                    "party",
+                    "p03_plate",
+                    "p06_front",
+                    "p06_back"
+                  ]
+                }
+              }
+            },
+            "puzzles": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "p01",
+                "p02",
+                "p03",
+                "p04",
+                "p05",
+                "p06"
+              ],
+              "properties": {
+                "p01": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "rotation",
+                    "solved"
+                  ],
+                  "properties": {
+                    "rotation": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3
+                    },
+                    "solved": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "p02": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "drain",
+                    "stopper",
+                    "solved"
+                  ],
+                  "properties": {
+                    "drain": {
+                      "type": "string",
+                      "enum": [
+                        "open",
+                        "closed"
+                      ]
+                    },
+                    "stopper": {
+                      "type": "string",
+                      "enum": [
+                        "locked",
+                        "released"
+                      ]
+                    },
+                    "solved": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "p03": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "gateLatched",
+                    "crossed",
+                    "solved"
+                  ],
+                  "properties": {
+                    "gateLatched": {
+                      "type": "boolean"
+                    },
+                    "crossed": {
+                      "type": "boolean"
+                    },
+                    "solved": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "p04": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "sideSeen",
+                    "climbed",
+                    "solved"
+                  ],
+                  "properties": {
+                    "sideSeen": {
+                      "type": "boolean"
+                    },
+                    "climbed": {
+                      "type": "boolean"
+                    },
+                    "solved": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "p05": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "a",
+                    "b",
+                    "solved"
+                  ],
+                  "properties": {
+                    "a": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 2
+                    },
+                    "b": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 2
+                    },
+                    "solved": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "p06": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "portalLatched",
+                    "solved"
+                  ],
+                  "properties": {
+                    "portalLatched": {
+                      "type": "boolean"
+                    },
+                    "solved": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            },
+            "dialogue": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "seenIds",
+                "activeId",
+                "lineIndex",
+                "queue"
+              ],
+              "properties": {
+                "seenIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "D000",
+                      "D001",
+                      "D002",
+                      "D003",
+                      "D010",
+                      "D011",
+                      "D012",
+                      "D013",
+                      "D014",
+                      "D015",
+                      "D016",
+                      "D018",
+                      "D017",
+                      "D020",
+                      "D021",
+                      "D022",
+                      "D030",
+                      "D031",
+                      "D032",
+                      "D033",
+                      "D040",
+                      "D041",
+                      "D042",
+                      "D043",
+                      "D050",
+                      "D051",
+                      "D052",
+                      "D053",
+                      "D060",
+                      "D061",
+                      "D062",
+                      "D063",
+                      "D070",
+                      "D071",
+                      "D072",
+                      "D073",
+                      "D080",
+                      "D081",
+                      "D082",
+                      "D083",
+                      "D084",
+                      "D085",
+                      "D086",
+                      "D087",
+                      "O010",
+                      "O020",
+                      "O030",
+                      "O040",
+                      "O050",
+                      "O060",
+                      "H_P01_1",
+                      "H_P01_2",
+                      "H_P01_3",
+                      "H_P02_1",
+                      "H_P02_2",
+                      "H_P02_3",
+                      "H_P03_1",
+                      "H_P03_2",
+                      "H_P03_3",
+                      "H_P04_1",
+                      "H_P04_2",
+                      "H_P04_3",
+                      "H_P05_1",
+                      "H_P05_2",
+                      "H_P05_3",
+                      "H_P06_1",
+                      "H_P06_2",
+                      "H_P06_3"
+                    ]
+                  },
+                  "uniqueItems": true
+                },
+                "activeId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "D000",
+                    "D001",
+                    "D002",
+                    "D003",
+                    "D010",
+                    "D011",
+                    "D012",
+                    "D013",
+                    "D014",
+                    "D015",
+                    "D016",
+                    "D018",
+                    "D017",
+                    "D020",
+                    "D021",
+                    "D022",
+                    "D030",
+                    "D031",
+                    "D032",
+                    "D033",
+                    "D040",
+                    "D041",
+                    "D042",
+                    "D043",
+                    "D050",
+                    "D051",
+                    "D052",
+                    "D053",
+                    "D060",
+                    "D061",
+                    "D062",
+                    "D063",
+                    "D070",
+                    "D071",
+                    "D072",
+                    "D073",
+                    "D080",
+                    "D081",
+                    "D082",
+                    "D083",
+                    "D084",
+                    "D085",
+                    "D086",
+                    "D087",
+                    "O010",
+                    "O020",
+                    "O030",
+                    "O040",
+                    "O050",
+                    "O060",
+                    "H_P01_1",
+                    "H_P01_2",
+                    "H_P01_3",
+                    "H_P02_1",
+                    "H_P02_2",
+                    "H_P02_3",
+                    "H_P03_1",
+                    "H_P03_2",
+                    "H_P03_3",
+                    "H_P04_1",
+                    "H_P04_2",
+                    "H_P04_3",
+                    "H_P05_1",
+                    "H_P05_2",
+                    "H_P05_3",
+                    "H_P06_1",
+                    "H_P06_2",
+                    "H_P06_3",
+                    null
+                  ]
+                },
+                "lineIndex": {
+                  "type": "integer",
+                  "const": 0
+                },
+                "queue": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "D000",
+                      "D001",
+                      "D002",
+                      "D003",
+                      "D010",
+                      "D011",
+                      "D012",
+                      "D013",
+                      "D014",
+                      "D015",
+                      "D016",
+                      "D018",
+                      "D017",
+                      "D020",
+                      "D021",
+                      "D022",
+                      "D030",
+                      "D031",
+                      "D032",
+                      "D033",
+                      "D040",
+                      "D041",
+                      "D042",
+                      "D043",
+                      "D050",
+                      "D051",
+                      "D052",
+                      "D053",
+                      "D060",
+                      "D061",
+                      "D062",
+                      "D063",
+                      "D070",
+                      "D071",
+                      "D072",
+                      "D073",
+                      "D080",
+                      "D081",
+                      "D082",
+                      "D083",
+                      "D084",
+                      "D085",
+                      "D086",
+                      "D087",
+                      "O010",
+                      "O020",
+                      "O030",
+                      "O040",
+                      "O050",
+                      "O060",
+                      "H_P01_1",
+                      "H_P01_2",
+                      "H_P01_3",
+                      "H_P02_1",
+                      "H_P02_2",
+                      "H_P02_3",
+                      "H_P03_1",
+                      "H_P03_2",
+                      "H_P03_3",
+                      "H_P04_1",
+                      "H_P04_2",
+                      "H_P04_3",
+                      "H_P05_1",
+                      "H_P05_2",
+                      "H_P05_3",
+                      "H_P06_1",
+                      "H_P06_2",
+                      "H_P06_3"
+                    ]
+                  },
+                  "uniqueItems": true
+                }
+              }
+            },
+            "hints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "P01",
+                "P02",
+                "P03",
+                "P04",
+                "P05",
+                "P06"
+              ],
+              "properties": {
+                "P01": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "P02": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "P03": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "P04": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "P05": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "P06": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "settingsRevision",
+        "masterVolume",
+        "musicVolume",
+        "sfxVolume",
+        "textSize",
+        "textSpeed",
+        "reduceMotion",
+        "labelsAlways",
+        "quality"
+      ],
+      "properties": {
+        "settingsRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "masterVolume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "musicVolume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "sfxVolume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "textSize": {
+          "type": "string",
+          "enum": [
+            "small",
+            "standard",
+            "large"
+          ]
+        },
+        "textSpeed": {
+          "type": "string",
+          "enum": [
+            "instant",
+            "slow",
+            "normal"
+          ]
+        },
+        "reduceMotion": {
+          "type": "boolean"
+        },
+        "labelsAlways": {
+          "type": "boolean"
+        },
+        "quality": {
+          "type": "string",
+          "enum": [
+            "low",
+            "standard"
+          ]
+        }
+      }
+    }
+  }
+}

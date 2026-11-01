@@ -1,0 +1,22 @@
+{
+  "designVersion": "1.1",
+  "sourceOfTruth": "docs/PUZZLES.md, docs/CONTROLS.md, docs/SCREENS.md (quoted strings). Edit the MD and this file together.",
+  "copy": {
+    "locked_generic": "まだ、この先へは進めない。",
+    "call_toto_first": "先にトトを呼ぼう。",
+    "p03_call_unlatched_far": "まだ門が固定されていない。戻ってから呼ぼう。",
+    "p03_self_plate_on": "圧板が沈んで、門が開いた。",
+    "p03_self_plate_off": "離れると、門も閉まった。",
+    "p01_not_connected": "門まで、あと少し。",
+    "p04_front_observation": "白い線が段の形に並んでいる。",
+    "p04_side_observation": "上まで続いている。",
+    "p05_mismatch": "輪の端が、まだそろっていない。",
+    "reset_confirm": "この仕掛けだけを最初の状態に戻します。",
+    "return_confirm": "トトと一緒に、もとの部屋へ帰る。",
+    "busy": "移動中",
+    "empty_click_hint": "調べられる場所は、右の一覧からも選べます。",
+    "practice_post_front": "標柱を正面から見ている。",
+    "practice_post_side": "標柱を横から見ている。",
+    "p05_solved_status": "輪がつながった。"
+  }
+}

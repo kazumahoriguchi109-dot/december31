@@ -1,0 +1,240 @@
+{
+  "designVersion": "1.1",
+  "contentVersion": "1.0",
+  "events": [
+    {
+      "event": "new_game",
+      "guard": "milestone == ROOM",
+      "priority": 0,
+      "rowIds": [
+        "D000",
+        "D001",
+        "D002"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "start_rpg",
+      "guard": "milestone >= ARRIVAL",
+      "priority": 1,
+      "rowIds": [
+        "D003"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": "CUE_ENTRY",
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "arrival",
+      "guard": "milestone >= ARRIVAL",
+      "priority": 2,
+      "rowIds": [
+        "D010",
+        "D011",
+        "D012",
+        "D013"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p01_open",
+      "guard": "milestone == ARRIVAL AND player.anchor == p01_panel",
+      "priority": 3,
+      "rowIds": [
+        "D014",
+        "D015"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p01_solved",
+      "guard": "milestone >= P01_DONE",
+      "priority": 4,
+      "rowIds": [
+        "D016",
+        "D018",
+        "D017"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": "CUE_EVOLVE_P01",
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p02_open",
+      "guard": "milestone == P01_DONE AND player.anchor == mill",
+      "priority": 5,
+      "rowIds": [
+        "D020"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p02_solved",
+      "guard": "milestone >= P02_DONE",
+      "priority": 6,
+      "rowIds": [
+        "D021",
+        "D022"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p03_open",
+      "guard": "milestone == P02_DONE AND player.anchor == gate_near",
+      "priority": 7,
+      "rowIds": [
+        "D030"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p03_latched",
+      "guard": "p03.gateLatched == true",
+      "priority": 8,
+      "rowIds": [
+        "D031"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p03_solved",
+      "guard": "milestone >= P03_DONE",
+      "priority": 9,
+      "rowIds": [
+        "D032",
+        "D033"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": "CUE_EVOLVE_P03",
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "view_tutorial",
+      "guard": "milestone == P03_DONE AND player.anchor == wall_base",
+      "priority": 10,
+      "rowIds": [
+        "D040"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "view_tutorial_done",
+      "guard": "explicit practice_side command only",
+      "priority": 11,
+      "rowIds": [
+        "D041"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p04_solved",
+      "guard": "milestone >= P04_DONE",
+      "priority": 12,
+      "rowIds": [
+        "D042",
+        "D043"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p05_open",
+      "guard": "milestone == P04_DONE AND player.anchor == observatory",
+      "priority": 13,
+      "rowIds": [
+        "D050"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p05_solved",
+      "guard": "milestone >= P05_DONE",
+      "priority": 14,
+      "rowIds": [
+        "D051",
+        "D052",
+        "D053"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": "CUE_EVOLVE_P05",
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "castle_clear",
+      "guard": "milestone >= P05_DONE",
+      "priority": 15,
+      "rowIds": [
+        "D060",
+        "D061",
+        "D062",
+        "D063"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p06_open",
+      "guard": "milestone in [P05_DONE,RETURN_OPEN] AND player.anchor in [portal_front,portal_back]",
+      "priority": 16,
+      "rowIds": [
+        "D070",
+        "D071"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": null,
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "p06_solved",
+      "guard": "milestone >= RETURN_OPEN",
+      "priority": 17,
+      "rowIds": [
+        "D072",
+        "D073"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": "CUE_RETURN_OPEN",
+      "cueIsNonAuthoritative": true
+    },
+    {
+      "event": "ending",
+      "guard": "milestone == ENDING",
+      "priority": 18,
+      "rowIds": [
+        "D080",
+        "D081",
+        "D082",
+        "D083",
+        "D084",
+        "D085",
+        "D086",
+        "D087"
+      ],
+      "sceneContract": "docs/STORY.md",
+      "presentationCue": "CUE_HOME_STABLE",
+      "cueIsNonAuthoritative": true
+    }
+  ]
+}

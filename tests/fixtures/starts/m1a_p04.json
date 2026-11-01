@@ -1,0 +1,105 @@
+{
+  "format": "december31-save",
+  "exportedAt": "2026-11-01T00:00:00Z",
+  "unsaved": true,
+  "slot": {
+    "schemaVersion": 1,
+    "contentVersion": "1.0",
+    "slotId": "manual-1",
+    "runId": "dev-fixture-m1a",
+    "revision": 1,
+    "createdAt": "2026-11-01T00:00:00Z",
+    "updatedAt": "2026-11-01T00:00:00Z",
+    "playTimeMs": 0,
+    "game": {
+      "progress": {
+        "milestone": "P03_DONE",
+        "activeManualSlot": "manual-1"
+      },
+      "player": {
+        "anchor": "wall_base",
+        "view": "front"
+      },
+      "toto": {
+        "mode": "follow",
+        "anchor": "party"
+      },
+      "puzzles": {
+        "p01": {
+          "rotation": 1,
+          "solved": true
+        },
+        "p02": {
+          "drain": "closed",
+          "stopper": "released",
+          "solved": true
+        },
+        "p03": {
+          "gateLatched": true,
+          "crossed": true,
+          "solved": true
+        },
+        "p04": {
+          "sideSeen": false,
+          "climbed": false,
+          "solved": false
+        },
+        "p05": {
+          "a": 0,
+          "b": 1,
+          "solved": false
+        },
+        "p06": {
+          "portalLatched": false,
+          "solved": false
+        }
+      },
+      "dialogue": {
+        "seenIds": [
+          "D000",
+          "D001",
+          "D002",
+          "D003",
+          "D010",
+          "D011",
+          "D012",
+          "D013",
+          "D014",
+          "D015",
+          "D016",
+          "D018",
+          "D017",
+          "D020",
+          "D021",
+          "D022",
+          "D030",
+          "D031",
+          "D032",
+          "D033"
+        ],
+        "activeId": null,
+        "lineIndex": 0,
+        "queue": []
+      },
+      "hints": {
+        "P01": 0,
+        "P02": 0,
+        "P03": 0,
+        "P04": 0,
+        "P05": 0,
+        "P06": 0
+      }
+    }
+  },
+  "settings": {
+    "settingsRevision": 1,
+    "masterVolume": 0.7,
+    "musicVolume": 0.6,
+    "sfxVolume": 0.8,
+    "textSize": "standard",
+    "textSpeed": "instant",
+    "reduceMotion": false,
+    "labelsAlways": false,
+    "quality": "standard"
+  }
+}

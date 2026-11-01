@@ -1,0 +1,1125 @@
+{
+  "designVersion": "1.1",
+  "sourceOfTruth": "docs/WORLD_MAP.md",
+  "coordinateSystem": "X right, Y up, Z forward; meters; logical layout only",
+  "landmarks": [
+    {
+      "id": "FRAME",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "TILE",
+      "position": [
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "id": "MILL",
+      "position": [
+        6,
+        0,
+        8
+      ]
+    },
+    {
+      "id": "GATE",
+      "position": [
+        10,
+        0,
+        12
+      ]
+    },
+    {
+      "id": "WHITE_WALL",
+      "position": [
+        14,
+        0,
+        16
+      ]
+    },
+    {
+      "id": "OBSERVATORY",
+      "position": [
+        22,
+        2,
+        20
+      ]
+    },
+    {
+      "id": "CASTLE",
+      "position": [
+        28,
+        2,
+        26
+      ]
+    }
+  ],
+  "anchors": [
+    "room",
+    "arrival",
+    "p01_panel",
+    "mill",
+    "gate_near",
+    "gate_far",
+    "wall_base",
+    "wall_top",
+    "observatory",
+    "castle",
+    "portal_front",
+    "portal_back",
+    "home"
+  ],
+  "totoAnchors": [
+    "party",
+    "p03_plate",
+    "p06_front",
+    "p06_back"
+  ],
+  "totoModes": [
+    "follow",
+    "wait"
+  ],
+  "milestones": [
+    "ROOM",
+    "ARRIVAL",
+    "P01_DONE",
+    "P02_DONE",
+    "P03_DONE",
+    "P04_DONE",
+    "P05_DONE",
+    "RETURN_OPEN",
+    "ENDING"
+  ],
+  "eraByMilestone": {
+    "ROOM": "ROOM",
+    "ARRIVAL": "E0",
+    "P01_DONE": "E1",
+    "P02_DONE": "E1",
+    "P03_DONE": "E2",
+    "P04_DONE": "E2",
+    "P05_DONE": "E3",
+    "RETURN_OPEN": "E3",
+    "ENDING": "ROOM"
+  },
+  "cameras": [
+    "front",
+    "wall_side",
+    "observe",
+    "apparatus_side",
+    "portal_front",
+    "portal_back"
+  ],
+  "edges": [
+    {
+      "from": "room",
+      "to": "arrival",
+      "guard": "intro_complete",
+      "bidirectional": false
+    },
+    {
+      "from": "arrival",
+      "to": "p01_panel",
+      "guard": "always",
+      "bidirectional": true
+    },
+    {
+      "from": "p01_panel",
+      "to": "mill",
+      "guard": "p01.solved",
+      "bidirectional": true
+    },
+    {
+      "from": "mill",
+      "to": "gate_near",
+      "guard": "p02.solved",
+      "bidirectional": true
+    },
+    {
+      "from": "gate_near",
+      "to": "gate_far",
+      "guard": "p03.gateLatched OR toto.anchor=p03_plate",
+      "bidirectional": true
+    },
+    {
+      "from": "gate_far",
+      "to": "wall_base",
+      "guard": "p03.solved",
+      "bidirectional": true
+    },
+    {
+      "from": "wall_base",
+      "to": "wall_top",
+      "guard": "p04.sideSeen AND (inspect_steps_auto_climb OR revisit_climb)",
+      "bidirectional": false
+    },
+    {
+      "from": "wall_top",
+      "to": "observatory",
+      "guard": "p04.solved",
+      "bidirectional": true
+    },
+    {
+      "from": "observatory",
+      "to": "castle",
+      "guard": "p05.solved",
+      "bidirectional": true
+    },
+    {
+      "from": "castle",
+      "to": "portal_front",
+      "guard": "p05.solved",
+      "bidirectional": true
+    },
+    {
+      "from": "portal_front",
+      "to": "portal_back",
+      "guard": "p05.solved",
+      "bidirectional": true
+    },
+    {
+      "from": "portal_front",
+      "to": "home",
+      "guard": "p06.portalLatched AND toto.mode=follow AND confirm_return",
+      "bidirectional": false
+    },
+    {
+      "from": "portal_back",
+      "to": "home",
+      "guard": "p06.portalLatched AND toto.mode=follow AND confirm_return",
+      "bidirectional": false
+    },
+    {
+      "from": "wall_top",
+      "to": "wall_base",
+      "guard": "p04.solved AND descend_action",
+      "bidirectional": false
+    }
+  ],
+  "anchorDefinitions": [
+    {
+      "id": "room",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "space": "room_local",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "room_front"
+      },
+      "reachabilityGuard": "milestone=ROOM",
+      "minMilestone": "ROOM"
+    },
+    {
+      "id": "arrival",
+      "position": [
+        0,
+        0,
+        -1.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "arrival_front"
+      },
+      "reachabilityGuard": "milestone>=ARRIVAL AND milestone<ENDING",
+      "minMilestone": "ARRIVAL"
+    },
+    {
+      "id": "p01_panel",
+      "position": [
+        0,
+        0,
+        3.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "p01_panel_front"
+      },
+      "reachabilityGuard": "milestone>=ARRIVAL AND milestone<ENDING",
+      "minMilestone": "ARRIVAL"
+    },
+    {
+      "id": "mill",
+      "position": [
+        4,
+        0,
+        7
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "mill_front"
+      },
+      "reachabilityGuard": "milestone>=P01_DONE AND milestone<ENDING",
+      "minMilestone": "P01_DONE"
+    },
+    {
+      "id": "gate_near",
+      "position": [
+        10,
+        0,
+        10.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "gate_near_front"
+      },
+      "reachabilityGuard": "milestone>=P02_DONE AND milestone<ENDING",
+      "minMilestone": "P02_DONE"
+    },
+    {
+      "id": "gate_far",
+      "position": [
+        10,
+        0,
+        13.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "gate_far_front"
+      },
+      "reachabilityGuard": "milestone>=P02_DONE AND milestone<ENDING AND (p03.gateLatched OR toto.anchor=p03_plate)",
+      "minMilestone": "P02_DONE"
+    },
+    {
+      "id": "wall_base",
+      "position": [
+        13,
+        0,
+        15
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front",
+        "wall_side"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "wall_base_front",
+        "wall_side": "wall_base_wall_side"
+      },
+      "reachabilityGuard": "milestone>=P03_DONE AND milestone<ENDING",
+      "minMilestone": "P03_DONE"
+    },
+    {
+      "id": "wall_top",
+      "position": [
+        14.6,
+        2,
+        17.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front",
+        "wall_side"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "wall_top_front",
+        "wall_side": "wall_top_wall_side"
+      },
+      "reachabilityGuard": "milestone>=P04_DONE AND milestone<ENDING AND p04.solved",
+      "minMilestone": "P04_DONE"
+    },
+    {
+      "id": "observatory",
+      "position": [
+        22,
+        2,
+        20
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front",
+        "observe",
+        "apparatus_side"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "observatory_front",
+        "observe": "observatory_observe",
+        "apparatus_side": "observatory_apparatus_side"
+      },
+      "reachabilityGuard": "milestone>=P04_DONE AND milestone<ENDING",
+      "minMilestone": "P04_DONE"
+    },
+    {
+      "id": "castle",
+      "position": [
+        28,
+        2,
+        24.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "castle_front"
+      },
+      "reachabilityGuard": "milestone>=P05_DONE AND milestone<ENDING",
+      "minMilestone": "P05_DONE"
+    },
+    {
+      "id": "portal_front",
+      "position": [
+        0,
+        0,
+        -1.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "portal_front"
+      ],
+      "defaultView": "portal_front",
+      "cameraByView": {
+        "portal_front": "portal_front_portal_front"
+      },
+      "reachabilityGuard": "milestone>=P05_DONE AND milestone<ENDING",
+      "minMilestone": "P05_DONE"
+    },
+    {
+      "id": "portal_back",
+      "position": [
+        0,
+        0,
+        1.5
+      ],
+      "space": "world",
+      "allowedViews": [
+        "portal_back"
+      ],
+      "defaultView": "portal_back",
+      "cameraByView": {
+        "portal_back": "portal_back_portal_back"
+      },
+      "reachabilityGuard": "milestone>=P05_DONE AND milestone<ENDING",
+      "minMilestone": "P05_DONE"
+    },
+    {
+      "id": "home",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "space": "room_local",
+      "allowedViews": [
+        "front"
+      ],
+      "defaultView": "front",
+      "cameraByView": {
+        "front": "home_front"
+      },
+      "reachabilityGuard": "milestone=ENDING",
+      "minMilestone": "ENDING"
+    }
+  ],
+  "cameraPresets": {
+    "room_front": {
+      "position": [
+        4,
+        3,
+        -5
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "arrival_front": {
+      "position": [
+        0,
+        7,
+        -10.5
+      ],
+      "target": [
+        0,
+        0.7,
+        -0.5
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "p01_panel_front": {
+      "position": [
+        0,
+        7,
+        -5.5
+      ],
+      "target": [
+        0,
+        0.7,
+        4.5
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "mill_front": {
+      "position": [
+        4,
+        7,
+        -2
+      ],
+      "target": [
+        4,
+        0.7,
+        8
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "gate_near_front": {
+      "position": [
+        10,
+        7,
+        1.5
+      ],
+      "target": [
+        10,
+        0.7,
+        11.5
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "gate_far_front": {
+      "position": [
+        10,
+        7,
+        4.5
+      ],
+      "target": [
+        10,
+        0.7,
+        14.5
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "wall_base_front": {
+      "position": [
+        8,
+        1,
+        16
+      ],
+      "target": [
+        14,
+        1,
+        16
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -4,
+        "right": 4,
+        "top": 2.25,
+        "bottom": -2.25
+      },
+      "verticalFovDegrees": null
+    },
+    "wall_base_wall_side": {
+      "position": [
+        18,
+        4,
+        12
+      ],
+      "target": [
+        14.6,
+        1,
+        15.5
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -4,
+        "right": 4,
+        "top": 2.25,
+        "bottom": -2.25
+      },
+      "verticalFovDegrees": null
+    },
+    "wall_top_front": {
+      "position": [
+        8,
+        1,
+        16
+      ],
+      "target": [
+        14,
+        1,
+        16
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -4,
+        "right": 4,
+        "top": 2.25,
+        "bottom": -2.25
+      },
+      "verticalFovDegrees": null
+    },
+    "wall_top_wall_side": {
+      "position": [
+        18,
+        4,
+        12
+      ],
+      "target": [
+        14.6,
+        1,
+        15.5
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -4,
+        "right": 4,
+        "top": 2.25,
+        "bottom": -2.25
+      },
+      "verticalFovDegrees": null
+    },
+    "observatory_front": {
+      "position": [
+        22,
+        9,
+        11
+      ],
+      "target": [
+        22,
+        2.7,
+        21
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "observatory_observe": {
+      "position": [
+        22,
+        3.6,
+        20
+      ],
+      "target": [
+        22,
+        3.6,
+        19
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "perspective",
+      "near": 0.05,
+      "far": 10,
+      "aspect": 1,
+      "frustum": null,
+      "verticalFovDegrees": 73.73979529168804
+    },
+    "observatory_apparatus_side": {
+      "position": [
+        25,
+        4,
+        19.1
+      ],
+      "target": [
+        22,
+        3.6,
+        18.75
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -2.4,
+        "right": 2.4,
+        "top": 1.35,
+        "bottom": -1.35
+      },
+      "verticalFovDegrees": null
+    },
+    "castle_front": {
+      "position": [
+        28,
+        9,
+        15.5
+      ],
+      "target": [
+        28,
+        2.7,
+        25.5
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "portal_front_portal_front": {
+      "position": [
+        0,
+        5,
+        -8
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "portal_back_portal_back": {
+      "position": [
+        0,
+        5,
+        8
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    },
+    "home_front": {
+      "position": [
+        4,
+        3,
+        -5
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -8,
+        "right": 8,
+        "top": 4.5,
+        "bottom": -4.5
+      },
+      "verticalFovDegrees": null
+    }
+  },
+  "globalMovementGuard": {
+    "follow": "normal_edge_guard",
+    "wait": {
+      "p03_plate": [
+        "gate_near",
+        "gate_far"
+      ],
+      "p06_front": [
+        "portal_front",
+        "portal_back"
+      ],
+      "p06_back": [
+        "portal_front",
+        "portal_back"
+      ]
+    },
+    "deniedCopy": "先にトトを呼ぼう。",
+    "rule": "When waiting, source AND destination must both belong to wait anchor allowed area. Apply to all edges including shortcuts/minimap; then apply local edge guard."
+  },
+  "p05LocalToWorld": {
+    "origin": [
+      22,
+      3.6,
+      20
+    ],
+    "scale": 0.25,
+    "formula": "world=(22+0.25*X, 3.6+0.25*Y, 20-0.25*Z)",
+    "note": "local +Z maps to world -Z, so screen-right local +X remains world +X for a camera looking world -Z"
+  },
+  "totoAnchorDefinitions": {
+    "party": {
+      "derivedFrom": "player.anchor",
+      "renderOffset": [
+        0.6,
+        0,
+        0
+      ]
+    },
+    "p03_plate": {
+      "position": [
+        9,
+        0,
+        10.5
+      ],
+      "allowedPlayerAnchors": [
+        "gate_near",
+        "gate_far"
+      ]
+    },
+    "p06_front": {
+      "position": [
+        0,
+        0,
+        -1.5
+      ],
+      "allowedPlayerAnchors": [
+        "portal_front",
+        "portal_back"
+      ]
+    },
+    "p06_back": {
+      "position": [
+        0,
+        0,
+        1.5
+      ],
+      "allowedPlayerAnchors": [
+        "portal_front",
+        "portal_back"
+      ]
+    }
+  },
+  "evolutionCues": [
+    {
+      "id": "P01_evolution",
+      "boundary": "P01_DONE",
+      "fromEra": "E0",
+      "toEra": "E1",
+      "sources": [
+        "player_feet",
+        "toto_feet"
+      ],
+      "destinationLandmark": "TILE",
+      "visualMotif": "same two identity marks repeated: light travel, concentric hold, era change",
+      "phaseMilliseconds": [
+        400,
+        200,
+        600
+      ],
+      "totalMaximumMilliseconds": 2000,
+      "reducedMotion": "static feet halos and connecting lines; crossfade baseline150ms maximum200ms",
+      "skip": "show static relationship then committed destination",
+      "replayOnLoad": false,
+      "snapshot": "presentation_only_pre_transition_positions",
+      "totalBaselineMilliseconds": 1200,
+      "reducedBaselineMilliseconds": 150,
+      "reducedMaximumMilliseconds": 200,
+      "sourceSymbols": {
+        "player_feet": "single_ring",
+        "toto_feet": "double_ring"
+      }
+    },
+    {
+      "id": "P03_evolution",
+      "boundary": "P03_DONE",
+      "fromEra": "E1",
+      "toEra": "E2",
+      "sources": [
+        "player_feet",
+        "toto_feet"
+      ],
+      "destinationLandmark": "GATE",
+      "visualMotif": "same two identity marks repeated: light travel, concentric hold, era change",
+      "phaseMilliseconds": [
+        400,
+        200,
+        600
+      ],
+      "totalMaximumMilliseconds": 2000,
+      "reducedMotion": "static feet halos and connecting lines; crossfade baseline150ms maximum200ms",
+      "skip": "show static relationship then committed destination",
+      "replayOnLoad": false,
+      "snapshot": "presentation_only_pre_transition_positions",
+      "totalBaselineMilliseconds": 1200,
+      "reducedBaselineMilliseconds": 150,
+      "reducedMaximumMilliseconds": 200,
+      "sourceSymbols": {
+        "player_feet": "single_ring",
+        "toto_feet": "double_ring"
+      }
+    },
+    {
+      "id": "P05_evolution",
+      "boundary": "P05_DONE",
+      "fromEra": "E2",
+      "toEra": "E3",
+      "sources": [
+        "player_feet",
+        "toto_feet"
+      ],
+      "destinationLandmark": "OBSERVATORY",
+      "visualMotif": "same two identity marks repeated: light travel, concentric hold, era change",
+      "phaseMilliseconds": [
+        400,
+        200,
+        600
+      ],
+      "totalMaximumMilliseconds": 2000,
+      "reducedMotion": "static feet halos and connecting lines; crossfade baseline150ms maximum200ms",
+      "skip": "show static relationship then committed destination",
+      "replayOnLoad": false,
+      "snapshot": "presentation_only_pre_transition_positions",
+      "totalBaselineMilliseconds": 1200,
+      "reducedBaselineMilliseconds": 150,
+      "reducedMaximumMilliseconds": 200,
+      "sourceSymbols": {
+        "player_feet": "single_ring",
+        "toto_feet": "double_ring"
+      }
+    }
+  ],
+  "noEvolutionBoundaries": [
+    "P02_DONE",
+    "P04_DONE",
+    "RETURN_OPEN"
+  ],
+  "transientObservationGuards": {
+    "p03SelfPlateTest": "Visual-only door opening does not satisfy gate_near->gate_far. Close before pause/save/scene_move."
+  },
+  "presentationCameraPresets": {
+    "overview_landmarks": {
+      "position": [
+        14,
+        31,
+        -20
+      ],
+      "target": [
+        14,
+        1,
+        13
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "near": 0.1,
+      "far": 100,
+      "aspect": 1.7777777777777777,
+      "frustum": {
+        "left": -28,
+        "right": 28,
+        "top": 15.75,
+        "bottom": -15.75
+      },
+      "verticalFovDegrees": null,
+      "paddingRadiusMeters": 3.5,
+      "purpose": "presentation only: S01 arrival landmarks / S06 clear return direction",
+      "saveView": false,
+      "returnToGameplay": "restore cameraByView for persisted player.anchor/player.view before exploration input",
+      "interaction": "no puzzle hotspot input; optional pause/skip only"
+    }
+  }
+}

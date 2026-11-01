@@ -1,0 +1,21 @@
+{
+  "designVersion": "1.1",
+  "sourceOfTruth": "docs/STORY.md (場面契約の目的更新) and docs/PUZZLES.md (各謎の目的表示)",
+  "rule": "Evaluate in listed order; the first rule whose milestone, anchor (if given) and flags (if given) all match is the current objective. Puzzle-site rules come before the milestone-wide rule so that arriving at a puzzle shows the puzzle objective and leaving it shows the progression objective. ROOM and ENDING have no objective line.",
+  "objectives": [
+    { "id": "OBJ_P01_PANEL", "text": "線を門までつなごう", "milestones": ["ARRIVAL"], "anchors": ["p01_panel"] },
+    { "id": "OBJ_ARRIVAL", "text": "城へ続く道をつなぐ", "milestones": ["ARRIVAL"] },
+    { "id": "OBJ_P02_MILL", "text": "水車を動かして、橋を下ろそう", "milestones": ["P01_DONE"], "anchors": ["mill"] },
+    { "id": "OBJ_P01_DONE", "text": "水車の道を進む", "milestones": ["P01_DONE"] },
+    { "id": "OBJ_P03_LATCHED", "text": "トトと門の先へ", "milestones": ["P02_DONE"], "anchors": ["gate_near", "gate_far"], "flags": { "p03.gateLatched": true } },
+    { "id": "OBJ_P03_GATE", "text": "二人で門を越えよう", "milestones": ["P02_DONE"], "anchors": ["gate_near", "gate_far"] },
+    { "id": "OBJ_P02_DONE", "text": "橋の先へ進む", "milestones": ["P02_DONE"] },
+    { "id": "OBJ_P04_WALL", "text": "城へ続く高い道を探そう", "milestones": ["P03_DONE"], "anchors": ["wall_base"] },
+    { "id": "OBJ_P03_DONE", "text": "白い模様の先へ進む", "milestones": ["P03_DONE"] },
+    { "id": "OBJ_P05_OBSERVATORY", "text": "観測台から、輪をつなげよう", "milestones": ["P04_DONE"], "anchors": ["observatory"] },
+    { "id": "OBJ_P04_DONE", "text": "城の輪を調べる", "milestones": ["P04_DONE"] },
+    { "id": "OBJ_P06_PORTAL", "text": "光る枠を調べよう", "milestones": ["P05_DONE"], "anchors": ["portal_front", "portal_back"] },
+    { "id": "OBJ_P05_DONE", "text": "入ってきた枠へ戻ろう", "milestones": ["P05_DONE"] },
+    { "id": "OBJ_RETURN_OPEN", "text": "トトと合流して一緒に帰る", "milestones": ["RETURN_OPEN"] }
+  ]
+}

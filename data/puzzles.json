@@ -1,0 +1,544 @@
+{
+  "designVersion": "1.1",
+  "sourceOfTruth": "docs/PUZZLES.md",
+  "status": "production_default_not_playtested",
+  "puzzles": [
+    {
+      "id": "P01",
+      "key": "p01",
+      "name": "つながる道",
+      "prerequisite": "ARRIVAL",
+      "completion": "P01_DONE",
+      "initial": {
+        "rotation": 0,
+        "solved": false
+      },
+      "domains": {
+        "rotation": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "solved": [
+          false,
+          true
+        ]
+      },
+      "actions": [
+        "rotate_right",
+        "rotate_left",
+        "reset"
+      ],
+      "solution": {
+        "rotation": 1
+      },
+      "portsByRotation": [
+        [
+          "W",
+          "N"
+        ],
+        [
+          "N",
+          "E"
+        ],
+        [
+          "E",
+          "S"
+        ],
+        [
+          "S",
+          "W"
+        ]
+      ],
+      "fixedPorts": [
+        "N",
+        "E"
+      ],
+      "anchor": "p01_panel",
+      "hintIds": [
+        "H_P01_1",
+        "H_P01_2",
+        "H_P01_3"
+      ]
+    },
+    {
+      "id": "P02",
+      "key": "p02",
+      "name": "止まった水車",
+      "prerequisite": "P01_DONE",
+      "completion": "P02_DONE",
+      "initial": {
+        "drain": "open",
+        "stopper": "locked",
+        "solved": false
+      },
+      "domains": {
+        "drain": [
+          "open",
+          "closed"
+        ],
+        "stopper": [
+          "locked",
+          "released"
+        ],
+        "solved": [
+          false,
+          true
+        ]
+      },
+      "actions": [
+        "toggle_drain",
+        "toggle_stopper",
+        "reset"
+      ],
+      "solution": {
+        "drain": "closed",
+        "stopper": "released"
+      },
+      "anchor": "mill",
+      "hintIds": [
+        "H_P02_1",
+        "H_P02_2",
+        "H_P02_3"
+      ]
+    },
+    {
+      "id": "P03",
+      "key": "p03",
+      "name": "二人で門の向こうへ",
+      "prerequisite": "P02_DONE",
+      "completion": "P03_DONE",
+      "initial": {
+        "gateLatched": false,
+        "crossed": false,
+        "solved": false
+      },
+      "domains": {
+        "gateLatched": [
+          false,
+          true
+        ],
+        "crossed": [
+          false,
+          true
+        ],
+        "solved": [
+          false,
+          true
+        ]
+      },
+      "actions": [
+        "toto_wait_plate",
+        "cross_gate",
+        "return_near",
+        "latch_gate",
+        "call_toto",
+        "reset",
+        "self_step_on",
+        "self_step_off",
+        "self_try_cross"
+      ],
+      "solution": {
+        "gateLatched": true,
+        "crossed": true,
+        "solved": true
+      },
+      "solutionContext": {
+        "playerAnchor": "gate_far",
+        "totoMode": "follow",
+        "totoAnchor": "party"
+      },
+      "anchor": "gate_near",
+      "hintIds": [
+        "H_P03_1",
+        "H_P03_2",
+        "H_P03_3"
+      ],
+      "selfPlateObservation": {
+        "status": "production_default_not_playtested",
+        "entryGuard": "player.anchor=gate_near AND toto.mode=follow AND NOT p03.gateLatched",
+        "stateKind": "transient_ui_only_not_saved",
+        "transientState": "selfPlateTest",
+        "states": [
+          "off",
+          "on"
+        ],
+        "initial": "off",
+        "onLabel": "自分で乗ってみる",
+        "leaveLabel": "圧板から離れる",
+        "tryCrossLabel": "門へ進んでみる",
+        "onCopy": "圧板が沈んで、門が開いた。",
+        "leaveCopy": "離れると、門も閉まった。",
+        "visualOpenFormula": "gateLatched OR toto.anchor=p03_plate OR selfPlateTest=on",
+        "traversableFormula": "gateLatched OR toto.anchor=p03_plate",
+        "offTriggers": [
+          "self_step_off",
+          "self_try_cross",
+          "pause",
+          "scene_move",
+          "reset"
+        ],
+        "stableAnchor": "gate_near",
+        "saveRule": "Close observation before opening pause/save; persist only stable gate_near/off. Reload never restores on.",
+        "handoffToToto": "Atomic player off then toto wait/p03_plate; no intermediate saved state",
+        "changesPuzzleProgress": false,
+        "humanObservation": [
+          "Why did the gate open/close?",
+          "Why did you leave Toto on the plate?"
+        ]
+      }
+    },
+    {
+      "id": "P04",
+      "key": "p04",
+      "name": "模様の横側",
+      "prerequisite": "P03_DONE",
+      "completion": "P04_DONE",
+      "initial": {
+        "sideSeen": false,
+        "climbed": false,
+        "solved": false
+      },
+      "domains": {
+        "sideSeen": [
+          false,
+          true
+        ],
+        "climbed": [
+          false,
+          true
+        ],
+        "solved": [
+          false,
+          true
+        ]
+      },
+      "actions": [
+        "view_side",
+        "view_front",
+        "inspect_steps_auto_climb",
+        "revisit_climb",
+        "descend",
+        "reset"
+      ],
+      "solution": {
+        "sideSeen": true,
+        "climbed": true,
+        "solved": true
+      },
+      "anchor": "wall_base",
+      "hintIds": [
+        "H_P04_1",
+        "H_P04_2",
+        "H_P04_3"
+      ],
+      "labels": {
+        "beforeSolved": {
+          "front": {
+            "noun": "白い模様",
+            "verb": "調べる"
+          },
+          "wall_side": {
+            "noun": "白い段",
+            "verb": "調べる"
+          }
+        },
+        "afterSolved": {
+          "noun": "足場",
+          "revisitUp": "上る",
+          "revisitDown": "下りる"
+        },
+        "recognitionBoundary": "sideSeen AND inspect_steps_auto_climb command accepted; commit climbed and solved",
+        "sharedAcross": [
+          "canvas_hotspot",
+          "dom_target_list",
+          "always_show_labels",
+          "accessible_name"
+        ],
+        "forbiddenBeforeSolved": [
+          "足場",
+          "階段",
+          "上る"
+        ],
+        "humanObservation": "横から見て、何が見えた？（解決後、中立的に尋ねる）"
+      }
+    },
+    {
+      "id": "P05",
+      "key": "p05",
+      "name": "一つに見える輪",
+      "prerequisite": "P04_DONE",
+      "completion": "P05_DONE",
+      "initial": {
+        "a": 0,
+        "b": 1,
+        "solved": false
+      },
+      "domains": {
+        "a": [
+          0,
+          1,
+          2
+        ],
+        "b": [
+          0,
+          1,
+          2
+        ],
+        "solved": [
+          false,
+          true
+        ]
+      },
+      "actions": [
+        "set_a_0",
+        "set_a_1",
+        "set_a_2",
+        "set_b_0",
+        "set_b_1",
+        "set_b_2",
+        "view_observe",
+        "view_apparatus_side",
+        "reset"
+      ],
+      "solution": {
+        "a": 1,
+        "b": 2
+      },
+      "anchor": "observatory",
+      "hintIds": [
+        "H_P05_1",
+        "H_P05_2",
+        "H_P05_3"
+      ]
+    },
+    {
+      "id": "P06",
+      "key": "p06",
+      "name": "帰り口の両側",
+      "prerequisite": "P05_DONE",
+      "completion": "RETURN_OPEN",
+      "initial": {
+        "portalLatched": false,
+        "solved": false
+      },
+      "domains": {
+        "portalLatched": [
+          false,
+          true
+        ],
+        "solved": [
+          false,
+          true
+        ]
+      },
+      "actions": [
+        "walk_front",
+        "walk_back",
+        "toto_wait_here",
+        "call_toto",
+        "return_together",
+        "reset"
+      ],
+      "solution": {
+        "portalLatched": true,
+        "solved": true
+      },
+      "exitGuard": {
+        "milestone": "RETURN_OPEN",
+        "totoMode": "follow",
+        "totoAnchor": "party"
+      },
+      "anchor": "portal_front",
+      "hintIds": [
+        "H_P06_1",
+        "H_P06_2",
+        "H_P06_3"
+      ]
+    }
+  ],
+  "p05Projection": {
+    "unitsToMeters": 0.25,
+    "camera": [
+      0,
+      0,
+      0
+    ],
+    "forward": [
+      0,
+      0,
+      1
+    ],
+    "up": [
+      0,
+      1,
+      0
+    ],
+    "projection": "perspective",
+    "formula": "u=X/Z,v=Y/Z",
+    "zStops": [
+      4,
+      5,
+      6
+    ],
+    "stopLabels": [
+      "手前",
+      "中央",
+      "奥"
+    ],
+    "targetRadius": 0.4,
+    "viewportHalfExtent": 0.75,
+    "minViewportCssPx": 300,
+    "maxProjectedTolerance": 0.01,
+    "fixed": {
+      "radius": 2.8,
+      "z": 7,
+      "startDegrees": 0,
+      "endDegrees": 180
+    },
+    "a": {
+      "radius": 2,
+      "startDegrees": 180,
+      "endDegrees": 270
+    },
+    "b": {
+      "radius": 2.4,
+      "startDegrees": 270,
+      "endDegrees": 360
+    },
+    "fragmentGeometry": "planar annular ribbon at constant Z, double sided; radial width is physical local units",
+    "radialWidthLocal": {
+      "fixed": 0.084,
+      "a": 0.06,
+      "b": 0.072
+    }
+  },
+  "p04Geometry": {
+    "boxes": [
+      {
+        "id": "step1",
+        "min": [
+          14,
+          0,
+          14
+        ],
+        "max": [
+          15.2,
+          0.6666666666666666,
+          15
+        ]
+      },
+      {
+        "id": "step2",
+        "min": [
+          14,
+          0,
+          15
+        ],
+        "max": [
+          15.2,
+          1.3333333333333333,
+          16
+        ]
+      },
+      {
+        "id": "step3",
+        "min": [
+          14,
+          0,
+          16
+        ],
+        "max": [
+          15.2,
+          2,
+          17
+        ]
+      },
+      {
+        "id": "landing",
+        "min": [
+          14,
+          0,
+          17
+        ],
+        "max": [
+          15.2,
+          2,
+          18
+        ]
+      }
+    ],
+    "frontProjection": "u=worldZ-14, v=worldY; looking along +X",
+    "frontMaskPolygonUV": [
+      [
+        0,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        1.3333333333333333
+      ],
+      [
+        1,
+        1.3333333333333333
+      ],
+      [
+        1,
+        0.6666666666666666
+      ],
+      [
+        0,
+        0.6666666666666666
+      ]
+    ],
+    "stepRise": 0.6666666666666666,
+    "treadDepth": 1,
+    "width": 1.2,
+    "route": [
+      [
+        13,
+        0,
+        15
+      ],
+      [
+        13.4,
+        0,
+        14.5
+      ],
+      [
+        14.6,
+        0.6666666666666666,
+        14.5
+      ],
+      [
+        14.6,
+        1.3333333333333333,
+        15.5
+      ],
+      [
+        14.6,
+        2,
+        16.5
+      ],
+      [
+        14.6,
+        2,
+        17.5
+      ]
+    ],
+    "realPhysicsRequired": false
+  }
+}
