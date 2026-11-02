@@ -2,6 +2,7 @@
 // It owns the SaveStore and the AutoSaver; the Game (domain + dispatcher) knows nothing about storage.
 import { Game } from './game';
 import { AutoSaver, type SaveStatus } from './autosaver';
+import { diag } from './diag';
 import { mountUi, mixer } from '../ui/view';
 import { world } from '../content/load';
 import { rowOf } from '../domain/dialogue';
@@ -54,6 +55,7 @@ export class Shell {
   private importPreview: { text: string } | null = null;
   private playing = false;
   private saveText = '';
+  private unsaved = false; // playing in memory only because the browser cannot store saves
 
   constructor(private root: HTMLElement, private opts: ShellOptions) {
     root.innerHTML = '<div id="screen-root" class="screen-root"></div><div id="play-root" hidden></div>';
@@ -104,6 +106,7 @@ export class Shell {
   private onSaveStatus(s: SaveStatus, e: SaveError | null) {
     this.saveText = ({ idle: '', saving: '保存中…', saved: '保存しました', slow: '保存に時間がかかっています', stuck: '保存が終わっていません（続けて遊べます）', failed: '保存できませんでした', halted: '保存を止めました' } as Record<SaveStatus, string>)[s];
     this.ui?.setSaveText(this.saveText);
+    diag('status', s);
     if (s === 'halted' && e && this.playing) this.showError(e, 'PLAY'); // the tab must stop writing: tell the player, keep the game
   }
 
@@ -151,10 +154,19 @@ export class Shell {
     if (this.store) { try { meta = await this.store.meta(); const id = meta.lastPlayedSlotId; if (id) canContinue = (await this.store.readSlot(id)).status === 'ok'; } catch { /* leave disabled */ } }
     const ro = this.readOnly;
     this.page('TITLE', '12月31日', `
+      <svg class="title-art" viewBox="0 0 320 120" role="img" aria-label="雪の夜の草原に立つ金色の枠と、重なる二つの輪" shape-rendering="crispEdges">
+        <rect width="320" height="120" fill="#16233a"/><rect y="70" width="320" height="50" fill="#2a4a3d"/><rect y="70" width="320" height="4" fill="#e9eef5"/>
+        ${Array.from({ length: 36 }, (_, i) => `<rect x="${(i * 97) % 320}" y="${(i * 53) % 60}" width="2" height="2" fill="#f6e7b4" opacity="${0.4 + (i % 4) * 0.15}"/>`).join('')}
+        <rect x="140" y="26" width="6" height="52" fill="#d9ac5b"/><rect x="174" y="26" width="6" height="52" fill="#d9ac5b"/><rect x="140" y="22" width="40" height="6" fill="#d9ac5b"/><rect x="146" y="28" width="28" height="48" fill="#05080d"/>
+        <circle cx="153" cy="52" r="9" fill="none" stroke="#ffd166" stroke-width="2"/><circle cx="167" cy="52" r="14" fill="none" stroke="#ffd166" stroke-width="2"/>
+        <path d="M160 120 L150 78 L170 78 Z" fill="#b9a37c"/>
+        <g fill="#2f6b4c"><path d="M40 88 l14 -34 l14 34 z"/><path d="M60 92 l12 -28 l12 28 z"/><path d="M240 90 l14 -36 l14 36 z"/><path d="M266 88 l10 -26 l10 26 z"/></g>
+      </svg>
       ${ro ? '<p class="note" role="status">いまは読み取りと書き出しだけできます（書き込みは止まっています）。</p>' : ''}
       <div class="menu">
         <button type="button" class="btn" id="b-new" ${ro ? 'aria-disabled="true"' : ''}>はじめから</button>
         <button type="button" class="btn" id="b-cont" ${canContinue && !ro ? '' : 'aria-disabled="true"'}>つづきから</button>
+        ${this.storeError ? '<button type="button" class="btn" id="b-unsaved">保存せずに遊ぶ</button>' : ''}
         <button type="button" class="btn" id="b-slots">セーブ一覧</button>
         <button type="button" class="btn" id="b-set">設定</button>
         <button type="button" class="btn" id="b-credits">クレジット</button>
@@ -163,6 +175,7 @@ export class Shell {
       <p class="fine">登録なしで遊べます。進行はこのブラウザに保存されます。セーブはこのブラウザの中だけに保存されます。ブラウザのデータを消したり、別のブラウザや端末で開いたりすると引き継げません。「セーブ一覧」から書き出せます。</p>`, '#b-new');
     this.on('#b-new', () => { if (!ro) this.showNew(); });
     this.on('#b-cont', async () => { if (canContinue && !ro && meta?.lastPlayedSlotId) await this.loadAndPlay(meta.lastPlayedSlotId); });
+    this.on('#b-unsaved', () => this.playUnsaved());
     this.on('#b-slots', () => this.showSlots('TITLE'));
     this.on('#b-set', () => this.showSettings('TITLE'));
     this.on('#b-credits', () => this.showCredits());
@@ -423,12 +436,14 @@ export class Shell {
   }
 
   // ------------------------------------------------------------------ pause
+  /** True when progress is really being written to this browser right now (not unsaved play, not a halted or failing saver). */
+  private savingWorks() { return !this.unsaved && this.saver !== null && !this.saver.halted && this.saver.status !== 'failed'; }
   private async openPause() {
     await this.saver?.flush(); // pause is a write barrier: the last commit is in the store before any menu action
     this.page('PAUSE', 'ひと休み', `
       <div class="menu">
         <button type="button" class="btn" id="p-resume">続ける</button>
-        <button type="button" class="btn" id="p-slots">セーブ一覧（保存・ロード）</button>
+        ${this.unsaved ? '' : '<button type="button" class="btn" id="p-slots">セーブ一覧（保存・ロード）</button>'}
         <button type="button" class="btn" id="p-log">会話ログ</button>
         <button type="button" class="btn" id="p-set">設定</button>
         <button type="button" class="btn" id="p-title">タイトルへ</button>
@@ -437,7 +452,7 @@ export class Shell {
     this.on('#p-slots', () => this.showSlots('PAUSE'));
     this.on('#p-log', () => this.showLog());
     this.on('#p-set', () => this.showSettings('PAUSE'));
-    this.on('#p-title', () => this.confirm({ title: 'タイトルへ戻ります', text: 'ここまでの進み方は、オートセーブに入っています。', yes: 'タイトルへ', no: 'やめる', onNo: () => this.openPause(), onYes: () => this.showTitle() }));
+    this.on('#p-title', () => this.confirm({ title: 'タイトルへ戻ります', text: !this.savingWorks() ? 'いまは保存できていないため、タイトルへ戻るとここまでの進み方は消えます。' : 'ここまでの進み方は、オートセーブに入っています。', yes: 'タイトルへ', no: 'やめる', onNo: () => this.openPause(), onYes: () => this.showTitle() }));
     this.screen = 'PAUSE';
   }
   /** UI_LOG: only lines already acknowledged, oldest first. Reading the log changes nothing in the saved state. */
@@ -449,6 +464,15 @@ export class Shell {
     this.on('#l-back', () => this.openPause());
   }
   private resume() { this.show('PLAY'); }
+
+  /** The browser cannot keep saves (no storage, no locks, or another tab is the writer): play from the start in memory only. */
+  private playUnsaved() {
+    this.unsaved = true;
+    this.run = { runId: uuid(), createdAt: new Date().toISOString(), baseMs: 0, since: performance.now() };
+    this.saveText = '保存されません（このタブを閉じると進行は消えます）';
+    this.game.replace(fresh());
+    this.show('PLAY');
+  }
 
   // ------------------------------------------------------------------ confirm / error
   private confirm(o: { title: string; text: string; yes: string; no: string; onYes: () => void | Promise<void>; onNo: () => void | Promise<void> }) {
@@ -465,10 +489,12 @@ export class Shell {
       <p class="fine">（${err.code}）<span data-error-detail>${esc(err.message.replace(/^E_[A-Z]+: /, "").slice(0, 200))}</span></p>
       <div class="btnrow">
         ${canPlay ? '<button type="button" class="btn" id="e-play">このまま続ける（保存はされません）</button>' : ''}
+        ${!canPlay && this.storeError ? '<button type="button" class="btn" id="e-unsaved">保存せずに遊ぶ（進行は残りません）</button>' : ''}
         <button type="button" class="btn" id="e-slots">セーブ一覧（読み取り・書き出し）</button>
         <button type="button" class="btn" id="e-title">タイトルへ</button>
       </div>`, canPlay ? '#e-play' : '#e-slots');
     this.on('#e-play', () => this.show('PLAY'));
+    this.on('#e-unsaved', () => this.playUnsaved());
     this.on('#e-slots', () => this.showSlots('TITLE'));
     this.on('#e-title', () => this.showTitle());
   }

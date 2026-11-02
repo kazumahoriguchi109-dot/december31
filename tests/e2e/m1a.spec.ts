@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
 import { openGame } from './helpers';
 
 type D31 = { state(): any; log(): any[]; objective(): string };

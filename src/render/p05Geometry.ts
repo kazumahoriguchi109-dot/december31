@@ -73,3 +73,11 @@ export const ARM_STEMS = {
   a: { midAngle: deg(225), length: 2.5 },
   b: { midAngle: deg(315), length: 2.5 },
 };
+
+/** How far apart the two end points of each joint appear from the viewing point (projected units, u=X/Z, v=Y/Z). 0 = they meet. */
+export function jointGaps(a: number, b: number): { upperLeft: number; upperRight: number; bottom: number } {
+  const proj = (p: Vec3) => [p[0] / p[2], p[1] / p[2]] as const;
+  const gap = (p: Vec3, q: Vec3) => { const s = proj(p), t = proj(q); return Math.hypot(s[0] - t[0], s[1] - t[1]); };
+  const e = seamEnds(a, b);
+  return { upperLeft: gap(e.upperLeft.fixed, e.upperLeft.a), upperRight: gap(e.upperRight.fixed, e.upperRight.b), bottom: gap(e.bottom.a, e.bottom.b) };
+}

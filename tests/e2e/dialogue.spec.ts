@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
 
 // Dialogue flow in a real browser (dev start, no storage involved).
 const st = (p: Page) => p.evaluate(() => (window as any).__d31.state());

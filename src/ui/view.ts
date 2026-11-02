@@ -46,7 +46,8 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
         </div>
         <section id="dlg" class="dlg" aria-labelledby="dlg-speaker" hidden>
           <h2 id="dlg-speaker" class="dlg-speaker"></h2>
-          <p id="dlg-text" class="dlg-text"></p>
+          <p id="dlg-text" class="dlg-text" aria-hidden="true"></p>
+          <p id="dlg-sr" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
           <div class="btnrow" id="dlg-actions"></div>
         </section>
         <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -81,6 +82,9 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
   const canvas = el<HTMLCanvasElement>('#world');
   const view = new WorldView(canvas);
   let lastFocusId: string | null = null;
+  let lastReadout = '';
+  let modalOpen = false;
+  let modalTrigger: string | null = null; // the control that was focused when a modal opened; focus returns there on close
   let lastViewName = '';
   // presentation hold: shows the just-closed ring from the observe camera before the committed castle view takes over.
   // render-only; authoritative state has already moved on.
@@ -102,11 +106,12 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
   document.addEventListener('keydown', (e) => {
     if (e.repeat && (e.key === 'Enter' || e.key === ' ') && idOf(e.target)) { e.preventDefault(); return; }
     if (e.key === 'Escape' && opts.onPause && !document.querySelector('dialog[open]') && !game.dialogueActive && playVisible()) { e.preventDefault(); game.settle(); opts.onPause(); return; }
+    if (e.ctrlKey || e.altKey || e.metaKey) return; // browser and screen-reader shortcuts are not ours
     if ((e.key === 'h' || e.key === 'H') && !e.repeat && !isTyping(e.target) && !document.querySelector('dialog[open]') && !game.dialogueActive && playVisible()) {
       game.perform('hint_open', 'keyboard'); return;
     }
     if (e.key === 'q' || e.key === 'Q') {
-      if (isTyping(e.target) || document.querySelector('dialog[open]')) return;
+      if (isTyping(e.target) || document.querySelector('dialog[open]') || !playVisible()) return;
       game.highlight(2000);
       return;
     }
@@ -163,18 +168,21 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
     }
     el('#controls').innerHTML = html;
     const lines = game.readout();
-    el('#readout').innerHTML = lines.length ? `<h3>いまの様子</h3><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '';
+    const readoutHtml = lines.length ? `<h3>いまの様子</h3><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '';
+    if (readoutHtml !== lastReadout) { lastReadout = readoutHtml; el('#readout').innerHTML = readoutHtml; } // a live region is rewritten only when its text changes
   }
 
   function renderHotspots() {
     const hl = game.now() < game.rt.highlightUntil;
     const acts = game.actions().filter((a) => a.world);
+    const focused = document.activeElement instanceof HTMLElement && el('#hotspots').contains(document.activeElement) ? document.activeElement.dataset['actionId'] : undefined;
     el('#hotspots').innerHTML = acts.map((a) => {
       const p = view.project(a.world!);
       const outside = p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1;
       if (outside) return '';
       return `<button type="button" class="hot ${hl ? 'hl' : ''}" style="left:${(p.x * 100).toFixed(2)}%;top:${(p.y * 100).toFixed(2)}%" data-action-id="${a.id}" aria-label="${esc(a.label)}" ${a.enabled ? '' : 'aria-disabled="true"'}><span class="hot-label">${esc(a.label)}</span></button>`;
     }).join('');
+    if (focused) el('#hotspots').querySelector<HTMLElement>(`[data-action-id="${focused}"]`)?.focus(); // rebuilding must not drop keyboard focus
   }
 
   // Typewriter: textContent always holds the whole line (tests, find-in-page); unrevealed characters are visibility:hidden.
@@ -221,7 +229,7 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
     el('#readout').toggleAttribute('hidden', line !== null);
     if (!show || !line) { dlgShownId = null; el('#dlg-actions').innerHTML = ''; return; } // no stale buttons behind a hidden box
     el('#dlg-speaker').textContent = line.speaker;
-    if (dlgShownId !== line.id) typeLine(el('#dlg-text'), line.text);
+    if (dlgShownId !== line.id) { typeLine(el('#dlg-text'), line.text); el('#dlg-sr').textContent = `${line.speaker}。${line.text}`; } // read out once, whole, however the text is revealed
     const hadFocus = box.contains(document.activeElement); // the buttons are rebuilt; keep keyboard focus on them
     el('#dlg-actions').innerHTML = game.actions().filter((a) => a.group === 'dialogue').map((a) => btn(a)).join('');
     if (hadFocus && dlgShownId === line.id) el<HTMLElement>('[data-action-id="dlg_next"]', box).focus();
@@ -273,10 +281,11 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
     const s = game.state;
     const obj = currentObjective(s);
     el('#obj-text').textContent = obj ? obj.text : '';
+    el('.objective').style.visibility = obj ? 'visible' : 'hidden'; // ROOM and the ending have no objective line (no empty label)
     el('#place').textContent = PLACE_NAMES[s.player.anchor] ?? s.player.anchor;
     const vn = `${VIEW_NAMES[s.player.view] ?? s.player.view}の視点`;
     el('#viewname').textContent = vn;
-    el('#status').textContent = game.rt.status;
+    if (el('#status').textContent !== game.rt.status) el('#status').textContent = game.rt.status;
     const holding = hold && game.now() < hold.until;
     if (!holding) hold = null;
     const preset = opts.presetOverride() ?? (holding ? WorldView.presetFor('observatory', 'observe') : WorldView.presetFor(s.player.anchor, s.player.view));
@@ -298,7 +307,7 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
     mixer.setEra(era as 'E0' | 'E1' | 'E2' | 'E3');
     view.lowQuality = document.documentElement.dataset['quality'] === 'low';
     view.render({
-      era: era as 'E0' | 'E1' | 'E2' | 'E3', presetId: preset, anchor: hold ? hold.anchor : s.player.anchor, view: hold ? 'observe' : s.player.view,
+      era: era as 'E0' | 'E1' | 'E2' | 'E3', reducedMotion: game.reducedMotion, presetId: preset, anchor: hold ? hold.anchor : s.player.anchor, view: hold ? 'observe' : s.player.view,
       p04Solved: s.puzzles.p04.solved, p05: opts.p05Override() ?? { a: s.puzzles.p05.a, b: s.puzzles.p05.b },
       p01: s.puzzles.p01, p02: s.puzzles.p02,
       p03: {
@@ -316,20 +325,35 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
 
   function refresh() {
     const hadFocus = lastFocusId;
+    const ae = document.activeElement as HTMLElement | null; // the panel is rebuilt below: remember which control the player is actually on
+    const onNow = ae && ae.closest('#controls, #targets') ? ae.dataset['actionId'] ?? null : null;
     const { vn, preset } = renderStatic();
     drawWorld(preset);
     renderPanel();
     renderHotspots();
     renderDialogue();
+    const modalWas = modalOpen;
     renderModals();
+    modalOpen = !!document.querySelector('dialog[open]');
+    if (modalOpen && !modalWas) modalTrigger = hadFocus;
+    // a line that appeared while a modal was open could not take focus then (the page behind a modal is inert): take it now
+    const dbox = el<HTMLElement>('#dlg');
+    if (!modalOpen && modalWas && !dbox.hasAttribute('hidden') && !dbox.contains(document.activeElement)) { lastFocusId = 'dlg_next'; el<HTMLElement>('[data-action-id="dlg_next"]', dbox).focus(); }
+    else if (!modalOpen && modalWas && modalTrigger) {
+      const back = document.querySelector<HTMLElement>(`#controls [data-action-id="${modalTrigger}"], #targets [data-action-id="${modalTrigger}"]`);
+      if (back) { lastFocusId = modalTrigger; back.focus(); }
+      modalTrigger = null;
+    }
     // focus: viewpoint change -> viewpoint heading; otherwise back on the same action if it still exists
     if (vn !== lastViewName) {
       if (lastViewName !== '' && hadFocus && /^view_/.test(hadFocus)) el('#viewname').focus();
       lastViewName = vn;
     } else if (hadFocus && !document.querySelector('dialog[open]')) {
-      const same = document.querySelector<HTMLElement>(`#controls [data-action-id="${hadFocus}"], #targets [data-action-id="${hadFocus}"]`);
+      const want = onNow ?? hadFocus;
+      const same = document.querySelector<HTMLElement>(`#controls [data-action-id="${want}"], #targets [data-action-id="${want}"]`);
       if (!same && (hadFocus === 'dlg_next' || hadFocus === 'dlg_skip')) lastFocusId = null;
-      if (same) same.focus(); else if (document.activeElement === document.body) el('#obj-text').parentElement!.setAttribute('tabindex', '-1'), el('.objective').focus();
+      const lost = document.activeElement === document.body || document.activeElement === null; // only restore focus the rebuild took away
+      if (same && lost) same.focus(); else if (!same && lost) el('#obj-text').parentElement!.setAttribute('tabindex', '-1'), el('.objective').focus();
     }
   }
 
@@ -349,5 +373,9 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
   // Q highlight fades without a state change
   setInterval(() => { if (game.rt.highlightUntil && game.now() > game.rt.highlightUntil) { game.rt.highlightUntil = 0; renderHotspots(); } }, 250);
   refresh();
-  return { refresh, stage, canvas, view, setSaveText: (t: string) => { el('#savestate').textContent = t; } };
+  return { refresh, stage, canvas, view, setSaveText: (t: string) => {
+    const n = el('#savestate');
+    n.textContent = t;
+    n.setAttribute('aria-live', t === '' || /^保存(中|しました)/.test(t) ? 'off' : 'polite'); // routine saving/saved is visual only; problems and the unsaved state are announced
+  } };
 }

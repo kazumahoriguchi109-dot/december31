@@ -1,3 +1,4 @@
+import { jointGaps } from '../render/p05Geometry';
 import { hintKeyFor, reduce, type Command, type GameEvent } from '../domain/commands';
 import { validateGame } from '../domain/invariants';
 import { checkMove, EDGES } from '../domain/movement';
@@ -261,8 +262,7 @@ export class Game {
     const s = this.state, ms = s.progress.milestone, a = s.player.anchor;
     if (a === 'p01_panel' && ms === 'ARRIVAL') {
       const ports = [['西', '北'], ['北', '東'], ['東', '南'], ['南', '西']][s.puzzles.p01.rotation]!;
-      const next = [['北', '東'], ['東', '南'], ['南', '西'], ['西', '北']][s.puzzles.p01.rotation]!;
-      return [`タイルのつなぎ口：${ports.join('と')}`, `右に回すと：${next.join('と')}`, '入口は北、門は東にある。'];
+      return [`タイルのつなぎ口：${ports.join('と')}`, '入口は北、門は東にある。']; // state only: what turning does is for the player to find
     }
     if (a === 'mill' && ms === 'P01_DONE') {
       const p = s.puzzles.p02;
@@ -282,6 +282,12 @@ export class Game {
         `トト：${s.toto.mode === 'wait' ? '圧板で待っている' : 'いっしょにいる'}`,
         `留め金：${p.gateLatched ? '固定した' : 'まだ'}`,
       ];
+    }
+    if (a === 'observatory' && s.player.view === 'observe' && ms === 'P04_DONE' && !s.puzzles.p05.solved) { // only while looking from the observation mark; state only: where each ring sits and whether each joint meets
+      const g = jointGaps(s.puzzles.p05.a, s.puzzles.p05.b);
+      const j = (n: string, d: number) => `${n}のつなぎ目：${d < 0.005 ? 'つながっている' : 'はなれている'}`;
+      const stop = ['手前', '中央', '奥'] as const;
+      return [`輪A：${stop[s.puzzles.p05.a]}　輪B：${stop[s.puzzles.p05.b]}`, j('左上', g.upperLeft), j('右上', g.upperRight), j('下', g.bottom)];
     }
     if ((a === 'portal_front' || a === 'portal_back') && (ms === 'P05_DONE' || ms === 'RETURN_OPEN')) {
       const t = s.toto;
@@ -332,7 +338,10 @@ export class Game {
 
     if (a.id === 'confirm_return_yes') this.rt.confirmReturn = false;
     if (this.rt.selfPlate && !a.id.startsWith('self_')) this.rt.selfPlate = false; // observation ends before anything else happens (never saved as "on")
-    if (a.rt) { this.runtimeAction(a.rt, actionId, source); this.log.push({ actionId, source, accepted: true }); this.emit([], this.state); return true; }
+    if (a.rt) {
+      const before = this.state; // dialogue acknowledgement replaces the state, so listeners (autosave) must see the old one as prev
+      this.runtimeAction(a.rt, actionId, source); this.log.push({ actionId, source, accepted: true }); this.emit([], before); return true;
+    }
     if (!a.cmd) return false;
     const prev = this.state;
     const r = reduce(prev, a.cmd);

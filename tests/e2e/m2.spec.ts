@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
 
 // M2: a real new game from the title screen through the intro, P01, P02 and P03, in the real DOM.
 // Dialogue is read line by line with the "next" button (as a player does); actions are clicked or pressed from the keyboard.
@@ -204,6 +205,7 @@ async function toWall(page: Page) {
 
 for (const how of ['mouse', 'keyboard'] as const) {
   test(`the whole game: title -> ... -> P06 -> ending (${how})`, async ({ page }) => {
+    test.setTimeout(90000); // the walk takes ~28 s before the era art pass and ~37 s after it on headless software GL (measured, cycle-010); real-GPU timing is unmeasured
     await toWall(page);
     await act(page, 'view_wall_side', how);
     await act(page, 'p04_inspect', how);

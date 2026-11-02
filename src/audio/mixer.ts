@@ -9,6 +9,10 @@ const ROOTS: Record<Era, number[]> = {
 };
 const WAVE: Record<Era, OscillatorType> = { E0: 'square', E1: 'triangle', E2: 'sine', E3: 'sine' };
 
+// Output scaling of the music and effects buses (the sliders multiply these). Raised after an offline measurement showed the
+// default mix peaking near -26 dBFS; the loudest sliders with every effect at once must still stay under the clipping ceiling.
+const MUSIC_GAIN = 0.55, SFX_GAIN = 0.75;
+
 export class Mixer {
   private ctx: AudioContext | null = null;
   private master!: GainNode; private music!: GainNode; private sfx!: GainNode;
@@ -25,8 +29,8 @@ export class Mixer {
   private apply() {
     const t = this.ctx!.currentTime;
     this.master.gain.setTargetAtTime(this.vol.master, t, 0.05);
-    this.music.gain.setTargetAtTime(this.vol.music * 0.25, t, 0.05);
-    this.sfx.gain.setTargetAtTime(this.vol.sfx * 0.5, t, 0.05);
+    this.music.gain.setTargetAtTime(this.vol.music * MUSIC_GAIN, t, 0.05);
+    this.sfx.gain.setTargetAtTime(this.vol.sfx * SFX_GAIN, t, 0.05);
   }
   /** Audio may only start after a user gesture; call from input handlers. */
   unlock() {
@@ -52,19 +56,29 @@ export class Mixer {
     g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
     o.connect(g); g.connect(to); o.start(start); o.stop(start + dur + 0.05);
   }
-  private tick() {
-    if (!this.ctx || this.ctx.state !== 'running') return;
+  private tick(at?: number) {
+    if (!this.ctx || (at === undefined && this.ctx.state !== 'running')) return;
     const notes = ROOTS[this.era]; const f = notes[this.step++ % notes.length]!;
-    const t = this.ctx.currentTime + 0.02;
+    const t = (at ?? this.ctx.currentTime) + 0.02;
     this.tone(f / 2, t, 2.6, WAVE[this.era], this.music, 0.5);
     this.tone(f, t + 0.3, 2.0, WAVE[this.era], this.music, 0.25);
     this.tone(f * 1.5, t + 0.9, 1.4, 'sine', this.music, 0.18);
+    // a small melody over the pad: a looping pentatonic phrase per era (rests keep it gentle)
+    const PH: Record<Era, number[]> = { E0: [0, 2, 4, 2, 0, -1, 2, -1], E1: [0, 2, 4, 5, 4, 2, 0, -1], E2: [4, 2, 0, 2, 4, 7, 4, -1], E3: [7, 4, 5, 4, 2, 4, 0, 2] };
+    const SCALE = [0, 2, 4, 7, 9];
+    const ph = PH[this.era]; const base = f * 2;
+    for (let i = 0; i < 4; i++) {
+      const deg = ph[((this.step - 1) * 4 + i) % ph.length]!;
+      if (deg < 0) continue;
+      const semis = SCALE[deg % 5]! + 12 * Math.floor(deg / 5);
+      this.tone(base * 2 ** (semis / 12), t + 0.15 + i * 0.6, 0.7, this.era === 'E0' ? 'square' : 'triangle', this.music, this.era === 'E0' ? 0.12 : 0.22);
+    }
     this.last.music = this.era;
   }
-  play(name: 'move' | 'press' | 'solve' | 'cue' | 'deny' | 'line') {
+  play(name: 'move' | 'press' | 'solve' | 'cue' | 'deny' | 'line', at?: number) {
     this.last.sfx = name; this.last.count++;
-    if (!this.ctx || this.ctx.state !== 'running') return;
-    const t = this.ctx.currentTime;
+    if (!this.ctx || (at === undefined && this.ctx.state !== 'running')) return;
+    const t = at ?? this.ctx.currentTime;
     const s = (f: number, d: number, off = 0, type: OscillatorType = 'triangle', p = 0.6) => this.tone(f, t + off, d, type, this.sfx, p);
     switch (name) {
       case 'move': s(330, 0.12); break;
@@ -74,6 +88,28 @@ export class Mixer {
       case 'solve': s(523.25, 0.3); s(659.25, 0.3, 0.1); s(783.99, 0.5, 0.2); break;
       case 'cue': s(392, 0.9, 0, 'sine', 0.5); s(587.33, 0.9, 0.35, 'sine', 0.4); break;
     }
+  }
+  /**
+   * Renders a scripted session offline (no speakers) so tests can measure silence, clipping and transitions. Not used in play.
+   * Eras change at tick boundaries exactly as in play; `volumes` are the three settings sliders (0..1).
+   */
+  async renderOffline(plan: { era: string; seconds: number }[], sfx: { name: Parameters<Mixer['play']>[0]; at: number }[] = [], volumes = { master: 0.7, music: 0.6, sfx: 0.8 }, sampleRate = 22050): Promise<Float32Array> {
+    const total = plan.reduce((n, p) => n + p.seconds, 0);
+    const ctx = new OfflineAudioContext(1, Math.ceil(total * sampleRate), sampleRate);
+    this.ctx = ctx as unknown as AudioContext;
+    this.master = ctx.createGain(); this.music = ctx.createGain(); this.sfx = ctx.createGain();
+    this.music.connect(this.master); this.sfx.connect(this.master); this.master.connect(ctx.destination);
+    this.master.gain.value = volumes.master; this.music.gain.value = volumes.music * MUSIC_GAIN; this.sfx.gain.value = volumes.sfx * SFX_GAIN;
+    let t0 = 0;
+    for (const seg of plan) {
+      this.setEra(seg.era);
+      for (let t = t0; t < t0 + seg.seconds; t += 2.4) this.tick(t);
+      t0 += seg.seconds;
+    }
+    for (const e of sfx) this.play(e.name, e.at);
+    const buf = await ctx.startRendering();
+    this.ctx = null;
+    return buf.getChannelData(0);
   }
   dispose() { clearInterval(this.timer); void this.ctx?.close(); this.ctx = null; }
 }

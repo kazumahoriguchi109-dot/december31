@@ -16,3 +16,4 @@ december31-save-*.json
 .env
 .env.*
 *.pem
+tests/e2e/_shots.spec.ts

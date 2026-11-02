@@ -1,4 +1,5 @@
-import { expect, test, type Page, type BrowserContext } from '@playwright/test';
+import { expect, test } from './fixtures';
+import type { Page, BrowserContext } from '@playwright/test';
 
 // Real-browser persistence tests. They use the real IndexedDB, real Web Locks and the real DOM of the dev build.
 // Each test gets a fresh browser context, so the database starts empty.
@@ -248,4 +249,55 @@ test('manual save: overwriting another slot asks first; refusing changes nothing
   const before = await raw(page, 'slots', 'manual-1');
   await page.locator('#c-no').click();
   expect(await raw(page, 'slots', 'manual-1')).toEqual(before);
+});
+
+test('review fix: finishing a dialogue is saved without waiting for another command', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#b-new').click();
+  await page.locator('[data-new="manual-1"]').click();
+  await expect(page.locator('#dlg-text')).toBeVisible();
+  for (let i = 0; i < 30; i++) {
+    const next = page.locator('#dlg:not([hidden]) [data-action-id="dlg_next"]');
+    if (await next.count() === 0) break;
+    await next.first().click(); await pause(page);
+  }
+  await waitSaved(page);
+  const stored = (await raw(page, 'slots', 'auto')).game;
+  expect(stored.dialogue.activeId).toBeNull();
+  expect(stored.dialogue.seenIds).toContain('D000');
+});
+
+test('review fix: with no saved settings the OS reduced-motion preference is used', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.locator('#b-set').click();
+  await expect(page.locator('#s-motion')).toBeChecked();
+});
+
+test('storage unavailable: the player can still play from the title, nothing is written, and pause says progress is not saved', async ({ browser }) => {
+  const ctx: BrowserContext = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'locks', { get: () => undefined }); });
+  await page.goto('/');
+  await expect(page.locator('[data-error-code="E_CAPABILITY"]')).toBeVisible();
+  await page.locator('#e-unsaved').click();
+  await expect(page.locator('#dlg-text')).toBeVisible();                       // the opening plays
+  await skipDialogue(page);
+  expect((await sh(page)).screen).toBe('PLAY');
+  await expect(page.locator('#savestate')).toContainText('保存されません');          // the unsaved state is visible while playing
+  await page.waitForTimeout(1200);
+  await expect(page.locator('#savestate')).not.toContainText('保存しました');
+  await page.locator('#pausebtn').click();
+  await expect(page.locator('#p-resume')).toBeVisible();
+  await expect(page.locator('#p-slots')).toHaveCount(0);                          // no save list that could not save
+  await page.locator('#p-title').click();
+  await expect(page.locator('#c-yes')).toBeVisible();
+  await expect(page.locator('[data-screen="CONFIRM"]')).toContainText('消えます');
+  const wrote = await page.evaluate(() => new Promise<number>((res) => {
+    const r = indexedDB.open('december31');
+    r.onsuccess = () => { const db = r.result; if (!db.objectStoreNames.contains('slots')) { db.close(); return res(0); } const c = db.transaction('slots').objectStore('slots').count(); c.onsuccess = () => { db.close(); res(c.result); }; };
+    r.onerror = () => res(0);
+  }));
+  expect(wrote).toBe(0);
+  await ctx.close();
 });

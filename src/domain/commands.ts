@@ -173,10 +173,11 @@ function reduceInner(prev: GameState, cmd: Command): Result {
     }
     case 'return_home': {
       if (milestone !== 'RETURN_OPEN' || !atPortal(s) || s.toto.mode !== 'follow') return fail(copy('locked_generic')); // never alone
+      const from = s.player.anchor; // portal_front or portal_back
       s.progress.milestone = 'ENDING';
       s.player.anchor = 'home';
       s.player.view = 'front';
-      ev.push({ type: 'ending' }, { type: 'moved', from: 'portal_front', to: 'home' });
+      ev.push({ type: 'ending' }, { type: 'moved', from, to: 'home' });
       return done();
     }
     case 'p03_wait': {

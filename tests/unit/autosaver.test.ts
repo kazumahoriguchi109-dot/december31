@@ -3,6 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AutoSaver } from '../../src/app/autosaver';
 import { SaveStore } from '../../src/persistence/store';
+import { SaveError } from '../../src/persistence/types';
 import type { GameState } from '../../src/domain/types';
 import fx from '../fixtures/starts/m1a_p04.json';
 
@@ -60,6 +61,18 @@ describe('AutoSaver', () => {
     const a = new AutoSaver(store, info, 10_000);
     a.schedule(game()); a.reset(); await a.flush();
     expect(a.saves).toBe(0);
+  });
+  it('a write that fails after a Load/New does not halt the new run', async () => {
+    const a = new AutoSaver(store, info, 0);
+    const orig = store.saveSlot.bind(store);
+    let release!: () => void;
+    store.saveSlot = (() => new Promise((_res, rej) => { release = () => rej(new SaveError('E_CONFLICT', 'late conflict')); })) as never;
+    a.schedule(game(), true);
+    await new Promise((r) => setTimeout(r, 5));
+    a.reset();                                   // a Load/New replaced the run while the old write was still in flight
+    store.saveSlot = orig;
+    release(); await a.flush();
+    expect(a.halted).toBe(false);
   });
   it('reports a slow write after 5 s and an unfinished one after 10 s', async () => {
     vi.useFakeTimers();

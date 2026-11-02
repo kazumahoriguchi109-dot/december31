@@ -137,7 +137,8 @@ export class SaveStore {
   async getSettings(): Promise<SettingsRecord> {
     return this.txn(['settings'], 'settings', async (t) => {
       const s = (await reqP(t.objectStore('settings').get('global'))) as SettingsRecord | undefined;
-      return s ?? defaultSettings();
+      // nothing saved yet: follow the OS motion preference instead of silently turning it off
+      return s ?? defaultSettings(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
     }, false);
   }
 

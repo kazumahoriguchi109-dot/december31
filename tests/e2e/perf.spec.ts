@@ -1,8 +1,10 @@
-import { test } from '@playwright/test';
+import { test } from './fixtures';
+
 import { openGame } from './helpers';
 
 // Synchronous cost of one full refresh (state -> DOM rebuild + WebGL draw), headless, 1366x768. Informational, not a pass/fail gate.
 test('refresh cost p50/p95', async ({ page }) => {
+  test.setTimeout(120_000); // software GL (SwiftShader) in headless is slow; real-GPU timing is still a human/hardware check
   await page.setViewportSize({ width: 1366, height: 768 });
   for (const start of ['M1A_P04', 'M1A_P05']) {
     await openGame(page, `/?start=${start}`);

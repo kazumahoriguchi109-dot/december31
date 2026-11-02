@@ -1,7 +1,11 @@
 import * as THREE from 'three';
+import { buildScenery, figure } from './scenery';
 import { anchorDef, puzzles, world } from '../content/load';
 import type { Anchor, Era, View } from '../domain/types';
 import { ARM_STEMS, ribbon, spec, zOf, type Piece } from './p05Geometry';
+import { canvasTexture, lam, lamTex, meadowTexture, rng } from './materials';
+import { EraStyle, isPixelEra } from './eraStyle';
+import { PixelPost } from './pixelPost';
 
 /** Everything the renderer needs. It is a pure projection of game state; the renderer never writes state back. */
 export interface ViewModel {
@@ -17,19 +21,25 @@ export interface ViewModel {
   p03: { gateOpen: boolean; latched: boolean; plateDown: boolean };
   totoWait: 'p03_plate' | 'p06_front' | 'p06_back' | null;
   p06: { latched: boolean; frontHeld: boolean; backHeld: boolean };
+  /** The player's "reduce motion" setting (falling snow stands still when set). The OS preference is always honoured as well. */
+  reducedMotion?: boolean;
 }
 
 const C = {
-  sky: 0x1e2f45, observeBg: 0x121c2b, ground: 0x2d4a40, plateau: 0x3c5a68, wall: 0xf0eee5, gold: 0xd9ac5b,
+  sky: 0x1e2f45, observeBg: 0x121c2b, ground: 0x2d4a40, wall: 0xf0eee5, gold: 0xd9ac5b,
   player: 0xd98f5b, toto: 0x527d69, rail: 0x4a5c72, fixed: 0xffffff, a: 0xffd166, b: 0x66d9ef,
 };
 const WALL_FRONT_X = 13.99;
+/** Friends are drawn larger than life on the open cameras so they read at a glance; on the wall cameras they stay small and beside the pattern. */
+const FIG_SCALE = 1.6;
 
 export const RES = { E0: [320, 180], E1: [640, 360] } as const;
 
 export class WorldView {
   readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
+  /** The whole outdoor world. Hidden for the square observation frame so that only the instrument is drawn there. */
+  private readonly worldRoot = new THREE.Group();
   /** Quality setting 'low': render at device pixel ratio 1 (cheaper on weak GPUs). */
   lowQuality = false;
   private readonly cameras = new Map<string, THREE.Camera>();
@@ -37,77 +47,99 @@ export class WorldView {
   private readonly wallFlat = new THREE.Group();
   private readonly pieces: Record<'a' | 'b', THREE.Mesh[]> = { a: [], b: [] };
   private readonly carriages: Record<'a' | 'b', THREE.Group[]> = { a: [], b: [] };
-  private readonly player: THREE.Mesh;
-  private readonly toto: THREE.Mesh;
+  private readonly player: THREE.Object3D;
+  private readonly toto: THREE.Object3D;
   private readonly early = new EarlyPuzzles();
   private readonly room = new RoomScene();
+  private apparatus: THREE.Object3D | null = null;
+  private readonly style: EraStyle;
+  private readonly post: PixelPost;
+  /** E0/E1 are shown through this 2D canvas: the finished pixel picture (palette, outlines). The GL canvas keeps the true render. */
+  private readonly pix: HTMLCanvasElement;
+  private readonly pixCtx: CanvasRenderingContext2D | null;
   /** The room is a separate scene so none of the outer world can show through. */
   private readonly roomScene = new THREE.Scene();
   private vm: ViewModel | null = null;
   private stageW = 960;
   private stageH = 540;
+  private raf = 0;
+  private lastTick = 0;
+  private nextTick = 0;
+  private readonly target = new THREE.Vector3();
+  private readonly fogs = new Map<Era, THREE.Fog | null>();
+  private readonly wallMat = new THREE.MeshLambertMaterial({ color: C.wall, fog: false });
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
     this.renderer.setClearColor(C.sky);
-    this.buildStatic();
+    this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.autoUpdate = false; // the shadow map is refreshed when the picture is rebuilt, not for every snowflake frame
+    this.pix = document.createElement('canvas');
+    this.pix.id = 'world-pix'; this.pix.setAttribute('aria-hidden', 'true'); this.pix.hidden = true;
+    this.pix.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated';
+    canvas.insertAdjacentElement('afterend', this.pix);
+    this.pixCtx = this.pix.getContext('2d', { willReadFrequently: true });
+    this.scene.add(this.worldRoot);
+    const lamps = this.buildStatic();
     this.buildWall();
     this.buildApparatus();
-    this.scene.add(this.early.root);
+    this.worldRoot.add(this.early.root);
     this.roomScene.add(this.room.root, new THREE.AmbientLight(0xffffff, 1.0));
-    const cap = new THREE.CapsuleGeometry(0.25, 0.5, 4, 10);
-    this.player = new THREE.Mesh(cap, new THREE.MeshLambertMaterial({ color: C.player }));
-    this.toto = new THREE.Mesh(cap, new THREE.MeshLambertMaterial({ color: C.toto }));
-    this.scene.add(this.player, this.toto);
+    this.player = figure(C.player, 0xf2e6c9, 'player');
+    this.toto = figure(C.toto, 0xd05a4e, 'toto');
+    this.worldRoot.add(this.player, this.toto);
+    this.style = new EraStyle(this.worldRoot, lamps);
+    EraStyle.tagShadows(this.worldRoot);
+    this.post = new PixelPost(this.renderer);
   }
 
   // ---------- scene construction ----------
   private buildStatic() {
-    const amb = new THREE.AmbientLight(0xffffff, 1.0);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-    sun.position.set(-5, 10, 2); // from the viewer side of the wall, so -X faces are evenly lit and tops are brighter
-    this.scene.add(amb, sun);
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshLambertMaterial({ color: C.ground }));
+    const R = this.worldRoot;
+    const meadow = meadowTexture(); meadow.repeat.set(30, 30);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), lamTex(0xffffff, meadow, 'meadow'));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(14, 0, 14);
-    this.scene.add(ground);
-    // vertical bands so that horizontal wall cameras still show a floor line and a sky
-    const band = new THREE.Mesh(new THREE.PlaneGeometry(240, 30), new THREE.MeshBasicMaterial({ color: C.ground, side: THREE.DoubleSide }));
+    ground.userData['flat'] = true; ground.userData['ground'] = true;
+    R.add(ground);
+    // vertical band so that horizontal wall cameras still show a floor line: the far meadow seen edge-on (grass blades, stones, drifts)
+    const bandTex = canvasTexture('band', 512, 128, (g, w, h) => {
+      const r = rng(41);
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#31523f'); gr.addColorStop(0.35, '#2a4a3b'); gr.addColorStop(1, '#1b3329');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 260; i++) { g.fillStyle = r() < 0.5 ? '#3d6650' : '#1f3a2e'; g.fillRect(r() * w, r() * h * 0.9, 2 + r() * 8, 1 + r() * 3); }
+      for (let i = 0; i < 120; i++) { // blades along the top edge
+        const x = r() * w, hh = 3 + r() * 10; g.fillStyle = r() < 0.5 ? '#40704f' : '#284a3a'; g.beginPath(); g.moveTo(x - 2, 0); g.lineTo(x, hh); g.lineTo(x + 2, 0); g.fill();
+      }
+      for (let i = 0; i < 26; i++) { g.fillStyle = 'rgb(120,150,168)'; g.fillRect(r() * w, 6 + r() * 60, 3 + r() * 9, 2); } // snow flecks, tinted (nothing white behind the wall)
+      for (let i = 0; i < 12; i++) { g.fillStyle = '#56687a'; g.beginPath(); g.ellipse(r() * w, 12 + r() * 70, 4 + r() * 6, 3 + r() * 3, 0, 0, 7); g.fill(); }
+    });
+    bandTex.repeat.set(16, 1);
+    const band = new THREE.Mesh(new THREE.PlaneGeometry(240, 6), new THREE.MeshBasicMaterial({ map: bandTex, side: THREE.DoubleSide, fog: false }));
     band.rotation.y = -Math.PI / 2;
-    band.position.set(50, -15, 14);
-    this.scene.add(band);
-    // plateaus the observatory and the castle stand on (anchors are at y=2)
-    for (const [x, z] of [[22, 20], [28, 26]] as const) {
-      const p = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 8), new THREE.MeshLambertMaterial({ color: C.plateau }));
-      p.position.set(x, 1, z);
-      this.scene.add(p);
-    }
+    band.position.set(50, -3, 14);
+    band.userData['flat'] = true;
+    R.add(band);
     // placeholder landmarks (temporary original shapes; not final art)
-    const gold = new THREE.MeshLambertMaterial({ color: C.gold });
+    const gold = lam(C.gold);
     const black = new THREE.MeshBasicMaterial({ color: 0x05080d });
-    const frame = new THREE.Group();
+    const frame = new THREE.Group(); frame.userData['og'] = true;
     frame.add(box(0.3, 3, 0.3, gold, -1.35, 1.5, 0), box(0.3, 3, 0.3, gold, 1.35, 1.5, 0), box(3, 0.3, 0.3, gold, 0, 3.15, 0), box(2.4, 3, 0.05, black, 0, 1.5, 0));
-    this.scene.add(frame);
-    this.scene.add(box(2.4, 0.15, 2.4, new THREE.MeshLambertMaterial({ color: 0x8aa1b5 }), 0, 0.08, 5));
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.4, 24), new THREE.MeshLambertMaterial({ color: 0xaf6654 }));
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(6, 1.5, 8);
-    this.scene.add(wheel);
-    const gate = new THREE.Group();
+    R.add(frame);
+    R.add(box(2.4, 0.15, 2.4, lam(0x8aa1b5), 0, 0.08, 5));
+    const gate = new THREE.Group(); gate.userData['og'] = true;
     gate.add(box(0.4, 3, 0.4, gold, 8.8, 1.5, 12), box(0.4, 3, 0.4, gold, 11.2, 1.5, 12), box(2.8, 0.4, 0.4, gold, 10, 3, 12));
-    this.scene.add(gate);
-    const castle = new THREE.Group();
-    const stone = new THREE.MeshLambertMaterial({ color: 0xcfd6dd });
-    castle.add(box(3.6, 2.4, 3.6, stone, 28, 3.2, 26), box(1.6, 2.4, 1.6, stone, 28, 5.6, 26), box(0.9, 0.9, 0.9, gold, 28, 7.3, 26));
-    this.scene.add(castle);
+    R.add(gate);
+    return buildScenery(R).lamps;
   }
 
   private buildWall() {
-    const mat = new THREE.MeshLambertMaterial({ color: C.wall });
+    const mat = this.wallMat;
     for (const b of puzzles.p04Geometry.boxes) {
       const [x0, y0, z0] = b.min as [number, number, number];
       const [x1, y1, z1] = b.max as [number, number, number];
-      this.wallBoxes.add(box(x1 - x0, y1 - y0, z1 - z0, mat, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2));
+      const m = box(x1 - x0, y1 - y0, z1 - z0, mat, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+      m.userData['wall'] = true; this.wallBoxes.add(m);
     }
     // E0/E1: the same silhouette as one flat shape built from the documented front mask polygon
     const poly = puzzles.p04Geometry.frontMaskPolygonUV as [number, number][];
@@ -116,8 +148,8 @@ export class WorldView {
     const pos = g.getAttribute('position') as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) pos.setXYZ(i, WALL_FRONT_X, pos.getY(i), 14 + pos.getX(i));
     pos.needsUpdate = true;
-    this.wallFlat.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: C.wall, side: THREE.DoubleSide })));
-    this.scene.add(this.wallBoxes, this.wallFlat);
+    this.wallFlat.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: C.wall, side: THREE.DoubleSide, fog: false })));
+    this.worldRoot.add(this.wallBoxes, this.wallFlat);
   }
 
   private buildApparatus() {
@@ -131,10 +163,10 @@ export class WorldView {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       g.setIndex(indices);
-      return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
+      return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, fog: false }));
     };
     root.add(mk('fixed', 0, C.fixed));
-    const railMat = new THREE.MeshBasicMaterial({ color: C.rail });
+    const railMat = new THREE.MeshBasicMaterial({ color: C.rail, fog: false });
     for (const piece of ['a', 'b'] as const) {
       const color = piece === 'a' ? C.a : C.b;
       const st = ARM_STEMS[piece];
@@ -155,6 +187,7 @@ export class WorldView {
       const ex = (r + st.length) * dx, ey = (r + st.length) * dy;
       root.add(box(0.12, 0.12, 3.4, railMat, ex, ey, 5)); // rail along the depth axis
     }
+    this.apparatus = root;
     this.scene.add(root);
   }
 
@@ -199,9 +232,11 @@ export class WorldView {
   render(vm: ViewModel) {
     this.vm = vm;
     const square = WorldView.isSquare(vm.presetId);
-    const lowRes = !square && (vm.era === 'E0' || vm.era === 'E1');
+    const pixel = isPixelEra(vm.era);
+    const lowRes = !square && pixel;
+    let w: number, h: number;
     if (lowRes) {
-      const [w, h] = RES[vm.era as 'E0' | 'E1'];
+      [w, h] = RES[vm.era as 'E0' | 'E1'];
       this.renderer.setPixelRatio(1);
       this.renderer.setSize(w, h, false);
       this.canvas.style.imageRendering = 'pixelated';
@@ -209,19 +244,80 @@ export class WorldView {
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.lowQuality ? 1 : 1.5));
       this.renderer.setSize(this.stageW, this.stageH, false);
       this.canvas.style.imageRendering = 'auto';
+      w = this.canvas.width; h = this.canvas.height;
     }
-    this.renderer.setClearColor(square ? C.observeBg : this.room.root.visible ? 0x2a2118 : C.sky);
-    const flat = vm.era === 'E0' || vm.era === 'E1';
+    // E0/E1 draw the white wall as one flat mask shape on the two front cameras (the P04 silhouette); everywhere else the solid wall is drawn
+    const flat = isPixelEra(vm.era) && (vm.presetId === 'wall_base_front' || vm.presetId === 'wall_top_front');
     this.wallBoxes.visible = !flat;
     this.wallFlat.visible = flat;
     for (const piece of ['a', 'b'] as const) {
       const sel = vm.p05[piece];
       this.pieces[piece].forEach((_, i) => { this.carriages[piece][i]!.visible = i === sel; });
     }
+    if (this.apparatus) this.apparatus.visible = vm.anchor === 'observatory'; // the instrument is only drawn where it is used
     this.early.apply(vm);
     this.room.apply(vm);
+    const inRoom = this.room.root.visible;
     this.placeFigures(vm);
-    this.renderer.render(this.room.root.visible ? this.roomScene : this.scene, this.camera(vm.presetId));
+    // the square observation frame draws the instrument alone on a plain ground: nothing of the landscape may sit behind its lines
+    this.worldRoot.visible = !square;
+    const preset = world.cameraPresets[vm.presetId]!;
+    this.target.set(...preset.target as [number, number, number]);
+    const wallView = vm.presetId.startsWith('wall_');
+    let clear = square ? C.observeBg : inRoom ? 0x2a2118 : C.sky;
+    if (!square && !inRoom) {
+      const st = this.style.apply(this.worldRoot, { era: vm.era, target: this.target, wallView, reduced: this.reduced(vm), low: this.lowQuality });
+      clear = st.clear;
+      this.wallMat.emissive.set(vm.era === 'E3' ? 0xa5a39d : vm.era === 'E2' ? 0x8f8d88 : 0x000000); // the wall is the clue: lighting must not grey or tint it away from white (review: it read grey in E2/E3)
+      if (!this.fogs.has(vm.era)) this.fogs.set(vm.era, this.style.fogFor(vm.era));
+      this.scene.fog = this.fogs.get(vm.era) ?? null;
+      this.style.updateSnow(this.target, 0);
+      this.renderer.shadowMap.needsUpdate = true;
+    } else this.scene.fog = null;
+    this.renderer.setClearColor(clear);
+    const cam = this.camera(vm.presetId);
+    const sceneToDraw = inRoom ? this.roomScene : this.scene;
+    if (lowRes && !inRoom && this.pixCtx) {
+      if (this.pix.width !== w || this.pix.height !== h) { this.pix.width = w; this.pix.height = h; }
+      this.post.run(this.scene, cam, vm.era, w, h, clear, this.pixCtx);
+      this.renderer.setClearColor(clear);
+    }
+    this.renderer.render(sceneToDraw, cam);
+    this.showDots(lowRes && !inRoom && !!this.pixCtx);
+    this.syncLoop(vm, square, inRoom, wallView);
+  }
+
+  private reduced(vm: ViewModel) { return !!vm.reducedMotion || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches); }
+
+  /** Falling snow (E3 only, open cameras): a light frame loop that only moves the flakes. Stops when the picture is not E3 outdoors or the tab is hidden. */
+  private syncLoop(vm: ViewModel, square: boolean, inRoom: boolean, wallView: boolean) {
+    const want = vm.era === 'E3' && !square && !inRoom && !wallView && !this.reduced(vm) && !this.lowQuality && !this.snowGaveUp;
+    if (!want) { if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } return; }
+    if (this.raf) return;
+    this.lastTick = performance.now(); this.nextTick = this.lastTick + 33; this.prevRaf = 0; this.slowFrames = 0;
+    const tick = (now: number) => {
+      this.raf = requestAnimationFrame(tick);
+      // The page itself is struggling (frames arrive far apart: software rendering, a weak GPU, a busy machine): the snow is the
+      // first thing to go, for good, so that clicks and keys are never starved by decoration.
+      if (this.prevRaf && now - this.prevRaf > 90) this.slowFrames++; else if (this.prevRaf) this.slowFrames = Math.max(0, this.slowFrames - 1);
+      this.prevRaf = now;
+      if (this.slowFrames >= 4) { this.snowGaveUp = true; cancelAnimationFrame(this.raf); this.raf = 0; return; }
+      const v = this.vm;
+      if (!v || document.hidden || now < this.nextTick) return;
+      const dt = Math.min(0.1, (now - this.lastTick) / 1000); this.lastTick = now;
+      this.style.updateSnow(this.target, dt);
+      this.renderer.render(this.scene, this.camera(v.presetId));
+      // about 30 fps at most, and never more than a fifth of the main thread: a slow device simply sees slower snow
+      this.nextTick = now + Math.max(33, (performance.now() - now) * 4);
+    };
+    this.raf = requestAnimationFrame(tick);
+  }
+
+  private prevRaf = 0; private slowFrames = 0; private snowGaveUp = false;
+
+  private showDots(on: boolean) {
+    this.pix.hidden = !on;
+    this.canvas.style.visibility = on ? 'hidden' : 'visible';
   }
 
   private placeFigures(vm: ViewModel) {
@@ -230,14 +326,18 @@ export class WorldView {
     const wall = vm.anchor === 'wall_base' || vm.anchor === 'wall_top';
     // On the wall cameras the figures are drawn beside the pattern (render offset only), so the silhouette is never covered.
     const pz = wall ? (vm.anchor === 'wall_base' ? 13.2 : 17.5) : z;
-    const px = wall && vm.anchor === 'wall_top' ? 14.6 : x;
+    const side = vm.anchor === 'p01_panel' ? -1.9 : 0; // the friends stand beside the L-shaped tile so that, larger than life, they do not hide it
+    const px = wall && vm.anchor === 'wall_top' ? 14.6 : x + side;
     const tz = wall ? (vm.anchor === 'wall_base' ? 12.5 : 17.5) : z;
-    const tx = wall ? (vm.anchor === 'wall_top' ? 14.6 : x) : x + 0.6;
-    this.player.position.set(px, y + 0.5, pz);
-    this.toto.position.set(tx, y + 0.5, wall && vm.anchor === 'wall_top' ? tz - 0.9 : tz);
-    if (vm.totoWait === 'p03_plate') this.toto.position.set(10, 0.5, 9.2); // on the plate
-    else if (vm.totoWait === 'p06_front') this.toto.position.set(0, 0.5, -1.5);
-    else if (vm.totoWait === 'p06_back') this.toto.position.set(0, 0.5, 1.5);
+    const tx = wall ? (vm.anchor === 'wall_top' ? 14.6 : x) : x + side + 0.6;
+    const s = wall ? 1 : FIG_SCALE;
+    const lift = 0.5 * s - 0.02 * (s - 1); // keeps the feet (and the blob shadow) on the ground at any scale
+    this.player.scale.setScalar(s); this.toto.scale.setScalar(s);
+    this.player.position.set(px, y + lift, pz);
+    this.toto.position.set(tx, y + lift, wall && vm.anchor === 'wall_top' ? tz - 0.9 : tz);
+    if (vm.totoWait === 'p03_plate') this.toto.position.set(10, lift, 9.2); // on the plate
+    else if (vm.totoWait === 'p06_front') this.toto.position.set(0, lift, -1.5);
+    else if (vm.totoWait === 'p06_back') this.toto.position.set(0, lift, 1.5);
     this.player.visible = this.toto.visible = def.space === 'world';
   }
 
@@ -280,15 +380,10 @@ class RoomScene {
     // table calendar: a small card with a red top
     const cal = box(0.5, 0.45, 0.1, basic(0xf4f0e6), 3.0, 1.84, 4.9);
     const calTop = box(0.5, 0.12, 0.12, basic(0xd05a4e), 3.0, 2.0, 4.9);
-    // two friends seen from behind, sharing one screen
-    const body = (x: number, c: number) => {
-      const g = new THREE.Group();
-      g.add(box(0.7, 0.9, 0.5, mat(c), 0, 1.0, 0), new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 10), mat(0xf0c7a0)));
-      g.children[1]!.position.set(0, 1.78, 0);
-      g.position.set(x, 0, 3.4);
-      return g;
-    };
-    const me = body(0.4, C.player), toto = body(2.0, C.toto);
+    // the same two friends as in the world, seen from behind, sharing one screen
+    const me = figure(C.player, 0xf2e6c9, 'player'), toto = figure(C.toto, 0xd05a4e, 'toto');
+    me.position.set(0.4, 0.6, 3.4); toto.position.set(2.0, 0.6, 3.4);
+    me.rotation.y = toto.rotation.y = Math.PI; // facing the screen
     const lamp = new THREE.PointLight(0xffe2b0, 40, 14); lamp.position.set(0, 5, 2);
     // two steady rings on the screen (visible at the ending only)
     for (const r of [0.2, 0.34]) {

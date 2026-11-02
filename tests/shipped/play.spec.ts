@@ -46,7 +46,8 @@ test('the shipped game: title -> opening -> all six puzzles -> ending -> credits
   await act(page, 'p03_latch'); await act(page, 'p03_call'); await act(page, 'move_wall_base');
   expect(await obj(page)).toBe('城へ続く高い道を探そう');
   // save and resume in the middle of the game (a real reload of the page)
-  await expect(page.locator('#savestate')).toHaveText('保存しました', { timeout: 10000 });
+  try { await expect(page.locator('#savestate')).toHaveText('保存しました', { timeout: 10000 }); }
+  catch (e) { console.log('SAVER DIAG ' + (await page.locator('#savestate').getAttribute('data-diag'))); throw e; } // what the saver did, for a failing run
   await page.reload();
   await page.locator('#b-cont').click();
   await expect(page.locator('#obj-text')).toHaveText('城へ続く高い道を探そう');
