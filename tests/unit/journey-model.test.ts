@@ -95,7 +95,7 @@ describe('evolution direct-control model',()=>{
   expect(context(s)?.id).toBe('drain');
   const handle={x:MAP.stopperControl.x-.85,z:MAP.stopperControl.z-.6};
   expect(distance(s.toto,handle)).toBeGreaterThanOrEqual(1);
-  expect(s.toto.x).toBeCloseTo(s.player.x+1.15,1);expect(s.toto.z).toBeCloseTo(s.player.z+1,1);
+  expect(s.toto.x).toBeCloseTo(s.player.x+1.15,1);expect(s.toto.z).toBeCloseTo(s.player.z+1.5,1);
   expect(validateSave(s)).not.toBeNull();
   const loaded=validateSave(s)!;wait(loaded);expect(loaded.toto.x).toBeCloseTo(s.toto.x,1);expect(loaded.toto.z).toBeCloseTo(s.toto.z,1);
   }

@@ -119,7 +119,7 @@ function advanceFriend(s:JourneyState,dt:number):void {
  const millControl=atMillControl(s.player,MAP.drainControl)?MAP.drain:atMillControl(s.player,MAP.stopperControl)?MAP.stopper:null;
  if(s.phase==='world' && (millControl || (s.era<2 && distance(s.player,MAP.tileControl)<=1.1))){
   const beside={x:s.player.x+1.15,z:s.player.z};
-  if(millControl&&[MAP.drainControl,MAP.stopperControl].some(c=>distance(beside,{x:c.x-.85,z:c.z-.6})<1))beside.z+=1;
+  if(millControl&&[MAP.drainControl,MAP.stopperControl].some(c=>distance(beside,{x:c.x-.85,z:c.z-.6})<1))beside.z+=1.5;
   if(distance(s.toto,s.player)<2 && clearSegment(s,s.toto,beside)){
    const d=distance(s.toto,beside),travel=Math.min(d,3*dt);
    if(d>.02)moveActor(s,s.toto,(beside.x-s.toto.x)/d*travel,(beside.z-s.toto.z)/d*travel,true);
