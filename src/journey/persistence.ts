@@ -3,8 +3,8 @@ import { validateSave } from './model';
 
 // Cycle-specific namespace: cycle004/005 v3 records and earlier saves remain untouched.
 // State schema version and preview namespace are independent. No automatic migration or legacy reads.
-const JOURNEY_KEY = 'dec31-evolution-c008:journey';
-const PREFERENCES_KEY = 'dec31-evolution-c008:preferences';
+const JOURNEY_KEY = 'dec31-evolution-c009:journey';
+const PREFERENCES_KEY = 'dec31-evolution-c009:preferences';
 export interface JourneyPreferences { volume: number; reducedMotion: boolean }
 const defaults = (): JourneyPreferences => ({ volume: .65, reducedMotion: false });
 

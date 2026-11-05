@@ -34,6 +34,7 @@ export function portrait(speaker: string, emotion: DialogueEmotion): string {
     <ellipse cx="32" cy="55" rx="5" ry="2.7" fill="#d98f7c" opacity=".38"/><ellipse cx="65" cy="55" rx="5" ry="2.7" fill="#d98f7c" opacity=".38"/>
     <path d="M${toto ? '22 36 21 24 28 22 26 13 38 16 44 7 52 13 64 11 73 24 74 38 66 30 58 31 52 24 43 31 33 29Z' : '23 40Q17 14 42 11q27-3 32 24l-9 5-5-13-8 10-5-9-11 9-7-3-4 11Z'}" fill="${hair}"/>
     <path d="${toto ? 'M31 22l9 1 6-7 M54 19l9 2' : 'M29 25q6-11 16-10 M56 17q9 3 11 11'}" fill="none" stroke="#775344" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+    ${toto ? '' : '<path d="M64 28l6 3m-1-5l-3 8" fill="none" stroke="#d9ad65" stroke-width="2.6" stroke-linecap="round"/>'}
     <path d="${brows}" fill="none" stroke="${hair}" stroke-width="2" stroke-linecap="round"/>
     ${eyes}<path d="M48 48l-2 6h4" fill="none" stroke="#cb9679" stroke-width="1.3" stroke-linejoin="round"/>${mouth}
     ${toto ? '<path d="M29 71q19 11 39 0l2 10q-22 12-43 0Z" fill="#ad5148"/><path d="M57 80l12-1-4 27-12-2Z" fill="#ad5148"/><path d="M60 85l-3 17M32 76q12 6 22 4" fill="none" stroke="#d37e66" stroke-width="2"/>' : '<path d="M30 72l18 7-9 12-14-11ZM66 72l-18 7 9 12 14-11Z" fill="#e6d3aa"/><path d="M48 82v28" stroke="#e6d3aa" stroke-width="1.4"/><circle cx="53" cy="97" r="1.6" fill="#d6b27d"/>'}

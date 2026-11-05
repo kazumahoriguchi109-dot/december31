@@ -52,7 +52,17 @@ export function pixelActor(kind: Kind) {
    // The protagonist's broad rounded hem and Toto's straight jacket remain distinct without colour.
    poly(kind==='player'?[10,23,23,23,25,39,23,41,9,41,8,38]:[10,23,23,23,24,39,9,39],ink);
    poly(kind==='player'?[11,24,22,24,24,38,22,40,10,40,9,38]:[11,24,22,24,23,38,10,38],p.coat);
-   if(back){rect(11,25,11,3,p.trim);rect(16,30,1,7,p.shade);rect(11,37,12,1,p.shade);}
+   if(back){
+    if(kind==='player'){
+     // Broad pale collar and long rounded coat remain recognizable without color.
+     poly([10,24,16,27,23,24,22,28,16,30,11,28],p.trim);
+    }else{
+     // A long asymmetric scarf tail is legible even in E0's monochrome palette.
+     rect(10,24,13,3,p.trim);rect(19,26,4,10,p.trim);rect(18,35,5,2,p.trim);
+     rect(19,37,1,2,p.trim);rect(22,37,1,2,p.trim);
+    }
+    rect(15,31,1,5,p.shade);rect(11,37,12,1,p.shade);
+   }
    else{
     if(kind==='player'){poly([10,24,16,27,13,30,9,27],p.trim);poly([23,24,16,27,19,30,24,27],p.trim);}
     else{rect(10,24,13,4,p.trim);rect(20,27,3,11,p.trim);rect(20,36,3,2,'#d67e66');}
@@ -75,7 +85,7 @@ export function pixelActor(kind: Kind) {
    rect(8,7,17,16,p.hair);rect(10,10,13,14,skin);rect(7,8,18,5,p.hair);rect(10,5,12,4,p.hair);
    if(kind==='player'){rect(7,12,4,12,p.hair);rect(22,11,4,14,p.hair);rect(10,8,7,5,p.hair);rect(10,23,2,2,p.hair);}
    else{rect(18,3,4,5,p.hair);rect(13,5,3,3,p.hair);rect(8,9,4,6,p.hair);rect(19,9,4,3,p.hair);}
-   if(back){rect(9,9,15,15,p.hair);if(kind==='player'){rect(8,20,17,5,p.hair);}else{rect(11,21,11,3,p.hair);rect(12,23,10,2,skinShade);}}
+   if(back){rect(9,9,15,15,p.hair);if(kind==='player'){rect(7,19,19,7,p.hair);rect(8,25,4,2,p.hair);rect(21,25,4,2,p.hair);}else{rect(11,21,11,3,p.hair);rect(12,23,10,2,skinShade);}}
    else{
     if(expression==='relieved'){rect(12,16,3,1,ink);rect(13,15,1,1,ink);rect(19,16,3,1,ink);rect(20,15,1,1,ink);}
     else{rect(12,15,2,expression==='surprised'?4:3,ink);rect(20,15,2,expression==='surprised'?4:3,ink);}
@@ -125,11 +135,14 @@ export function createJourneyActor(kind:Kind):THREE.Group {
   for(const name of['rig-armL','rig-armR']){const arm=actor.getObjectByName(name);if(arm)addBox(arm,.135,.035,.15,name==='rig-armL'?-.07:.07,-.33,-.01,cream,'knit-cuff');}
  }else{
   addBox(body,.115,.14,.025,.16,.025,-.318,mat(0xad5148),'scarf-tip');
+  // The asymmetric tail is visible from behind as well as in the portrait.
+  addBox(body,.12,.27,.035,.16,.015,.29,mat(0xad5148),'scarf-back-tail');
+  for(const x of [.12,.16,.20])addBox(body,.012,.055,.04,x,-.145,.29,mat(0xad5148),'scarf-back-fringe');
   for(const x of[.12,.16,.20])addBox(body,.012,.05,.028,x,-.065,-.318,mat(0xad5148),'scarf-fringe');
   addBox(body,.085,.035,.025,-.14,.20,-.265,stitch,'jacket-tab');
   addBox(body,.025,.025,.025,-.14,.20,-.285,amber,'jacket-tab-button');
  }
  actor.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.receiveShadow=true;}});
- actor.userData['characterDesign']='winter-friends-cycle003';
+ actor.userData['characterDesign']='winter-friends-cycle009';
  return actor;
 }
