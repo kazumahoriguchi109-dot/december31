@@ -16,3 +16,13 @@ export function lightMemory(s:JourneyState,id:string):boolean {
  const key=`memory-lit-${id}`;if(s.seen.includes(key))return false;s.seen.push(key);return true;
 }
 export const memoryLit=(s:JourneyState,id:string)=>s.seen.includes(`memory-lit-${id}`);
+
+/** A lit trail is saved immediately; its explanation is only marked read after dismissal. */
+export function pendingMemoryExplanation(s:JourneyState):string|null {
+ if(s.phase!=='world')return null;
+ return MEMORIES.find(m=>memoryLit(s,m.id)&&!s.seen.includes(`memory-explained-${m.id}`))?.id??null;
+}
+export function acknowledgeMemoryExplanation(s:JourneyState,id:string):boolean {
+ if(!MEMORIES.some(m=>m.id===id)||!memoryLit(s,id)||s.seen.includes(`memory-explained-${id}`))return false;
+ s.seen.push(`memory-explained-${id}`);return true;
+}

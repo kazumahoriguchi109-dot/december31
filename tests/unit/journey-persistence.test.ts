@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createState } from '../../src/journey/model';
 import { clearJourney, loadJourney, loadPreferences, saveJourney, savePreferences } from '../../src/journey/persistence';
 
-const key = 'dec31-evolution-c011:journey';
+const key = 'dec31-evolution-c012:journey';
 let records: Map<string, string>;
 let storage: {getItem:ReturnType<typeof vi.fn>;setItem:ReturnType<typeof vi.fn>;removeItem:ReturnType<typeof vi.fn>};
 beforeEach(() => {
@@ -48,6 +48,8 @@ describe('isolated evolution persistence',()=>{
   });
   it('never reads, writes, migrates or deletes earlier namespaces even with valid same-schema saves',()=>{
     const sentinels=new Map([
+      ['dec31-evolution-c011:journey',JSON.stringify(createState())],
+      ['dec31-evolution-c011:preferences',JSON.stringify({volume:.3,reducedMotion:true})],
       ['dec31-evolution-c010:journey',JSON.stringify(createState())],
       ['dec31-evolution-c010:preferences',JSON.stringify({volume:.3,reducedMotion:true})],
       ['dec31-evolution-c009:journey',JSON.stringify(createState())],
@@ -73,7 +75,7 @@ describe('isolated evolution persistence',()=>{
     clearJourney();
     for(const [k,v] of sentinels)expect(records.get(k)).toBe(v);
     for(const method of [storage.getItem,storage.setItem,storage.removeItem])
-      expect(method.mock.calls.every(([k])=>k==='dec31-evolution-c011:journey'||k==='dec31-evolution-c011:preferences')).toBe(true);
+      expect(method.mock.calls.every(([k])=>k==='dec31-evolution-c012:journey'||k==='dec31-evolution-c012:preferences')).toBe(true);
   });
   it('returns failure on quota denial without claiming to save; blocked reads use safe defaults',()=>{
     storage.setItem.mockImplementation(()=>{throw new Error('QuotaExceededError');});
@@ -90,7 +92,7 @@ describe('isolated evolution persistence',()=>{
     expect(savePreferences({volume:1.1,reducedMotion:false})).toBe(false);
     expect(savePreferences({volume:.2,reducedMotion:true,extra:'ignored'} as any)).toBe(true);
     expect(loadPreferences()).toEqual({volume:.2,reducedMotion:true});
-    records.set('dec31-evolution-c011:preferences',JSON.stringify({volume:-1,reducedMotion:false}));
+    records.set('dec31-evolution-c012:preferences',JSON.stringify({volume:-1,reducedMotion:false}));
     expect(loadPreferences()).toEqual({volume:.65,reducedMotion:false});
   });
 });

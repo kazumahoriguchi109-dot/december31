@@ -1,5 +1,5 @@
 import {createState,step,stepCompanion,millCompanionStaging,context,interact,partner,rotate,objective} from './model';
-import {memoryAt,lightMemory,memoryLit} from './memories';
+import {memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation} from './memories';
 import {createRenderer} from './renderer';
 import {createUI} from './ui';
 import {createJourneyAudio} from './audio';
@@ -10,7 +10,7 @@ import './style.css';
 let state:JourneyState=createState();
 let preferences=loadPreferences();
 let screen:'title'|'game'|'pause'|'credits'='title';
-let dialogue:{speaker:string,text:string,expression:Expression}[]=[];
+let dialogue:{id:string,speaker:string,text:string,expression:Expression}[]=[];
 let pendingInteraction:{id:string,at:number}|null=null;
 let actionCue:{id:string,start:number,duration:number}|null=null;
 const expressionFor=(id:string,text:string):Expression=>/home|solved|portal-open|latch-fixed/.test(id)?'relieved':/arrival/.test(id)?'surprised':/wall|discovery|[？?]/.test(id+text)?'curious':'neutral';
@@ -35,7 +35,7 @@ function dialogueBlocked(){const stage=millCompanionStaging(state);return perfor
 function showLine(){const line=dialogueBlocked()?null:dialogue[0]??null;dialogueVisible=!!line;ui.setDialogue(line);if(!dialogue.length&&pendingEnding){pendingEnding=false;setScreen('credits');}}
 function events(list:JourneyEvent[]){
  for(const event of list){
-  if(event.type==='dialogue'){dialogue.push({speaker:event.speaker??'トト',text:event.text??event.id,expression:expressionFor(event.id,event.text??'')});if(event.id==='mill-solved'&&millCompanionStaging(state)&&!millCompanionStaging(state)?.ready)dialogueStageRemaining=1;}
+  if(event.type==='dialogue'){dialogue.push({id:event.id,speaker:event.speaker??'トト',text:event.text??event.id,expression:expressionFor(event.id,event.text??'')});if(event.id==='mill-solved'&&millCompanionStaging(state)&&!millCompanionStaging(state)?.ready)dialogueStageRemaining=1;}
   else if(event.type==='notice'){if(event.id==='partner-arrived'){if(toastId==='partner-walk-to-plate')toast(event.text??'',event.id);}else if(event.id==='partner-rejoined'){if(toastId==='partner-call')toast(event.text??'',event.id);}else toast(event.text??'',event.id);}
   else if(event.type==='sound')audio.play(event.id);
   else if(event.type==='evolution'){
@@ -53,6 +53,7 @@ function begin(fresh:boolean){
  state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
  if(fresh)events(step(state,{x:0,z:0,run:false},0));
  else if(state.phase==='ending')setScreen('credits');
+ else {const pending=pendingMemoryExplanation(state);if(pending)events([{type:'dialogue',id:`memory-light-${pending}`,speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'}]);}
  showLine();saveNow();
 }
 function action(id:string,value?:string){
@@ -64,7 +65,7 @@ function action(id:string,value?:string){
  if(id==='pause'&&screen==='game'){saveNow();setScreen('pause');return;}
  if(id==='resume'&&screen==='pause'){setScreen('game');return;}
  if(id==='credits'){setScreen('credits');return;}
- if(id==='next'&&screen==='game'&&dialogue.length&&dialogueVisible){dialogue.shift();audio.play('line');showLine();keys.clear();return;}
+ if(id==='next'&&screen==='game'&&dialogue.length&&dialogueVisible){const line=dialogue.shift()!;if(line.id.startsWith('memory-light-')&&acknowledgeMemoryExplanation(state,line.id.slice('memory-light-'.length)))saveNow();audio.play('line');showLine();keys.clear();return;}
  if(!available())return;
  if(id==='interact'){
   const memory=memoryAt(state,resonance);
@@ -72,8 +73,8 @@ function action(id:string,value?:string){
   if(memory&&!target?.enabled){
    const first=lightMemory(state,memory.id);
    const lines:JourneyEvent[]=memory.lines.map(([speaker,text],i)=>({type:'dialogue' as const,id:`memory-${memory.id}-${i}`,speaker,text}));
-   if(first)lines.push({type:'dialogue',id:'memory-light',speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'});
-   events(lines);return;
+   if(first)lines.push({type:'dialogue',id:`memory-light-${memory.id}`,speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'});
+   events(lines);if(first)toast('思い出の光が道に灯った。','memory-lit');return;
   }
   const animate=target?.enabled&&(['lever-a','lever-b'].includes(target.id)||target.id==='tile'&&!state.solved[0]||['drain','stopper'].includes(target.id)&&!state.solved[1]||target.id==='latch'&&!state.gateLatched);
   if(animate&&target){const now=performance.now();keys.clear();actionCue={id:target.id,start:now,duration:preferences.reducedMotion?180:750};pendingInteraction={id:target.id,at:now+(preferences.reducedMotion?100:450)};}

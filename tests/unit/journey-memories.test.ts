@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {createState,validateSave} from '../../src/journey/model';
-import {MEMORIES,memoryAt,lightMemory,memoryLit} from '../../src/journey/memories';
+import {MEMORIES,memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation} from '../../src/journey/memories';
 
 describe('optional resonance memories',()=>{
  it('persists each optional trail once without changing puzzle progress',()=>{
@@ -9,6 +9,13 @@ describe('optional resonance memories',()=>{
   expect(lightMemory(s,'gate')).toBe(false);expect(s.seen.filter(x=>x==='memory-lit-gate')).toHaveLength(1);
   expect(s.solved).toEqual(solved);const restored=validateSave(s);expect(restored).not.toBeNull();expect(memoryLit(restored!,'gate')).toBe(true);
   expect(memoryLit(restored!,'water')).toBe(false);s.era=2;expect(lightMemory(s,'water')).toBe(false);
+ });
+ it('recovers an unread light explanation and stops recovering it after acknowledgement',()=>{
+  const s=createState();s.phase='world';s.era=3;s.solved=[true,true,true,true,true,false];s.gateLatched=true;s.wallSeen=true;s.ringA=1;s.ringB=2;s.p1=1;s.p2Drain=false;s.p2Stopper=false;
+  expect(pendingMemoryExplanation(s)).toBeNull();expect(acknowledgeMemoryExplanation(s,'gate')).toBe(false);
+  expect(lightMemory(s,'gate')).toBe(true);let restored=validateSave(s)!;expect(pendingMemoryExplanation(restored)).toBe('gate');
+  expect(acknowledgeMemoryExplanation(restored,'gate')).toBe(true);expect(acknowledgeMemoryExplanation(restored,'gate')).toBe(false);
+  restored=validateSave(restored)!;expect(pendingMemoryExplanation(restored)).toBeNull();expect(memoryLit(restored,'gate')).toBe(true);
  });
  it('requires the late ability, resonance, world walking and proximity',()=>{
   const s=createState();s.phase='world';s.era=3;
