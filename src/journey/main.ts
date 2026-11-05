@@ -1,5 +1,5 @@
 import {createState,step,stepCompanion,millCompanionStaging,context,interact,partner,rotate,objective} from './model';
-import {memoryAt} from './memories';
+import {memoryAt,lightMemory,memoryLit} from './memories';
 import {createRenderer} from './renderer';
 import {createUI} from './ui';
 import {createJourneyAudio} from './audio';
@@ -69,7 +69,12 @@ function action(id:string,value?:string){
  if(id==='interact'){
   const memory=memoryAt(state,resonance);
   const target=context(state);
-  if(memory&&!target?.enabled){events(memory.lines.map(([speaker,text],i)=>({type:'dialogue' as const,id:`memory-${memory.id}-${i}`,speaker,text})));return;}
+  if(memory&&!target?.enabled){
+   const first=lightMemory(state,memory.id);
+   const lines:JourneyEvent[]=memory.lines.map(([speaker,text],i)=>({type:'dialogue' as const,id:`memory-${memory.id}-${i}`,speaker,text}));
+   if(first)lines.push({type:'dialogue',id:'memory-light',speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'});
+   events(lines);return;
+  }
   const animate=target?.enabled&&(['lever-a','lever-b'].includes(target.id)||target.id==='tile'&&!state.solved[0]||['drain','stopper'].includes(target.id)&&!state.solved[1]||target.id==='latch'&&!state.gateLatched);
   if(animate&&target){const now=performance.now();keys.clear();actionCue={id:target.id,start:now,duration:preferences.reducedMotion?180:750};pendingInteraction={id:target.id,at:now+(preferences.reducedMotion?100:450)};}
   else events(interact(state));
@@ -80,7 +85,7 @@ function action(id:string,value?:string){
   if(state.quarter!==previous){guardHeld=[...keys].some(k=>movementKeys.has(k));transitionUntil=performance.now()+(preferences.reducedMotion?100:280);}
  }else if(id==='resonance'){
   if(state.era<3){toast('まだ、この世界には見えていないものがある。');return;}
-  resonance=!resonance;audio.play('line');toast(resonance?'ふたりの跡が浮かんだ。近づいて、Eで思い出す。':'いつもの景色に戻った。');
+  resonance=!resonance;audio.play('line');toast(resonance?'ふたりの跡が浮かんだ。近づいて、Eで灯そう。':state.seen.some(id=>id.startsWith('memory-lit-'))?'共鳴を閉じた。灯した光は残っている。':'いつもの景色に戻った。');
  }
 }
 document.addEventListener('keydown',e=>{
@@ -121,7 +126,7 @@ function frame(now:number){
  if((moving&&now-lastSave>2000)||(wasMoving&&!moving)){saveNow();}wasMoving=moving;
  if(screen!=='title'){
   const actualContext=context(state),memory=memoryAt(state,resonance);
-  const shownContext=dialogue.length?null:actualContext?.enabled?actualContext:memory?{id:`memory-${memory.id}`,label:'ふたりの思い出',hint:memory.title,point:memory.point,enabled:true}:actualContext;
+  const shownContext=dialogue.length?null:actualContext?.enabled?actualContext:memory?{id:`memory-${memory.id}`,label:memoryLit(state,memory.id)?'ふたりの思い出を聞く':'思い出を灯す',hint:memory.title,point:memory.point,enabled:true}:actualContext;
   const focusContext=available()&&!guardHeld&&shownContext?.enabled?shownContext:null;
   ui.render(state,shownContext,objective(state));
   const interactButton=document.getElementById('journey-interact') as HTMLButtonElement;

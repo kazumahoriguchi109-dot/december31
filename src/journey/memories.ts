@@ -9,3 +9,10 @@ export function memoryAt(s:JourneyState,enabled:boolean):typeof MEMORIES[number]
  if(!enabled||s.phase!=='world'||s.mode!=='walk'||s.era<3)return null;
  return MEMORIES.find(m=>distance(s.player,m.point as Point)<1.25)??null;
 }
+
+/** Remembering is optional. A lit trace remains in the world and in the ordinary save. */
+export function lightMemory(s:JourneyState,id:string):boolean {
+ if(s.phase!=='world'||s.mode!=='walk'||s.era<3||!MEMORIES.some(m=>m.id===id))return false;
+ const key=`memory-lit-${id}`;if(s.seen.includes(key))return false;s.seen.push(key);return true;
+}
+export const memoryLit=(s:JourneyState,id:string)=>s.seen.includes(`memory-lit-${id}`);

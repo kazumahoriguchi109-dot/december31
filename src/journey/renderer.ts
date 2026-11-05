@@ -1,4 +1,4 @@
-import {MEMORIES} from './memories';
+import {MEMORIES,memoryLit} from './memories';
 import * as THREE from 'three';
 import {MAP,CONTROL_AREAS,isOnPlate,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
 import {poseJourneyActor} from './acting';
@@ -132,6 +132,17 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   for(const side of[-1,1]){const foot=box(mark,.14,.025,.32,side*.17,.08,0,side<0?C.gold:0x79c7d0);foot.rotation.y=side*.22;}
   const star=glyph(mark,'✦',0,2.5,0,'#f0ddb1',.55);star.userData['journeyMarker']=false;
  }
+ // Each remembered place leaves a persistent, collision-free breadcrumb trail toward home.
+ const litTrails=MEMORIES.map(m=>{
+  const trailGroup=new THREE.Group();outdoor.add(trailGroup);
+  for(let i=0;i<4;i++){
+   const x=m.point.x+1.35,z=m.point.z+.5+i*.9,y=heightAt({x,z});
+   const disc=new THREE.Mesh(new THREE.CircleGeometry(.18,12),new THREE.MeshBasicMaterial({color:0xf4cc7a,transparent:true,opacity:.9,depthWrite:false}));
+   disc.rotation.x=-Math.PI/2;disc.position.set(x,y+.085,z);trailGroup.add(disc);
+   const glint=torus(trailGroup,.27,.022,x,y+.095,z,C.paper);glint.rotation.x=-Math.PI/2;
+  }
+  return trailGroup;
+ });
  // Context selection follows main's one enabled action; no proximity-based second selection.
  const focusRing=torus(scene,.76,.028,0,.07,0,C.paper);focusRing.rotation.x=-Math.PI/2;focusRing.visible=false;
  const companionTarget=new THREE.Group(),travellingRing=new THREE.Group(),arrivedRing=new THREE.Group();companionTarget.add(travellingRing,arrivedRing);outdoor.add(companionTarget);
@@ -194,7 +205,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
   const flatWall=!s.wallSeen&&(s.era<2||s.quarter%2===0);wallPattern.visible=flatWall;stair.visible=!flatWall;
-  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=portalSeal.visible=!s.portalOpen;for(const piece of portal.children.slice(0,3)){if(piece instanceof THREE.Mesh&&piece.material instanceof THREE.MeshStandardMaterial){piece.material.color.set(s.portalOpen?C.paper:C.gold);piece.material.emissiveIntensity=Math.max(piece.material.emissiveIntensity,s.portalOpen?.2:0);}}const starPoint={x:MAP.starPost.x+.95,z:MAP.starPost.z};const starClear=distance(s.player,starPoint)>=2&&distance(s.toto,starPoint)>=.9;starBefore.visible=!s.solved[0]&&starClear;starAfter.visible=!!s.solved[0]&&starClear;resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.frontPlate)||isOnPlate(s.toto,MAP.frontPlate)?C.paper:s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.backPlate)||isOnPlate(s.toto,MAP.backPlate)?C.paper:s.era===3?C.gold:C.stone);
+  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=portalSeal.visible=!s.portalOpen;for(const piece of portal.children.slice(0,3)){if(piece instanceof THREE.Mesh&&piece.material instanceof THREE.MeshStandardMaterial){piece.material.color.set(s.portalOpen?C.paper:C.gold);piece.material.emissiveIntensity=Math.max(piece.material.emissiveIntensity,s.portalOpen?.2:0);}}const starPoint={x:MAP.starPost.x+.95,z:MAP.starPost.z};const starClear=distance(s.player,starPoint)>=2&&distance(s.toto,starPoint)>=.9;starBefore.visible=!s.solved[0]&&starClear;starAfter.visible=!!s.solved[0]&&starClear;resonance.visible=s.era===3&&!!options.resonance;litTrails.forEach((trail,i)=>{trail.visible=s.phase==='world'&&memoryLit(s,MEMORIES[i]!.id);});front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.frontPlate)||isOnPlate(s.toto,MAP.frontPlate)?C.paper:s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.backPlate)||isOnPlate(s.toto,MAP.backPlate)?C.paper:s.era===3?C.gold:C.stone);
   if(camera.zoom!==(inRoom?1.4:1)){camera.zoom=inRoom?1.4:1;camera.updateProjectionMatrix();}
   const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
   // On the return trip a steeper reading angle keeps the table beyond the actors' silhouettes, even after Q.
