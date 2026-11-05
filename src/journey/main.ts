@@ -1,0 +1,111 @@
+import {createState,step,context,interact,partner,rotate,objective} from './model';
+import {createRenderer} from './renderer';
+import {createUI} from './ui';
+import {createJourneyAudio} from './audio';
+import {loadJourney,saveJourney,loadPreferences,savePreferences} from './persistence';
+import type {JourneyEvent,JourneyState} from './contract';
+import './style.css';
+
+let state:JourneyState=createState();
+let preferences=loadPreferences();
+let screen:'title'|'game'|'pause'|'credits'='title';
+let dialogue:{speaker:string,text:string}[]=[];
+let transitionUntil=0, toastUntil=0, resonance=false, guardHeld=false,pendingEnding=false;
+let lastSave=0,wasMoving=false,lastTime=performance.now();
+const keys=new Set<string>();
+const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
+const root=document.querySelector<HTMLElement>('#app')!;
+const audio=createJourneyAudio();audio.setVolume(preferences.volume);
+const ui=createUI(root,action);
+const renderer=createRenderer(ui.canvas);
+ui.setSettings(preferences);ui.setContinue(!!loadJourney());ui.setScreen('title');
+const unlockNames=['','色と流れが生まれた','世界に奥行きが生まれた','ふたりの跡が見える'];
+function saveNow(){const ok=saveJourney(state);lastSave=performance.now();ui.setSaveStatus(ok?'保存しました':'保存できません。このページを閉じると進行が失われます');}
+function toast(text:string){ui.setToast(text);toastUntil=performance.now()+4500;}
+function setScreen(next:typeof screen){screen=next;keys.clear();guardHeld=false;ui.setScreen(next);if(next==='game'){renderer.resize();ui.canvas.focus();}if(next==='title')ui.setContinue(!!loadJourney());}
+function showLine(){ui.setDialogue(dialogue[0]??null);if(!dialogue.length&&pendingEnding){pendingEnding=false;setScreen('credits');}}
+function events(list:JourneyEvent[]){
+ for(const event of list){
+  if(event.type==='dialogue')dialogue.push({speaker:event.speaker??'トト',text:event.text??event.id});
+  else if(event.type==='notice')toast(event.text??'');
+  else if(event.type==='sound')audio.play(event.id);
+  else if(event.type==='evolution'){
+   const era=event.era??state.era;audio.setEra(era);audio.play('evolution');ui.setEvolution(era);
+   transitionUntil=performance.now()+(preferences.reducedMotion?300:1900);toast(unlockNames[era]??'');keys.clear();
+  }else if(event.type==='ending')pendingEnding=true;
+ }
+ if(list.length){saveNow();showLine();}
+}
+function available(){return screen==='game'&&!dialogue.length&&performance.now()>=transitionUntil;}
+function begin(fresh:boolean){
+ const existing=loadJourney();
+ if(fresh&&existing&&!window.confirm('この新しい試遊版の進行を最初からにしますか？ 公開版のセーブには影響しません。'))return;
+ state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
+ if(fresh)events(step(state,{x:0,z:0,run:false},0));
+ else if(state.phase==='ending')setScreen('credits');
+ showLine();saveNow();
+}
+function action(id:string,value?:string){
+ audio.unlock();
+ if(id==='volume'){preferences.volume=Math.max(0,Math.min(1,Number(value)));audio.setVolume(preferences.volume);savePreferences(preferences);return;}
+ if(id==='motion'){preferences.reducedMotion=value==='true';savePreferences(preferences);return;}
+ if(id==='new'){begin(true);return;}if(id==='continue'){begin(false);return;}
+ if(id==='title'){saveNow();dialogue=[];ui.setDialogue(null);ui.setEvolution(null);setScreen('title');return;}
+ if(id==='pause'&&screen==='game'){saveNow();setScreen('pause');return;}
+ if(id==='resume'&&screen==='pause'){setScreen('game');return;}
+ if(id==='credits'){setScreen('credits');return;}
+ if(id==='next'&&screen==='game'&&dialogue.length){dialogue.shift();audio.play('line');showLine();keys.clear();return;}
+ if(!available())return;
+ if(id==='interact')events(interact(state));
+ else if(id==='partner')events(partner(state));
+ else if(id==='rotate'){
+  const previous=state.quarter;events(rotate(state));
+  if(state.quarter!==previous){guardHeld=[...keys].some(k=>movementKeys.has(k));transitionUntil=performance.now()+(preferences.reducedMotion?100:280);}
+ }else if(id==='resonance'){
+  if(state.era<3){toast('まだ、この世界には見えていないものがある。');return;}
+  resonance=!resonance;audio.play('line');toast(resonance?'共鳴を見る — ふたりが残した跡が浮かんでいる。':'いつもの景色に戻った。');
+ }
+}
+document.addEventListener('keydown',e=>{
+ if(screen!=='game') {if(e.key==='Escape'&&screen==='pause'){e.preventDefault();action('resume');}return;}
+ if(e.ctrlKey||e.altKey||e.metaKey)return;
+ if(e.target instanceof HTMLInputElement)return;
+ audio.unlock();
+ if(movementKeys.has(e.code)||e.code==='ShiftLeft'||e.code==='ShiftRight'){e.preventDefault();if(!dialogue.length)keys.add(e.code);return;}
+ if(e.repeat)return;
+ if(e.code==='Escape'){e.preventDefault();action('pause');return;}
+ if(e.code==='KeyE'||e.code==='Space'||e.code==='Enter'){
+  // Native focused buttons keep their single browser activation path.
+  if((e.code==='Space'||e.code==='Enter')&&e.target instanceof HTMLButtonElement)return;
+  e.preventDefault();action(dialogue.length?'next':'interact');
+ }else if(e.code==='KeyT'){e.preventDefault();action('partner');}
+ else if(e.code==='KeyQ'){e.preventDefault();action('rotate');}
+ else if(e.code==='KeyR'){e.preventDefault();action('resonance');}
+});
+document.addEventListener('keyup',e=>{keys.delete(e.code);if(![...keys].some(k=>movementKeys.has(k)))guardHeld=false;});
+window.addEventListener('blur',()=>{keys.clear();guardHeld=false;if(screen==='game')saveNow();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();if(screen==='game')saveNow();}});
+window.addEventListener('beforeunload',()=>{if(screen!=='title')saveJourney(state);});
+window.addEventListener('resize',()=>renderer.resize());
+function frame(now:number){
+ const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;
+ if(transitionUntil&&now>=transitionUntil){transitionUntil=0;ui.setEvolution(null);}
+ if(toastUntil&&now>toastUntil){ui.setToast('');toastUntil=0;}
+ const active=available()&&!guardHeld;
+ const input={x:active?(Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'))):0,z:active?(Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'))):0,run:active&&(keys.has('ShiftLeft')||keys.has('ShiftRight'))};
+ const before={x:state.player.x,z:state.player.z};
+ if(active)events(step(state,input,dt));
+ const moving=Math.hypot(state.player.x-before.x,state.player.z-before.z)>.0001;
+ if(moving)audio.step(input.run&&state.era>=1);
+ if((moving&&now-lastSave>2000)||(wasMoving&&!moving)){saveNow();}wasMoving=moving;
+ if(screen!=='title'){
+  ui.render(state,dialogue.length?null:context(state),objective(state));
+  renderer.render(state,screen==='game'&&!dialogue.length?dt:0,{reducedMotion:preferences.reducedMotion,quality:'normal',resonance});
+ }
+ requestAnimationFrame(frame);
+}
+ui.canvas.tabIndex=0;ui.canvas.setAttribute('aria-label','ゲーム画面。WASDか矢印キーで移動、Eで近くを調べる。');
+requestAnimationFrame(frame);
+
+// Read-only telemetry for automated input tests. Removed from production by Vite.
+if(import.meta.env.DEV)Object.defineProperty(window,'__journeyProbe',{value:()=>({state:structuredClone(state),screen,dialogue:dialogue[0]??null,context:context(state),guardHeld,transition:performance.now()<transitionUntil})});
