@@ -96,6 +96,15 @@ describe('evolution direct-control model',()=>{
   }
   const loaded=validateSave(s)!;wait(loaded);expect(validateSave(loaded)).not.toBeNull();
  });
+ it('allows either mill control order, reversal before solving and saving an unfinished state',()=>{
+  for(const order of [['drain','stopper'],['stopper','drain']] as const){
+   let s=begin();solveTile(s);walk(s,{x:0,z:-13});
+   const move=(id:'drain'|'stopper')=>{const point=id==='drain'?MAP.drainControl:MAP.stopperControl;walk(s,{x:point.x+.3,z:-13.7});expect(context(s)?.id).toBe(id);interact(s);step(s,{x:0,z:0,run:false},0);};
+   move(order[0]);expect(s.solved[1]).toBe(false);move(order[0]);expect(s.p2Drain).toBe(true);expect(s.p2Stopper).toBe(true);
+   move(order[0]);s=validateSave(s)!;expect(s).not.toBeNull();expect(s.solved[1]).toBe(false);move(order[1]);
+   expect(s.solved[1]).toBe(true);expect(validateSave(s)?.solved[1]).toBe(true);
+  }
+ });
  it('keeps Toto clear of the adjacent handle at the drain control eastern edge',()=>{
   for(const approach of [{x:0,z:-13},{x:-8,z:-13},{x:-5.21,z:-12}]){
   const s=begin();solveTile(s);walk(s,{x:0,z:-12});walk(s,approach);walk(s,{x:-5.21,z:-14});

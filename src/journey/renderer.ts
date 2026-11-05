@@ -1,4 +1,5 @@
 import {MEMORIES,memoryLit} from './memories';
+import {millVisual} from './millVisual';
 import * as THREE from 'three';
 import {MAP,CONTROL_AREAS,isOnPlate,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
 import {poseJourneyActor} from './acting';
@@ -80,12 +81,31 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  trail(outdoor,[[-2.75,-13],[-2.75,-13.75]],.75,0xaca890);
  trail(outdoor,[[-5.75,-13],[-5.75,-13.75]],.75,0xaca890);
  for(const [x,z,rx,rz]of[[-8.6,-18.5,.5,.22],[-8.7,-21.1,.42,.6],[-5.35,-21.3,.5,.24],[-6.5,-17.8,.35,.16],[-2.5,-16.5,.35,.18]]as const)snowBank(outdoor,x,z,rx,rz);
- const bridge=new THREE.Group();outdoor.add(bridge);for(let z=-24.1;z<=-21.8;z+=.28)box(bridge,4,.12,.24,0,.07,z,C.wood);for(const x of[-1.85,1.85]){line(bridge,new THREE.Vector3(x,.8,-24),new THREE.Vector3(x,.8,-22),.055,C.wood);for(const z of[-24,-23,-22])box(bridge,.12,.9,.12,x,.45,z,C.wood);}
+ const bridge=new THREE.Group();bridge.position.set(0,.05,-22);outdoor.add(bridge);
+ for(let z=-2.1;z<=.2;z+=.28)box(bridge,4,.12,.24,0,.02,z,C.wood);
+ for(const x of[-1.85,1.85]){line(bridge,new THREE.Vector3(x,.75,-2),new THREE.Vector3(x,.75,0),.055,C.wood);for(const z of[-2,-1,0])box(bridge,.12,.9,.12,x,.4,z,C.wood);}
+ // A visible shaft and linkage run from the wheel toward the raised bridge.
+ line(outdoor,new THREE.Vector3(-4.9,.3,-19.15),new THREE.Vector3(-4.9,.3,-21.1),.055,C.wood);
+ line(outdoor,new THREE.Vector3(-4.9,.3,-21.1),new THREE.Vector3(-1.8,.3,-21.1),.055,C.wood);
+ line(outdoor,new THREE.Vector3(-1.8,.3,-21.1),new THREE.Vector3(-1.8,.3,-22),.055,C.wood);
+ const bridgePulley=torus(outdoor,.3,.055,-1.8,.34,-21.1,C.gold);bridgePulley.rotation.x=-Math.PI/2;
  const millHouse=asset(outdoor,'mill_house',-7,0,-20,1.15);millHouse.rotation.y=Math.PI;
  const millLight=new THREE.PointLight(0xffc67b,0,7,2);millLight.position.set(-6.17,1.45,-18.4);outdoor.add(millLight);const millGlow=lightPool(outdoor,-6.17,-18,1.8);
  asset(outdoor,'firewood',-8.35,0,-18.8,.75);asset(outdoor,'barrel',-8.6,0,-20,.65);
  const wheel=new THREE.Group();wheel.position.set(MAP.mill.x,1.35,MAP.mill.z);outdoor.add(wheel);torus(wheel,1.14,.13,0,0,0,C.wood);torus(wheel,.92,.055,0,0,.09,C.gold);for(let i=0;i<12;i++){const a=i*Math.PI/6,paddle=box(wheel,.32,.13,.38,Math.cos(a)*1.08,Math.sin(a)*1.08,0,0x8b6546);paddle.rotation.z=a;}for(let i=0;i<8;i++){const a=i*Math.PI/4;line(wheel,new THREE.Vector3(),new THREE.Vector3(Math.cos(a)*1.12,Math.sin(a)*1.12,0),.07,C.wood);}cylinder(outdoor,.25,.5,-5,.25,-18,C.stone);
  box(outdoor,.42,.06,5,-4.7,.04,-20.5,C.water);const spill=box(outdoor,.55,.07,2.6,MAP.drain.x,.06,-16.7,C.water);for(const x of[-7.4,-6.6])box(outdoor,.15,.16,2.8,x,.08,-16.7,C.stone);cylinder(outdoor,.65,.035,-7,.025,-15.25,0x8bb7c1);const sluice=box(outdoor,.8,.65,.2,MAP.drain.x,.4,MAP.drain.z,C.navy);const pin=box(outdoor,.18,.6,.18,MAP.stopper.x,.55,MAP.stopper.z,C.gold);
+ // The incoming stream splits at the sluice. Only the selected branch contains bright water.
+ const sourceFlow=box(outdoor,.48,.055,2.45,-7,.085,-19.3,0x68a5b4);
+ const wheelFlow=new THREE.Group(),bypassGlints=new THREE.Group();outdoor.add(wheelFlow,bypassGlints);
+ box(wheelFlow,1.85,.07,.46,-6.05,.1,-18,0x68b9c7);
+ const wheelGlints:THREE.Mesh[]=[],spillGlints:THREE.Mesh[]=[];
+ for(let i=0;i<3;i++){
+  const a=box(wheelFlow,.22,.025,.26,-6.8+i*.5,.15,-18,0xd8ece4);wheelGlints.push(a);
+  const b=box(bypassGlints,.26,.025,.22,-7,.14,-17.6+i*.65,0xd8ece4);spillGlints.push(b);
+ }
+ // A large, contrasting catch beside the rim exposes the stop/release condition.
+ const catchArm=new THREE.Group();catchArm.position.set(-3.72,1.45,-18);outdoor.add(catchArm);
+ box(catchArm,.22,.85,.24,0,.16,.18,C.gold);box(catchArm,.72,.2,.28,-.19,-.2,.18,C.gold);
  // The work enclosure matches the model's occupied mill area; controls are reached from its foreground.
  box(outdoor,6.4,.05,5.3,-6,-.015,-19.15,0x9aa49b);
  // Keep the floor under the existing water / wheels: the foundation top is below water and tread detail.
@@ -167,6 +187,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const indoorLight=new THREE.PointLight(0xffc77d,14,12,2);indoorLight.position.set(2.4,2.2,-2.5);room.add(indoorLight);
  // Snow is GPU points, no CPU pixel readback; reduced motion keeps the scene still.
  const snowPositions=new Float32Array(180*3);for(let i=0;i<180;i++){snowPositions[i*3]=(Math.sin(i*17.13)*.5+.5)*26-13;snowPositions[i*3+1]=1+(i%19)*.5;snowPositions[i*3+2]=(Math.sin(i*7.73)*.5+.5)*26-13;}const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(snowPositions,3));const snow=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:0xece6d4,size:.07,transparent:true,opacity:.7}));scene.add(snow);
+ let bridgeWasDown:boolean|null=null,bridgeStarted=0;
  let width=1,height=1,lastEra=-1,lastRoom=false,lastQuality='',time=0,walkP=0,walkT=0,lastP={x:0,z:0},lastT={x:0,z:0},started=false;const presentationFacing=[0,0];
  function resize(){const rect=canvas.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);lastEra=-1;camera.left=-8*width/height;camera.right=8*width/height;camera.top=8;camera.bottom=-8;camera.updateProjectionMatrix();optical.aspect=width/height;
   // Fit the largest possible unsolved arc (r/depth=.6), leaving UI-safe space above/below.
@@ -200,14 +221,26 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   for(const [point,mesh]of [[MAP.gatePlate,gatePlate],[MAP.frontPlate,front],[MAP.backPlate,back]]as const){const selected=options.focusActionId==='wait'&&options.focusActionPoint&&distance(options.focusActionPoint,point)<.01;mesh.material.emissive.copy(focusTint);mesh.material.emissiveIntensity=selected?.3:0;}
   latchLever.rotation.y=s.gateLatched?Math.PI/2:0;
   leverHandles[0]!.rotation.x=(s.ringA-1)*.42;leverHandles[1]!.rotation.x=(s.ringB-1)*.42;
-  tile.rotation.y=-s.p1*Math.PI/2;crank.rotation.z=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];bridge.visible=!!s.solved[1];spill.visible=s.p2Drain;sluice.position.y=s.p2Drain?.7:.35;drainHandle.rotation.z=s.p2Drain?0:Math.PI/2;stopHandle.rotation.z=s.p2Stopper?0:Math.PI/2;pin.rotation.z=s.p2Stopper?0:Math.PI/2;if(s.solved[1]&&!options.reducedMotion)wheel.rotation.z=time*.55;
+  tile.rotation.y=-s.p1*Math.PI/2;crank.rotation.z=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];
+  const mill=millVisual(s);
+  if(bridgeWasDown===null)bridgeWasDown=mill.bridgeDown;
+  if(mill.bridgeDown&&!bridgeWasDown)bridgeStarted=performance.now();
+  bridgeWasDown=mill.bridgeDown;
+  const bridgeProgress=options.reducedMotion||!bridgeStarted?1:Math.min(1,(performance.now()-bridgeStarted)/1000);
+  bridge.rotation.x=mill.bridgeDown?(1-bridgeProgress)*Math.PI/2:Math.PI/2;spill.visible=mill.bypass;bypassGlints.visible=mill.bypass;wheelFlow.visible=mill.wheelChannel;
+  sluice.position.y=mill.bypass?.7:.35;drainHandle.rotation.z=mill.bypass?0:Math.PI/2;stopHandle.rotation.z=mill.locked?0:Math.PI/2;pin.rotation.z=mill.locked?0:Math.PI/2;catchArm.rotation.z=mill.locked?0:Math.PI/2;
+  if(!options.reducedMotion){const phase=(time*.65)%1;wheelGlints.forEach((glint,i)=>{glint.position.x=-6.88+((phase+i/3)%1)*1.65;});spillGlints.forEach((glint,i)=>{glint.position.z=-17.7+((phase+i/3)%1)*1.9;});}
+  if(mill.turning&&!options.reducedMotion){wheel.rotation.z=time*.55;bridgePulley.rotation.z=time*.55;}
   const occupied=isOnPlate(s.player,MAP.gatePlate)||isOnPlate(s.toto,MAP.gatePlate),openGate=s.gateLatched||occupied;
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
   const flatWall=!s.wallSeen&&(s.era<2||s.quarter%2===0);wallPattern.visible=flatWall;stair.visible=!flatWall;
   armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=portalSeal.visible=!s.portalOpen;for(const piece of portal.children.slice(0,3)){if(piece instanceof THREE.Mesh&&piece.material instanceof THREE.MeshStandardMaterial){piece.material.color.set(s.portalOpen?C.paper:C.gold);piece.material.emissiveIntensity=Math.max(piece.material.emissiveIntensity,s.portalOpen?.2:0);}}const starPoint={x:MAP.starPost.x+.95,z:MAP.starPost.z};const starClear=distance(s.player,starPoint)>=2&&distance(s.toto,starPoint)>=.9;starBefore.visible=!s.solved[0]&&starClear;starAfter.visible=!!s.solved[0]&&starClear;resonance.visible=s.era===3&&!!options.resonance;litTrails.forEach((trail,i)=>{trail.visible=s.phase==='world'&&memoryLit(s,MEMORIES[i]!.id);});front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.frontPlate)||isOnPlate(s.toto,MAP.frontPlate)?C.paper:s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.backPlate)||isOnPlate(s.toto,MAP.backPlate)?C.paper:s.era===3?C.gold:C.stone);
-  if(camera.zoom!==(inRoom?1.4:1)){camera.zoom=inRoom?1.4:1;camera.updateProjectionMatrix();}
-  const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
+  // While working the first-era mill, frame the controls, wheel and bridge together.
+  const millDistance=Math.min(distance(s.player,MAP.drainControl),distance(s.player,MAP.stopperControl));
+  const millView=!inRoom&&s.era===1?Math.max(0,Math.min(1,(3.2-millDistance)/1.6)):0;
+  const zoom=inRoom?1.4:1-.12*millView;if(Math.abs(camera.zoom-zoom)>.0001){camera.zoom=zoom;camera.updateProjectionMatrix();}
+  const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z-2*millView);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
   // On the return trip a steeper reading angle keeps the table beyond the actors' silhouettes, even after Q.
   const y=inRoom?12:s.era===0?20:s.era===1?16:12+tableView*6;const d=inRoom?9:s.era===0?8:s.era===1?10:13-tableView*5;
   camera.position.copy(origin).add(new THREE.Vector3(Math.sin(q)*d,y,Math.cos(q)*d));camera.lookAt(origin);for(const tree of trees){const dx=tree.position.x-s.player.x,dz=tree.position.z-s.player.z,forward=dx*Math.sin(q)+dz*Math.cos(q),cross=dx*Math.cos(q)-dz*Math.sin(q);tree.visible=!(s.era>=2&&forward>0&&forward<10&&Math.abs(cross)<2.6);}

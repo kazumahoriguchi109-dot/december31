@@ -15,6 +15,7 @@ let pendingInteraction:{id:string,at:number}|null=null;
 let actionCue:{id:string,start:number,duration:number}|null=null;
 const expressionFor=(id:string,text:string):Expression=>/home|solved|portal-open|latch-fixed/.test(id)?'relieved':/arrival/.test(id)?'surprised':/wall|discovery|[？?]/.test(id+text)?'curious':'neutral';
 let evolutionRevealUntil=0;
+let millRevealUntil=0;
 let dialogueStageRemaining=0;
 let dialogueVisible=false;
 let toastId='';
@@ -31,11 +32,11 @@ const unlockNames=['','色と流れが生まれた','世界に奥行きが生ま
 function saveNow(){const ok=saveJourney(state);lastSave=performance.now();ui.setSaveStatus(ok?'保存しました':'保存できません。このページを閉じると進行が失われます');}
 function toast(text:string,id=''){toastId=id;ui.setToast(text);toastUntil=performance.now()+4500;}
 function setScreen(next:typeof screen){screen=next;keys.clear();guardHeld=false;if(next!=='game'){pendingInteraction=null;actionCue=null;}ui.setScreen(next);if(next==='game'){renderer.resize();ui.canvas.focus();}if(next==='title')ui.setContinue(!!loadJourney());}
-function dialogueBlocked(){const stage=millCompanionStaging(state);return performance.now()<evolutionRevealUntil||(dialogueStageRemaining>0&&!!stage&&!stage.ready);}
+function dialogueBlocked(){const stage=millCompanionStaging(state);return performance.now()<evolutionRevealUntil||performance.now()<millRevealUntil||(dialogueStageRemaining>0&&!!stage&&!stage.ready);}
 function showLine(){const line=dialogueBlocked()?null:dialogue[0]??null;dialogueVisible=!!line;ui.setDialogue(line);if(!dialogue.length&&pendingEnding){pendingEnding=false;setScreen('credits');}}
 function events(list:JourneyEvent[]){
  for(const event of list){
-  if(event.type==='dialogue'){dialogue.push({id:event.id,speaker:event.speaker??'トト',text:event.text??event.id,expression:expressionFor(event.id,event.text??'')});if(event.id==='mill-solved'&&millCompanionStaging(state)&&!millCompanionStaging(state)?.ready)dialogueStageRemaining=1;}
+  if(event.type==='dialogue'){dialogue.push({id:event.id,speaker:event.speaker??'トト',text:event.text??event.id,expression:expressionFor(event.id,event.text??'')});if(event.id==='mill-solved'){millRevealUntil=performance.now()+(preferences.reducedMotion?100:1050);keys.clear();}if(event.id==='mill-solved'&&millCompanionStaging(state)&&!millCompanionStaging(state)?.ready)dialogueStageRemaining=1;}
   else if(event.type==='notice'){if(event.id==='partner-arrived'){if(toastId==='partner-walk-to-plate')toast(event.text??'',event.id);}else if(event.id==='partner-rejoined'){if(toastId==='partner-call')toast(event.text??'',event.id);}else toast(event.text??'',event.id);}
   else if(event.type==='sound')audio.play(event.id);
   else if(event.type==='evolution'){
@@ -46,11 +47,11 @@ function events(list:JourneyEvent[]){
  if(list.length){saveNow();showLine();}
 }
 function interactionBusy(){return !!pendingInteraction||!!(actionCue&&actionCue.id!=='partner'&&performance.now()<actionCue.start+actionCue.duration);}
-function available(){return screen==='game'&&!dialogue.length&&!interactionBusy()&&performance.now()>=transitionUntil;}
+function available(){return screen==='game'&&!dialogue.length&&!interactionBusy()&&performance.now()>=transitionUntil&&performance.now()>=millRevealUntil;}
 function begin(fresh:boolean){
  const existing=loadJourney();
  if(fresh&&existing&&!window.confirm('この新しい試遊版の進行を最初からにしますか？ 公開版のセーブには影響しません。'))return;
- state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
+ state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;millRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
  if(fresh)events(step(state,{x:0,z:0,run:false},0));
  else if(state.phase==='ending')setScreen('credits');
  else {const pending=pendingMemoryExplanation(state);if(pending){
@@ -120,6 +121,7 @@ function frame(now:number){
  const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;
  if(pendingInteraction&&screen==='game'&&now>=pendingInteraction.at){const id=pendingInteraction.id;pendingInteraction=null;const target=context(state);if(target?.id===id&&target.enabled)events(interact(state));else actionCue=null;}
  if(actionCue&&now>=actionCue.start+actionCue.duration)actionCue=null;
+ if(millRevealUntil&&now>=millRevealUntil){millRevealUntil=0;showLine();}
  if(transitionUntil&&now>=transitionUntil){transitionUntil=0;ui.setEvolution(null);if(evolutionRevealUntil){evolutionRevealUntil=0;showLine();}}
  if(toastUntil&&now>toastUntil){ui.setToast('');toastUntil=0;toastId='';}
  const active=available()&&!guardHeld;
