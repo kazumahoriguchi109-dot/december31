@@ -3,6 +3,7 @@
 import { Game } from './game';
 import { AutoSaver, type SaveStatus } from './autosaver';
 import { diag } from './diag';
+const titleImage = new URL('../ui/assets/winter-keyart.jpg', import.meta.url).href;
 import { mountUi, mixer } from '../ui/view';
 import { world } from '../content/load';
 import { rowOf } from '../domain/dialogue';
@@ -154,25 +155,21 @@ export class Shell {
     if (this.store) { try { meta = await this.store.meta(); const id = meta.lastPlayedSlotId; if (id) canContinue = (await this.store.readSlot(id)).status === 'ok'; } catch { /* leave disabled */ } }
     const ro = this.readOnly;
     this.page('TITLE', '12月31日', `
-      <svg class="title-art" viewBox="0 0 320 120" role="img" aria-label="雪の夜の草原に立つ金色の枠と、重なる二つの輪" shape-rendering="crispEdges">
-        <rect width="320" height="120" fill="#16233a"/><rect y="70" width="320" height="50" fill="#2a4a3d"/><rect y="70" width="320" height="4" fill="#e9eef5"/>
-        ${Array.from({ length: 36 }, (_, i) => `<rect x="${(i * 97) % 320}" y="${(i * 53) % 60}" width="2" height="2" fill="#f6e7b4" opacity="${0.4 + (i % 4) * 0.15}"/>`).join('')}
-        <rect x="140" y="26" width="6" height="52" fill="#d9ac5b"/><rect x="174" y="26" width="6" height="52" fill="#d9ac5b"/><rect x="140" y="22" width="40" height="6" fill="#d9ac5b"/><rect x="146" y="28" width="28" height="48" fill="#05080d"/>
-        <circle cx="153" cy="52" r="9" fill="none" stroke="#ffd166" stroke-width="2"/><circle cx="167" cy="52" r="14" fill="none" stroke="#ffd166" stroke-width="2"/>
-        <path d="M160 120 L150 78 L170 78 Z" fill="#b9a37c"/>
-        <g fill="#2f6b4c"><path d="M40 88 l14 -34 l14 34 z"/><path d="M60 92 l12 -28 l12 28 z"/><path d="M240 90 l14 -36 l14 36 z"/><path d="M266 88 l10 -26 l10 26 z"/></g>
-      </svg>
+      <img class="title-art" src="${titleImage}" alt="" aria-hidden="true">
+      <p class="title-kicker">A WINTER'S TALE · ESCAPE ADVENTURE</p>
+      <p class="title-intro">一年の終わりに、<br>まだ知らない世界の入口へ。</p>
       ${ro ? '<p class="note" role="status">いまは読み取りと書き出しだけできます（書き込みは止まっています）。</p>' : ''}
       <div class="menu">
-        <button type="button" class="btn" id="b-new" ${ro ? 'aria-disabled="true"' : ''}>はじめから</button>
+        <button type="button" class="btn primary" id="b-new" ${ro ? 'aria-disabled="true"' : ''}>はじめから</button>
         <button type="button" class="btn" id="b-cont" ${canContinue && !ro ? '' : 'aria-disabled="true"'}>つづきから</button>
+        ${!canContinue ? '<span class="continue-note">まだセーブデータがありません</span>' : ''}
         ${this.storeError ? '<button type="button" class="btn" id="b-unsaved">保存せずに遊ぶ</button>' : ''}
         <button type="button" class="btn" id="b-slots">セーブ一覧</button>
         <button type="button" class="btn" id="b-set">設定</button>
         <button type="button" class="btn" id="b-credits">クレジット</button>
         ${import.meta.env.DEV ? DEV_TITLE_HTML : ''}
       </div>
-      <p class="fine">登録なしで遊べます。進行はこのブラウザに保存されます。セーブはこのブラウザの中だけに保存されます。ブラウザのデータを消したり、別のブラウザや端末で開いたりすると引き継げません。「セーブ一覧」から書き出せます。</p>`, '#b-new');
+      <p class="fine">登録なしで遊べます。進行はこのブラウザに保存されます。別の端末への引き継ぎや、ブラウザのデータを消す前には「セーブ一覧」から書き出してください。</p>`, '#b-new');
     this.on('#b-new', () => { if (!ro) this.showNew(); });
     this.on('#b-cont', async () => { if (canContinue && !ro && meta?.lastPlayedSlotId) await this.loadAndPlay(meta.lastPlayedSlotId); });
     this.on('#b-unsaved', () => this.playUnsaved());
@@ -387,9 +384,9 @@ export class Shell {
     this.page('CREDITS', 'クレジット', `
       <p>『12月31日』</p>
       <ul>
-        <li>ゲームの実装：Claude Code（Anthropic）との共同制作</li>
-        <li>絵：ゲームの中でコードを使って描いた図形です</li>
-        <li>音：ブラウザの中で作った、短い曲と効果音です（録音や既存の音源は使っていません）</li>
+        <li>ゲームの実装：Claude Code（Anthropic）、美術・UI改修：Codex（OpenAI）との共同制作</li>
+        <li>絵：Blenderで制作したオリジナル3D素材とコード描画。タイトル背景はOpenAIの画像生成によるものです</li>
+        <li>音楽・演出音：オリジナルのブラウザ合成音。操作音3点：Kenney「Interface Sounds」（CC0 1.0、WAV変換：Calinou）</li>
         <li>使用ソフトウェア：three.js（MIT License、Copyright © 2010-2026 three.js authors）、TypeScript、Vite</li>
       </ul>
       <p class="fine">セーブはこのブラウザの中だけに保存されます。</p>
@@ -402,7 +399,7 @@ export class Shell {
     const s = this.settings;
     const range = (id: string, label: string, v: number) => `<label>${label}<input type="range" id="${id}" min="0" max="1" step="0.05" value="${v}"></label>`;
     this.page('SETTINGS', '設定', `
-      <p class="fine">音は、ブラウザの中で作った短い曲と効果音です。最初に画面を押すと鳴り始めます。</p>
+      <p class="fine">音は最初に画面を押すと鳴り始めます。音楽と効果音の音量を別々に調整できます。</p>
       ${range('s-master', '全体の音量', s.masterVolume)}${range('s-music', '音楽', s.musicVolume)}${range('s-sfx', '効果音', s.sfxVolume)}
       <label>文字の大きさ<select id="s-size"><option value="small">小</option><option value="standard">ふつう</option><option value="large">大</option></select></label>
       <label>文字の速さ<select id="s-speed"><option value="instant">すぐ全部</option><option value="normal">ふつう</option><option value="slow">ゆっくり</option></select></label>

@@ -1,8 +1,10 @@
+import { poseFigure } from './characterPose';
+import { winterAsset } from './winterAssets';
 import * as THREE from 'three';
 import { buildScenery, figure } from './scenery';
 import { anchorDef, puzzles, world } from '../content/load';
 import type { Anchor, Era, View } from '../domain/types';
-import { ARM_STEMS, ribbon, spec, zOf, type Piece } from './p05Geometry';
+import { ARM_STEMS, centre, ribbon, spec, zOf, type Piece } from './p05Geometry';
 import { canvasTexture, lam, lamTex, meadowTexture, rng } from './materials';
 import { EraStyle, isPixelEra } from './eraStyle';
 import { PixelPost } from './pixelPost';
@@ -23,6 +25,8 @@ export interface ViewModel {
   p06: { latched: boolean; frontHeld: boolean; backHeld: boolean };
   /** The player's "reduce motion" setting (falling snow stands still when set). The OS preference is always honoured as well. */
   reducedMotion?: boolean;
+  speaker?: string;
+  dialogueId?: string;
 }
 
 const C = {
@@ -31,7 +35,7 @@ const C = {
 };
 const WALL_FRONT_X = 13.99;
 /** Friends are drawn larger than life on the open cameras so they read at a glance; on the wall cameras they stay small and beside the pattern. */
-const FIG_SCALE = 1.6;
+const FIG_SCALE = 1.35;
 
 export const RES = { E0: [320, 180], E1: [640, 360] } as const;
 
@@ -52,6 +56,8 @@ export class WorldView {
   private readonly early = new EarlyPuzzles();
   private readonly room = new RoomScene();
   private apparatus: THREE.Object3D | null = null;
+  private readonly entranceFrame = new THREE.Group();
+  private readonly tileBase = new THREE.Group();
   private readonly style: EraStyle;
   private readonly post: PixelPost;
   /** E0/E1 are shown through this 2D canvas: the finished pixel picture (palette, outlines). The GL canvas keeps the true render. */
@@ -123,10 +129,11 @@ export class WorldView {
     // placeholder landmarks (temporary original shapes; not final art)
     const gold = lam(C.gold);
     const black = new THREE.MeshBasicMaterial({ color: 0x05080d });
-    const frame = new THREE.Group(); frame.userData['og'] = true;
+    const frame = this.entranceFrame; frame.userData['og'] = true;
     frame.add(box(0.3, 3, 0.3, gold, -1.35, 1.5, 0), box(0.3, 3, 0.3, gold, 1.35, 1.5, 0), box(3, 0.3, 0.3, gold, 0, 3.15, 0), box(2.4, 3, 0.05, black, 0, 1.5, 0));
     R.add(frame);
-    R.add(box(2.4, 0.15, 2.4, lam(0x8aa1b5), 0, 0.08, 5));
+    this.tileBase.add(box(2.8, 0.15, 2.8, lam(0x334657), 0, 0.08, 5), box(3.0, 0.06, 3.0, gold, 0, 0.04, 5));
+    R.add(this.tileBase);
     const gate = new THREE.Group(); gate.userData['og'] = true;
     gate.add(box(0.4, 3, 0.4, gold, 8.8, 1.5, 12), box(0.4, 3, 0.4, gold, 11.2, 1.5, 12), box(2.8, 0.4, 0.4, gold, 10, 3, 12));
     R.add(gate);
@@ -165,7 +172,15 @@ export class WorldView {
       g.setIndex(indices);
       return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, fog: false }));
     };
-    root.add(mk('fixed', 0, C.fixed));
+    // Side-view edge thickness makes the physical pieces readable edge-on. The
+    // exact planar ribbons remain the sole geometry in the observation puzzle.
+    const edge = (piece: Piece, pos: number, color: number) => {
+      const group = new THREE.Group(); group.userData.sideDetail = true;
+      const material = new THREE.MeshBasicMaterial({ color, fog: false });
+      for (let i = 0; i < 72; i++) group.add(tube(...centre(piece, pos, i / 72), ...centre(piece, pos, (i + 1) / 72), .055, material));
+      return group;
+    };
+    root.add(mk('fixed', 0, C.fixed), edge('fixed', 0, C.fixed));
     const railMat = new THREE.MeshBasicMaterial({ color: C.rail, fog: false });
     for (const piece of ['a', 'b'] as const) {
       const color = piece === 'a' ? C.a : C.b;
@@ -179,7 +194,7 @@ export class WorldView {
         const sx = (r + 0.05) * dx, sy = (r + 0.05) * dy;
         const ex = (r + st.length) * dx, ey = (r + st.length) * dy;
         const grp = new THREE.Group();
-        grp.add(m, tube(sx, sy, z, ex, ey, z, 0.05, railMat), box(0.3, 0.3, 0.3, railMat, ex, ey, z));
+        grp.add(m, edge(piece, pos, color), tube(sx, sy, z, ex, ey, z, 0.05, railMat), box(0.3, 0.3, 0.3, railMat, ex, ey, z));
         this.pieces[piece].push(m);
         this.carriages[piece].push(grp);
         root.add(grp);
@@ -229,11 +244,20 @@ export class WorldView {
     if (this.vm) this.render(this.vm);
   }
 
+  private gestureFrame = 0;
+  private gestureKey = '';
   render(vm: ViewModel) {
+    const previousAnchor = this.vm?.anchor;
+    const moved = !!previousAnchor && previousAnchor !== vm.anchor && anchorDef(previousAnchor).position[1] === anchorDef(vm.anchor).position[1] && ['p01_panel','mill','gate_near','gate_far','observatory','castle'].includes(vm.anchor);
+    const gestureKey = `${vm.anchor}/${vm.dialogueId ?? vm.speaker ?? ''}`;
+    const gestureChanged = gestureKey !== this.gestureKey;
+    this.gestureKey = gestureKey;
+    if (this.gestureFrame) { cancelAnimationFrame(this.gestureFrame); this.gestureFrame = 0; }
     this.vm = vm;
     const square = WorldView.isSquare(vm.presetId);
+    const instrument = square || (vm.anchor === 'observatory' && vm.view === 'apparatus_side');
     const pixel = isPixelEra(vm.era);
-    const lowRes = !square && pixel;
+    const lowRes = !instrument && pixel;
     let w: number, h: number;
     if (lowRes) {
       [w, h] = RES[vm.era as 'E0' | 'E1'];
@@ -254,18 +278,26 @@ export class WorldView {
       const sel = vm.p05[piece];
       this.pieces[piece].forEach((_, i) => { this.carriages[piece][i]!.visible = i === sel; });
     }
-    if (this.apparatus) this.apparatus.visible = vm.anchor === 'observatory'; // the instrument is only drawn where it is used
+    if (this.apparatus) { this.apparatus.visible = vm.anchor === 'observatory'; this.apparatus.traverse(o => { if (o.userData.sideDetail) o.visible = vm.view === 'apparatus_side'; }); } // the instrument is only drawn where it is used
+    // Cut away the foreground doorway while inspecting another puzzle. Never hide its own P06 interaction.
+    this.entranceFrame.visible = vm.anchor !== 'p01_panel' && vm.anchor !== 'mill';
+    this.tileBase.visible = vm.anchor !== 'mill';
+    const millHouse = this.worldRoot.getObjectByName('mill_house');
+    if (millHouse) millHouse.visible = vm.anchor !== 'gate_near' && vm.anchor !== 'gate_far'; // camera cutaway keeps the cooperative plate and both friends visible
+    this.entranceFrame.children[3]!.visible = !vm.p06.latched;
     this.early.apply(vm);
+    const wheel = this.worldRoot.getObjectByName('mill-wheel');
+    if (wheel) wheel.rotation.z = vm.p02.stopper === 'locked' ? 0 : vm.p02.drain === 'open' ? .28 : .7;
     this.room.apply(vm);
     const inRoom = this.room.root.visible;
     this.placeFigures(vm);
     // the square observation frame draws the instrument alone on a plain ground: nothing of the landscape may sit behind its lines
-    this.worldRoot.visible = !square;
+    this.worldRoot.visible = !instrument;
     const preset = world.cameraPresets[vm.presetId]!;
     this.target.set(...preset.target as [number, number, number]);
     const wallView = vm.presetId.startsWith('wall_');
-    let clear = square ? C.observeBg : inRoom ? 0x2a2118 : C.sky;
-    if (!square && !inRoom) {
+    let clear = instrument ? C.observeBg : inRoom ? 0x2a2118 : C.sky;
+    if (!instrument && !inRoom) {
       const st = this.style.apply(this.worldRoot, { era: vm.era, target: this.target, wallView, reduced: this.reduced(vm), low: this.lowQuality });
       clear = st.clear;
       this.wallMat.emissive.set(vm.era === 'E3' ? 0xa5a39d : vm.era === 'E2' ? 0x8f8d88 : 0x000000); // the wall is the clue: lighting must not grey or tint it away from white (review: it read grey in E2/E3)
@@ -284,7 +316,25 @@ export class WorldView {
     }
     this.renderer.render(sceneToDraw, cam);
     this.showDots(lowRes && !inRoom && !!this.pixCtx);
-    this.syncLoop(vm, square, inRoom, wallView);
+    this.syncLoop(vm, instrument, inRoom, wallView);
+    // A short arrival step or response to a new line; never an endless idle loop.
+    if ((moved || gestureChanged && vm.speaker) && !this.reduced(vm) && !this.lowQuality && !instrument && !wallView) {
+      const start = performance.now(), duration = moved ? 480 : 420;
+      const playerEnd = this.player.position.clone(), totoEnd = this.toto.position.clone();
+      const approach = moved ? new THREE.Vector3(...anchorDef(vm.anchor).position).sub(new THREE.Vector3(...anchorDef(previousAnchor!).position)).setY(0).normalize().multiplyScalar(.38) : new THREE.Vector3();
+      const tick = (now: number) => {
+        if (!this.canvas.isConnected || this.vm !== vm) { this.gestureFrame = 0; return; }
+        const t = Math.min(1, (now - start) / duration), pulse = Math.sin(t * Math.PI * 2) * (1 - t);
+        const walk = moved ? Math.sin(t * Math.PI * 4) * (1 - t) : 0;
+        this.player.position.copy(playerEnd).addScaledVector(approach, -(1 - t) * (1 - t));
+        if (!vm.totoWait) this.toto.position.copy(totoEnd).addScaledVector(approach, -(1 - t) * (1 - t));
+        this.poseFriends(vm, pulse, walk); this.room.pose(vm, pulse);
+        if (lowRes && !inRoom && this.pixCtx) this.post.run(this.scene, cam, vm.era, w, h, clear, this.pixCtx);
+        this.renderer.render(sceneToDraw, cam);
+        this.gestureFrame = t < 1 ? requestAnimationFrame(tick) : 0;
+      };
+      tick(start); // establish the start pose before the browser presents this frame
+    }
   }
 
   private reduced(vm: ViewModel) { return !!vm.reducedMotion || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches); }
@@ -325,11 +375,11 @@ export class WorldView {
     const [x, y, z] = def.position;
     const wall = vm.anchor === 'wall_base' || vm.anchor === 'wall_top';
     // On the wall cameras the figures are drawn beside the pattern (render offset only), so the silhouette is never covered.
-    const pz = wall ? (vm.anchor === 'wall_base' ? 13.2 : 17.5) : z;
-    const side = vm.anchor === 'p01_panel' ? -1.9 : 0; // the friends stand beside the L-shaped tile so that, larger than life, they do not hide it
-    const px = wall && vm.anchor === 'wall_top' ? 14.6 : x + side;
-    const tz = wall ? (vm.anchor === 'wall_base' ? 12.5 : 17.5) : z;
-    const tx = wall ? (vm.anchor === 'wall_top' ? 14.6 : x) : x + side + 0.6;
+    const pz = wall ? (vm.anchor === 'wall_base' ? 13.2 : 17.5) : vm.anchor === 'observatory' ? z - .8 : z;
+    const side = vm.anchor === 'p01_panel' ? 2.7 : vm.anchor === 'mill' ? -3 : vm.anchor === 'observatory' ? 2.6 : 0; // Keep both friends beside the puzzle tile or drainage, never over the readable mechanism.
+    const px = wall && vm.anchor === 'wall_top' ? 14.6 : x + side - (wall ? 0 : vm.totoWait ? 1.35 : .78);
+    const tz = wall ? (vm.anchor === 'wall_base' ? 12.5 : 17.5) : pz;
+    const tx = wall ? (vm.anchor === 'wall_top' ? 14.6 : x) : x + side + .78;
     const s = wall ? 1 : FIG_SCALE;
     const lift = 0.5 * s - 0.02 * (s - 1); // keeps the feet (and the blob shadow) on the ground at any scale
     this.player.scale.setScalar(s); this.toto.scale.setScalar(s);
@@ -338,7 +388,38 @@ export class WorldView {
     if (vm.totoWait === 'p03_plate') this.toto.position.set(10, lift, 9.2); // on the plate
     else if (vm.totoWait === 'p06_front') this.toto.position.set(0, lift, -1.5);
     else if (vm.totoWait === 'p06_back') this.toto.position.set(0, lift, 1.5);
+    if (vm.anchor === 'portal_front' || vm.anchor === 'portal_back') {
+      const samePlate = vm.totoWait === (vm.anchor === 'portal_front' ? 'p06_front' : 'p06_back');
+      // The state says the player holds this plate: put both boots inside its radius.
+      this.player.position.set(samePlate ? -.35 : 0, lift + .15, z);
+      if (samePlate) this.toto.position.x = .35;
+      else if (!vm.totoWait) this.toto.position.x = 1.35;
+      if (vm.totoWait) this.toto.position.y += .15;
+    }
+    // Poses respond to the current task; waiting is a visible turn toward the friend, not a different game state.
+    this.player.rotation.y = wall ? -Math.PI / 2 : vm.anchor === 'p01_panel' ? -.55 : vm.anchor === 'mill' ? -.35 : .12;
+    this.toto.rotation.y = wall ? -Math.PI / 2 : vm.totoWait ? .65 : vm.anchor === 'mill' ? -.5 : -.18;
+    if (vm.view === 'portal_back') { this.player.rotation.y += Math.PI; this.toto.rotation.y += Math.PI; }
+    this.player.rotation.z = !wall && vm.speaker === '主人公' ? -.025 : 0;
+    this.toto.rotation.z = !wall && vm.speaker === 'トト' ? .025 : 0;
+    this.poseFriends(vm);
     this.player.visible = this.toto.visible = def.space === 'world';
+  }
+
+  private poseFriends(vm: ViewModel, pulse = 0, walk = 0) {
+    poseFigure(this.player, { speaking: vm.speaker === '主人公', worried: vm.anchor === 'castle', pulse, walk });
+    poseFigure(this.toto, { speaking: vm.speaker === 'トト', waiting: !!vm.totoWait, worried: vm.anchor === 'castle', pulse, walk: vm.totoWait ? 0 : -walk });
+  }
+
+  /** The actual rendered feet, including presentation offsets, scale and pose. */
+  projectedFeet(): [{ x: number; y: number }, { x: number; y: number }] | null {
+    if (!this.worldRoot.visible || !this.player.visible || this.vm?.era === 'ROOM') return null;
+    const foot = (actor: THREE.Object3D) => {
+      actor.updateWorldMatrix(true, false);
+      const p = actor.localToWorld(new THREE.Vector3(0, -.52, -.05));
+      return this.project([p.x, p.y, p.z]);
+    };
+    return [foot(this.player), foot(this.toto)];
   }
 
   /** Screen position (0..1 within the stage frame) of a world point under the current camera. */
@@ -360,12 +441,14 @@ class RoomScene {
   readonly root = new THREE.Group();
   private readonly screen: THREE.Mesh;
   private readonly rings = new THREE.Group();
+  private readonly me = figure(C.player, 0xf2e6c9, 'player');
+  private readonly friend = figure(C.toto, 0xd05a4e, 'toto');
   constructor() {
     const mat = (c: number) => new THREE.MeshLambertMaterial({ color: c });
     const basic = (c: number) => new THREE.MeshBasicMaterial({ color: c });
-    const shell = new THREE.Mesh(new THREE.BoxGeometry(14, 6, 14), new THREE.MeshLambertMaterial({ color: 0xb59a7a, side: THREE.BackSide }));
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(14, 6, 14), new THREE.MeshLambertMaterial({ color: 0x7f8e90, side: THREE.BackSide }));
     shell.position.set(0, 3, 0);
-    const floor = box(14, 0.1, 14, mat(0x8a6a4a), 0, 0.05, 0);
+    const floor = box(14, 0.1, 14, mat(0x80634b), 0, 0.05, 0);
     const rug = box(5, 0.04, 3.4, mat(0x6e8fb0), 0, 0.12, -0.6);
     // window on the +Z wall, snow outside
     const win = box(3.2, 2.4, 0.1, basic(0x2a3d63), -2.4, 3.2, 6.9);
@@ -381,9 +464,32 @@ class RoomScene {
     const cal = box(0.5, 0.45, 0.1, basic(0xf4f0e6), 3.0, 1.84, 4.9);
     const calTop = box(0.5, 0.12, 0.12, basic(0xd05a4e), 3.0, 2.0, 4.9);
     // the same two friends as in the world, seen from behind, sharing one screen
-    const me = figure(C.player, 0xf2e6c9, 'player'), toto = figure(C.toto, 0xd05a4e, 'toto');
-    me.position.set(0.4, 0.6, 3.4); toto.position.set(2.0, 0.6, 3.4);
+    const me = this.me, toto = this.friend;
+    me.scale.setScalar(1.4); toto.scale.setScalar(1.4);
+    me.position.set(.35, .84, 3.35); toto.position.set(2.05, .84, 3.35);
     me.rotation.y = toto.rotation.y = Math.PI; // facing the screen
+    for (const actor of [me, toto]) {
+      const controller = new THREE.Group();
+      controller.add(box(.38, .1, .18, mat(0x354b5c), 0, .15, -.43));
+      controller.add(box(.08, .025, .06, basic(0xc9d8df), -.1, .213, -.43));
+      controller.add(box(.025, .025, .1, basic(0xc9d8df), -.1, .215, -.43));
+      controller.add(box(.04, .025, .04, basic(0xe6c58b), .1, .213, -.44));
+      actor.add(controller);
+    }
+    // The same little game on the shared screen, not a new puzzle or a third character.
+    const screenArt = canvasTexture('room-shared-game', 256, 144, ctx => {
+      ctx.fillStyle = '#19352e'; ctx.fillRect(0, 0, 256, 144);
+      ctx.fillStyle = '#263d52'; ctx.fillRect(0, 0, 256, 60);
+      ctx.fillStyle = '#8299aa'; ctx.fillRect(135, 30, 62, 53);
+      for (const x of [130, 176]) { ctx.fillRect(x, 20, 26, 60); ctx.clearRect(x + 8, 20, 10, 8); }
+      ctx.fillStyle = '#d1a96b'; ctx.fillRect(159, 61, 16, 27);
+      ctx.fillStyle = '#c9d8df'; ctx.beginPath(); ctx.moveTo(159, 88); ctx.lineTo(178, 88); ctx.lineTo(135, 144); ctx.lineTo(92, 144); ctx.fill();
+      ctx.fillStyle = '#b96b4d'; ctx.fillRect(112, 108, 7, 12);
+      ctx.fillStyle = '#57796b'; ctx.fillRect(123, 108, 7, 12);
+    }, false);
+    const display = new THREE.Mesh(new THREE.PlaneGeometry(1.86, 1.04), new THREE.MeshBasicMaterial({ map: screenArt }));
+    display.position.set(1.2, 2.3, 5.34); display.rotation.y = Math.PI;
+    this.root.add(display);
     const lamp = new THREE.PointLight(0xffe2b0, 40, 14); lamp.position.set(0, 5, 2);
     // two steady rings on the screen (visible at the ending only)
     for (const r of [0.2, 0.34]) {
@@ -391,10 +497,22 @@ class RoomScene {
       ring.position.set(1.2, 2.3, 5.33); ring.rotation.y = Math.PI;
       this.rings.add(ring);
     }
-    this.root.add(shell, floor, rug, win, snow, moon, frame, desk, ...legs, this.screen, stand, cal, calTop, me, toto, lamp, this.rings);
+    // A furnished, lived-in room. Keep the screen/calendar and every gameplay target in place.
+    const woven = winterAsset('woven_rug'); woven.scale.set(1.65, 1, 1.65); woven.position.set(0, .12, -.6);
+    const shelf = winterAsset('bookshelf'); shelf.position.set(-4.5, .1, 5.8); shelf.rotation.y = 0;
+    const chair = winterAsset('armchair'); chair.position.set(-3.8, .1, 1.4); chair.rotation.y = -.45;
+    const lampModel = winterAsset('table_lamp'); lampModel.position.set(-.35, 1.6, 4.8);
+    const sideTable = box(1.1, .1, .9, mat(0x76503b), -2.5, .8, 1.2);
+    const sideLeg = box(.18, .75, .18, mat(0x493b35), -2.5, .4, 1.2);
+    this.root.add(shell, floor, woven, win, snow, moon, frame, desk, ...legs, this.screen, stand, cal, calTop, me, toto, lamp, this.rings, shelf, chair, lampModel, sideTable, sideLeg);
     this.root.visible = false;
   }
+  pose(vm: ViewModel, pulse = 0) {
+    poseFigure(this.me, { speaking: vm.speaker === '主人公', holding: true, pulse });
+    poseFigure(this.friend, { speaking: vm.speaker === 'トト', holding: true, pulse });
+  }
   apply(vm: ViewModel) {
+    this.pose(vm);
     const here = vm.anchor === 'room' || vm.anchor === 'home';
     this.root.visible = here;
     this.rings.visible = vm.anchor === 'home';
@@ -431,6 +549,7 @@ class EarlyPuzzles {
   private readonly tile = new THREE.Group();
   private readonly lineIn: THREE.Mesh;
   private readonly lineOut: THREE.Mesh;
+  private readonly tileGate: THREE.Mesh;
   private readonly gateLeaf: THREE.Mesh;
   private readonly plate: THREE.Mesh;
   private readonly latch: THREE.Mesh;
@@ -440,7 +559,7 @@ class EarlyPuzzles {
   private readonly bridge: THREE.Mesh;
   private readonly water: THREE.Mesh;
   private readonly mats = {
-    off: new THREE.MeshBasicMaterial({ color: 0x6d7f95 }), on: new THREE.MeshBasicMaterial({ color: 0xffd166 }),
+    off: new THREE.MeshBasicMaterial({ color: 0xc3dfdf }), on: new THREE.MeshBasicMaterial({ color: 0xffd166 }),
     water: new THREE.MeshBasicMaterial({ color: 0x4aa3df }), dark: new THREE.MeshBasicMaterial({ color: 0x05080d }),
     red: new THREE.MeshBasicMaterial({ color: 0xe0605a }), wood: new THREE.MeshLambertMaterial({ color: 0x9a7a52 }),
     leaf: new THREE.MeshLambertMaterial({ color: 0xd9ac5b }),
@@ -448,13 +567,18 @@ class EarlyPuzzles {
 
   constructor() {
     const m = this.mats;
-    // P01: an L-shaped tile (ports W+N at rotation 0), the fixed entry line from the north and the exit line to the east
-    this.tile.position.set(0, 0.06, 5);
-    this.tile.add(box(1.4, 0.12, 0.4, m.off, -0.5, 0, 0), box(0.4, 0.12, 1.4, m.off, 0, 0, 0.5));
-    this.lineIn = box(0.3, 0.1, 2.4, m.off, 0, 0.05, 7.2);
-    this.lineOut = box(2.6, 0.1, 0.3, m.off, 1.9, 0.05, 5);
+    // P01 uses SCREEN cardinal directions: camera looks along +Z, so screen east is world -X.
+    // At rotation 0 the tile points screen W+N; clockwise once joins the fixed N+E lines.
+    this.tile.position.set(0, 0.24, 5);
+    this.tile.add(box(1.4, 0.12, 0.4, m.off, 0.5, 0, 0), box(0.4, 0.12, 1.4, m.off, 0, 0, 0.5));
+    this.lineIn = box(0.3, 0.1, 2.4, m.off, 0, 0.24, 7.2);
+    this.lineOut = box(2.6, 0.1, 0.3, m.off, -1.9, 0.24, 5);
     const gate1 = new THREE.Group();
-    gate1.add(box(0.3, 2, 0.3, m.leaf, 3.4, 1, 4.4), box(0.3, 2, 0.3, m.leaf, 3.4, 1, 5.6), box(0.3, 0.3, 1.5, m.leaf, 3.4, 2, 5));
+    gate1.add(box(.18, 2, .18, m.leaf, -4.3, 1, 5.6), box(.18, 2, .18, m.leaf, -3.1, 1, 5.6), box(1.45,.18,.22,m.leaf,-3.7,2,5.6));
+    this.tileGate = box(1.0,1.65,.1,m.wood,-3.7,.9,5.6);gate1.add(this.tileGate);
+    // Arrowheads communicate flow without relying on the solved colour.
+    const arrow = (points: number[]) => {const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));return new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xf2d8a1,side:THREE.DoubleSide}));};
+    this.g1.add(arrow([-.2,.31,6.65,.2,.31,6.65,0,.31,6.25]),arrow([-2.5,.31,4.8,-2.5,.31,5.2,-2.9,.31,5]));
     this.g1.add(this.tile, this.lineIn, this.lineOut, gate1);
     // P02: water channel, drain, wheel pin, bridge
     this.water = box(5, 0.08, 0.7, m.water, 3.5, 0.05, 9.5);
@@ -474,7 +598,7 @@ class EarlyPuzzles {
     this.plateF.position.set(0, 0.05, -1.5);
     this.plateB = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.1, 20), m.off);
     this.plateB.position.set(0, 0.05, 1.5);
-    this.glow = box(2.4, 3, 0.06, new THREE.MeshBasicMaterial({ color: 0xf6e7b4 }), 0, 1.5, 0);
+    this.glow = box(2.4, 3, 0.06, new THREE.MeshBasicMaterial({ color: 0xf6e7b4, transparent: true, opacity: .26, depthWrite: false }), 0, 1.5, 0);
     this.g4.add(this.plateF, this.plateB, this.glow);
     this.root.add(this.g1, this.g2, this.g3, this.g4);
   }
@@ -491,11 +615,13 @@ class EarlyPuzzles {
     this.glow.visible = vm.p06.latched;
     const p1 = vm.p01;
     this.tile.rotation.y = -p1.rotation * (Math.PI / 2); // clockwise on screen, in 90-degree steps
+    this.tileGate.position.y = p1.solved ? 2.8 : .9;
     const lit = p1.solved ? m.on : m.off;
     this.lineIn.material = lit; this.lineOut.material = lit;
     for (const c of this.tile.children) (c as THREE.Mesh).material = lit;
     const p2 = vm.p02;
     this.drainBox.material = p2.drain === 'open' ? m.dark : m.off;
+    this.water.scale.z = p2.drain === 'open' ? .35 : 1;
     this.spill.visible = p2.drain === 'open'; // water leaves through the open drain
     this.pin.visible = p2.stopper === 'locked';
     this.bridge.rotation.x = p2.solved ? 0 : -0.9;

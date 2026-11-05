@@ -17,3 +17,7 @@ december31-save-*.json
 .env.*
 *.pem
 tests/e2e/_shots.spec.ts
+
+# Local source checkout and generated test evidence
+assets/audio/kenney-source/
+handoff/evidence/

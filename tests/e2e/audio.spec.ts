@@ -85,3 +85,56 @@ test('audio: every era is audible, never clips, and has no long silence', async 
   const steadyWorst = Math.max(...Object.values(o['steady jump dB'] as Record<string, number>));
   for (const [k, v] of Object.entries(o['envelope jump dB'] as Record<string, number>)) expect(v, `era change ${k} vs steady ${steadyWorst.toFixed(1)} dB`).toBeLessThan(steadyWorst + 3);
 });
+
+test('licensed interaction samples decode, and unavailable samples retain audible fallback', async ({ page }) => {
+  await page.goto('/');
+  const render = async () => page.evaluate(async () => {
+    const { Mixer } = await import(/* @vite-ignore */ '/src/audio/mixer.ts') as typeof import('../../src/audio/mixer');
+    const m = new Mixer();
+    const x = await m.renderOffline([{ era: 'E2', seconds: 1 }], [{ name: 'press', at: .1 }, { name: 'move', at: .3 }, { name: 'deny', at: .5 }], { master: 1, music: 0, sfx: 1 });
+    return { loaded: m.loadedSamples.sort(), peak: Math.max(...x.map(Math.abs)), finite: x.every(Number.isFinite) };
+  });
+  const loaded = await render();
+  expect(loaded.loaded).toEqual(['deny', 'move', 'press']);
+  expect(loaded.finite).toBe(true); expect(loaded.peak).toBeGreaterThan(.01); expect(loaded.peak).toBeLessThan(.95);
+  await page.route('**/src/audio/samples/*.wav', route => route.abort());
+  const fallback = await render();
+  expect(fallback.loaded).toEqual([]); expect(fallback.finite).toBe(true);
+  expect(fallback.peak).toBeGreaterThan(.01); expect(fallback.peak).toBeLessThan(.95);
+});
+
+test('live audio: saved mute is applied before connection, repeated feedback replaces old voices, and visibility/disposal are safe', async ({page})=>{
+  await page.goto('/');
+  await page.evaluate(async()=>{
+    const {Mixer}=await import(/* @vite-ignore */ '/src/audio/mixer.ts') as typeof import('../../src/audio/mixer');
+    const m=new Mixer();m.setVolumes(0,1,1);(window as any).__audioCheck=m;
+    const b=document.createElement('button');b.id='audio-check-unlock';b.textContent='Unlock audio test';b.onclick=()=>m.unlock();document.body.append(b);
+  });
+  await page.locator('#audio-check-unlock').click();
+  const result=await page.evaluate(async()=>{
+    const m=(window as any).__audioCheck;
+    const ctx=m.ctx as AudioContext;await ctx.resume();
+    const initialMaster=m.master.gain.value;
+    const meter=ctx.createAnalyser();meter.fftSize=2048;m.master.connect(meter);
+    m.play('cue');await new Promise(r=>setTimeout(r,100));
+    const samples=new Float32Array(meter.fftSize);meter.getFloatTimeDomainData(samples);
+    const mutedPeak=Math.max(...samples.map(Math.abs));
+    const first=m.activeEffects.get('cue');
+    m.play('cue');const second=m.activeEffects.get('cue');
+    await new Promise(r=>setTimeout(r,70));
+    const retired={gain:first.bus.gain.value,sources:first.sources.size};
+    const distinct=first!==second,activeCount=m.activeEffects.size;
+    // The same release policy covers decoded samples and their synth fallbacks.
+    await m.loadSamples(ctx);m.play('press');const oldSample=m.activeEffects.get('press');m.play('press');
+    await new Promise(r=>setTimeout(r,70));const sampleRetired=oldSample.sources.size===0;
+    let hidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});document.dispatchEvent(new Event('visibilitychange'));
+    await new Promise(r=>setTimeout(r,80));const hiddenState=ctx.state;
+    hidden=false;document.dispatchEvent(new Event('visibilitychange'));await new Promise(r=>setTimeout(r,80));const visibleState=ctx.state;
+    m.dispose();await new Promise(r=>setTimeout(r,80));document.dispatchEvent(new Event('visibilitychange'));delete (document as any).hidden;
+    return {initialMaster,mutedPeak,retired,distinct,activeCount,sampleRetired,hiddenState,visibleState,disposed:ctx.state};
+  });
+  console.log('AUDIO LIVE '+JSON.stringify(result));
+  expect(result.initialMaster).toBe(0);expect(result.mutedPeak).toBe(0);
+  expect(result.distinct).toBe(true);expect(result.activeCount).toBe(1);expect(result.retired.sources).toBe(0);expect(result.retired.gain).toBe(0);expect(result.sampleRetired).toBe(true);
+  expect(result.hiddenState).toBe('suspended');expect(result.visibleState).toBe('running');expect(result.disposed).toBe('closed');
+});

@@ -3,6 +3,8 @@
 // Flags used by the era style (see eraStyle.ts / world.ts): userData.og = "outline this whole group as one shape",
 // userData.flat = "ground-like: casts no shadow and gets no outline", userData.recv = "receives shadows".
 import * as THREE from 'three';
+import { winterMill } from './winterMill';
+import { winterAsset } from './winterAssets';
 import { cliffTexture, lam, lamTex, meadowTexture, paveTexture, rng, roadTexture, waterTexture } from './materials';
 
 function mesh(g: THREE.BufferGeometry, m: THREE.Material | THREE.Material[], x: number, y: number, z: number): THREE.Mesh {
@@ -22,41 +24,27 @@ const nearRoad = (x: number, z: number, r: number) => ROAD.some(([a, b], i) => {
   return Math.hypot(x - (a + t * vx), z - (b + t * vz)) < r;
 });
 /** Warm lamps: where the lantern glow is added in the richest era. */
-export const LAMPS: [number, number][] = [[-1.8, 1.5], [1.8, 1.5], [8.4, 10], [11.6, 10], [3, 5.2]];
+export const LAMPS: [number, number][] = [[-1.8, 1.5], [1.8, 1.5], [8.4, 10], [11.6, 10], [-3.8, 6.6]];
 /** Plateaus the observatory and the castle stand on (anchor y = 2). */
 export const PLATEAUS: [number, number][] = [[22, 20], [28, 26]];
 
 export function tree(x: number, z: number, s: number, snow: boolean): THREE.Group {
-  const g = og(new THREE.Group());
-  g.add(mesh(new THREE.CylinderGeometry(0.12 * s, 0.16 * s, 0.7 * s, 6), lam(0x6b4a30), 0, 0.35 * s, 0));
-  for (let i = 0; i < 3; i++) {
-    const r = (0.95 - i * 0.25) * s;
-    g.add(mesh(new THREE.ConeGeometry(r, 0.9 * s, 7), lam(i % 2 ? 0x2f6b4c : 0x3a7a57), 0, (1.0 + i * 0.6) * s, 0));
-    if (snow) g.add(mesh(new THREE.ConeGeometry(r * 0.62, 0.34 * s, 7), lam(0xf4f8fb), 0, (1.22 + i * 0.6) * s, 0));
-  }
-  g.position.set(x, 0, z);
-  return g;
+  const g = winterAsset(Math.round(x * 3 + z) % 2 ? 'pine_slender' : 'pine_snow');
+  g.scale.setScalar(s); g.position.set(x, 0, z); return g;
 }
 
 export function house(x: number, z: number, w: number, d: number, h: number, wall: number, roof: number): THREE.Group {
-  const g = og(new THREE.Group());
-  g.add(box(w, h, d, lam(wall), 0, h / 2, 0));
-  const r = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.78, h * 0.7, 4), lam(roof));
-  r.rotation.y = Math.PI / 4; r.position.set(0, h + h * 0.35, 0);
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.62, h * 0.34, 4), lam(0xf1f6f8));
-  cap.rotation.y = Math.PI / 4; cap.position.set(0, h + h * 0.62, 0);
-  g.add(r, cap, box(w * 0.22, h * 0.5, 0.05, lam(0x4a3322), 0, h * 0.25, -d / 2 - 0.01), box(0.3, 0.3, 0.05, basic(0xf6e7b4), w * 0.3, h * 0.62, -d / 2 - 0.01));
-  g.add(box(0.3, 0.3, 0.05, lam(0x5a4632), w * 0.3, h * 0.62, -d / 2 - 0.005), box(0.28, 0.6, 0.28, lam(0x8a6a58), -w * 0.28, h + 0.5, 0.2), box(0.34, 0.08, 0.34, lam(0xf1f6f8), -w * 0.28, h + 0.84, 0.2));
-  g.add(box(w + 0.12, 0.1, d + 0.12, lam(0x8d7e68), 0, 0.05, 0)); // stone plinth
-  g.position.set(x, 0, z);
-  return g;
+  const g = winterAsset('mill_house');
+  g.scale.set(w / 2.6, h / 1.6, d / 2.2); g.position.set(x, 0, z); return g;
 }
 
 export function waterwheel(): THREE.Group {
   // axis along Z so the cameras that look along +Z see the wheel face-on
   const g = og(new THREE.Group());
-  const wood = lam(0xaf6654), dark = lam(0x7a4438);
+  const wood = lam(0x876247), dark = lam(0x493f39);
   g.add(new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.12, 6, 24), wood));
+  for (const z of [-.16,.16]) { const band = new THREE.Mesh(new THREE.TorusGeometry(1.38,.035,5,32),lam(0x374956)); band.position.z=z; g.add(band); }
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;g.add(mesh(new THREE.SphereGeometry(.05,6,4),lam(0xbaaa85),Math.cos(a)*1.38,Math.sin(a)*1.38,-.2));}
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
     const spoke = box(2.8, 0.1, 0.1, dark, 0, 0, 0); spoke.rotation.z = a; g.add(spoke);
@@ -67,38 +55,15 @@ export function waterwheel(): THREE.Group {
 }
 
 export function castleModel(): THREE.Group {
-  const g = og(new THREE.Group());
-  const stone = lam(0xd6dce3), shade = lam(0xaab4c0), roofM = lam(0x4f6ea8), goldM = lam(0xd9ac5b);
-  g.add(box(4.4, 2.6, 3.4, stone, 0, 1.3, 0), box(5.0, 0.3, 4.0, shade, 0, 0.15, 0));
-  for (const x of [-2.4, 2.4]) {
-    g.add(box(1.5, 4.0, 1.5, stone, x, 2.0, 0.2));
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.3, 8), roofM); cone.position.set(x, 4.65, 0.2); g.add(cone);
-    g.add(box(0.28, 0.5, 0.05, lam(0x2a3d63), x, 3.0, -0.56));
-  }
-  g.add(box(2.0, 3.4, 1.8, stone, 0, 1.7, 0.4));
-  const top = new THREE.Mesh(new THREE.ConeGeometry(1.5, 1.6, 8), roofM); top.position.set(0, 4.2, 0.4); g.add(top);
-  g.add(mesh(new THREE.SphereGeometry(0.2, 10, 8), goldM, 0, 5.2, 0.4), box(0.04, 0.5, 0.04, goldM, 0, 5.0, 0.4));
-  g.add(box(1.0, 1.4, 0.06, lam(0x3c2a1d), 0, 0.8, -1.32), box(0.5, 0.7, 0.05, basic(0xf6e7b4), 0, 2.4, -0.5));
-  for (let i = -4; i <= 4; i++) g.add(box(0.28, 0.3, 0.3, stone, i * 0.5, 2.75, -1.55));
-  // banners on the two side towers and lit slit windows (cosmetic)
-  for (const x of [-2.4, 2.4]) g.add(box(0.5, 0.34, 0.04, lam(0xc4453b), x + 0.3, 5.6, 0.2), box(0.04, 0.9, 0.04, goldM, x, 5.35, 0.2), box(0.28, 0.5, 0.05, basic(0xf6e7b4), x, 2.2, -0.56));
-  return g;
+  return winterAsset('castle');
 }
 
 export function observatoryDome(): THREE.Group {
-  const g = og(new THREE.Group());
-  g.add(mesh(new THREE.CylinderGeometry(1.6, 1.8, 1.4, 12), lam(0xd6dce3), 0, 0.7, 0));
-  g.add(mesh(new THREE.SphereGeometry(1.5, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x6f86b8), 0, 1.4, 0));
-  const tube = mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.6, 8), lam(0x3b4a66), 0.2, 2.3, -0.7); tube.rotation.x = -0.9; g.add(tube);
-  g.add(box(0.3, 0.5, 0.05, basic(0xf6e7b4), 0, 0.8, -1.74), box(0.04, 1.2, 0.04, lam(0x3b4a66), 0, 3.0, 0)); // door light, little mast
-  return g;
+  return winterAsset('observatory');
 }
 
 export function lantern(x: number, z: number): THREE.Group {
-  const g = og(new THREE.Group());
-  g.add(box(0.1, 1.1, 0.1, lam(0x4a3322), 0, 0.55, 0), box(0.3, 0.3, 0.3, basic(0xffe6a0), 0, 1.25, 0), box(0.4, 0.08, 0.4, lam(0x4a3322), 0, 1.45, 0), box(0.28, 0.05, 0.28, lam(0xf1f6f8), 0, 1.52, 0));
-  g.position.set(x, 0, z);
-  return g;
+  const g = winterAsset('lantern'); g.position.set(x, 0, z); return g;
 }
 
 /** Wooden fence: posts and two rails, along a straight line. */
@@ -129,6 +94,8 @@ function scatter(geo: THREE.BufferGeometry, mat: THREE.Material, at: { x: number
 
 export function buildScenery(scene: THREE.Object3D) {
   const rand = rng(31);
+  scene.add(winterMill());
+  const millClearing = (x: number, z: number) => x > -2 && x < 12.5 && z > .5 && z < 10.5;
   const inPlateau = (x: number, z: number, m: number) => PLATEAUS.some(([px, pz]) => Math.abs(x - px) < 4 + m && Math.abs(z - pz) < 4 + m);
   const nearFrame = (x: number, z: number) => Math.abs(x) < 2.5 && z > -3 && z < 3;
   /** The strip behind the white wall as the horizontal wall cameras see it (any x past the camera, z 12..20): nothing pale or tall may stand there. */
@@ -168,7 +135,7 @@ export function buildScenery(scene: THREE.Object3D) {
   let placed = 0;
   for (let tries = 0; tries < 400 && placed < 70; tries++) {
     const x = -12 + rand() * 56, z = -12 + rand() * 54;
-    if (nearRoad(x, z, 2.2)) continue;
+    if (nearRoad(x, z, 2.2) || millClearing(x, z)) continue;
     if (corridor(x, z) || (x > 8 && x < 31 && z > 10 && z < 24)) continue; // wall backdrop, observatory and castle area
     if (nearFrame(x, z)) continue;
     scene.add(tree(x, z, 0.8 + rand() * 0.7, true)); placed++;
@@ -184,7 +151,7 @@ export function buildScenery(scene: THREE.Object3D) {
     for (let t = 0; t < n * 6 && out.length < n; t++) { const x = -14 + rand() * 64, z = -14 + rand() * 62; if (ok(x, z)) out.push({ x, z, r: rand() * 6.28 }); }
     return out;
   };
-  const free = (x: number, z: number) => !nearRoad(x, z, 1.3) && !inPlateau(x, z, 0.3) && !nearFrame(x, z);
+  const free = (x: number, z: number) => !nearRoad(x, z, 1.3) && !inPlateau(x, z, 0.3) && !nearFrame(x, z) && !millClearing(x, z);
   // grass tufts: three crossed blades per cluster (also in the wall zone: it keeps the foreground from being bare)
   const tuftGeo = new THREE.ConeGeometry(0.07, 0.34, 4);
   for (const [c, n] of [[0x3f6b4f, 220], [0x2a4a3d, 180]] as const)
@@ -197,7 +164,7 @@ export function buildScenery(scene: THREE.Object3D) {
   scene.add(fence(-5.5, 2.5, -2.4, 2.5), fence(5.6, 3.2, 8, 3.2), fence(13, 6.2, 16, 6.2), fence(-3, 10, -3, 13));
   // places
   scene.add(house(8.8, 7.2, 2.6, 2.2, 1.6, 0xe8dcc4, 0xa8553f));       // mill house
-  const wheel = waterwheel(); wheel.position.set(6, 1.5, 8); scene.add(wheel);
+  const wheel = waterwheel(); wheel.name = 'mill-wheel'; wheel.position.set(6, 1.5, 8); scene.add(wheel);
   const streamMat = lamTex(0xffffff, waterTexture(), 'water');
   const stream = flat(new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.05, 9), streamMat)); stream.position.set(6, 0.04, 5.5);
   stream.userData['stream'] = true; scene.add(stream);
@@ -233,20 +200,20 @@ export function buildScenery(scene: THREE.Object3D) {
   const court = flat(box(2.2, 0.04, 3.2, lam(0x9db2bd), 28, 2.02, 24.8)); scene.add(court);
   for (const [x, z] of LAMPS) scene.add(lantern(x, z));
   for (const [x, z] of [[24.2, 22.0], [31.2, 28.2]] as const) { const l = lantern(x, z); l.position.y = 2; scene.add(l); }
+  // Furnish only existing safe roadside clearings; no decoration in the wall/observation sightlines.
+  for (const [name, x, z, angle] of [
+    ['bench', -5.5, 1.7, .2], ['barrel', 9.9, 6.3, 0], ['crate', 10.6, 6.5, .15],
+    ['firewood', 10, 7.5, 0], ['bench', 24.4, 22.5, -.5],
+  ] as const) {
+    const prop = winterAsset(name); prop.position.set(x, x > 20 ? 2 : 0, z); prop.rotation.y = angle; scene.add(prop);
+  }
   return { lamps: [...LAMPS.map(([x, z]) => [x, 1.25, z] as const), [24.2, 3.25, 22.0] as const, [31.2, 3.25, 28.2] as const] };
 }
 
-/** A small friend: rounded body, head, scarf and a hat (player) or ears (Toto). Origin at the waist so it sits at anchor y + 0.5. */
+/** Winter-coated friends. Origin at the waist so the feet sit at anchor height. */
 export function figure(coat: number, scarf: number, kind: 'player' | 'toto'): THREE.Group {
-  const g = og(new THREE.Group());
-  g.add(mesh(new THREE.CapsuleGeometry(0.26, 0.45, 4, 10), lam(coat), 0, 0, 0));
-  g.add(mesh(new THREE.SphereGeometry(0.24, 12, 10), lam(0xf0c7a0), 0, 0.62, 0));
-  g.add(mesh(new THREE.TorusGeometry(0.27, 0.07, 6, 12), lam(scarf), 0, 0.34, 0).rotateX(Math.PI / 2));
-  const eye = new THREE.MeshBasicMaterial({ color: 0x1b1b1b });
-  g.add(mesh(new THREE.SphereGeometry(0.035, 6, 6), eye, -0.09, 0.64, -0.21), mesh(new THREE.SphereGeometry(0.035, 6, 6), eye, 0.09, 0.64, -0.21));
-  if (kind === 'player') g.add(mesh(new THREE.CylinderGeometry(0.25, 0.26, 0.14, 12), lam(0xc4453b), 0, 0.84, 0));
-  else for (const x of [-0.15, 0.15]) g.add(mesh(new THREE.ConeGeometry(0.09, 0.2, 5), lam(0x8a6a4a), x, 0.88, 0));
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.34, 14), new THREE.MeshBasicMaterial({ color: 0x0b1410, transparent: true, opacity: 0.35 }));
-  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.48; shadow.userData['flat'] = true; shadow.userData['blob'] = true; g.add(shadow);
+  const g = winterAsset(kind);
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.38, 14), new THREE.MeshBasicMaterial({ color: 0x0b1410, transparent: true, opacity: 0.3 }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.51; shadow.userData['flat'] = true; shadow.userData['blob'] = true; g.add(shadow);
   return g;
 }

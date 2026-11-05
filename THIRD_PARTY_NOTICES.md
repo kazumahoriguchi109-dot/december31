@@ -25,3 +25,9 @@
     THE SOFTWARE.
 
 Other build and test tools (TypeScript, Vite, Vitest, Playwright, Ajv, fake-indexeddb) are used only for development and are not part of the delivered game code.
+
+## Kenney Interface Sounds (CC0 1.0)
+
+The three interaction samples are by Kenney (2020), converted to WAV by Calinou. Source, file mapping and the original CC0 notices are in [assets/audio/SOURCES.md](assets/audio/SOURCES.md), KENNEY-CC0.txt and KENNEY-ORIGINAL.txt in that folder.
+
+The winter models and dialogue portraits are original project artwork. The title background is AI-generated project artwork; it is not a photograph or an asset from another game.

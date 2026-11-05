@@ -23,9 +23,9 @@ export interface Twins { e0: THREE.MeshToonMaterial; e1: THREE.MeshToonMaterial 
 
 function build(color: number, map: THREE.Texture | null, key: string): THREE.MeshLambertMaterial {
   const hit = cache.get(key); if (hit) return hit;
-  const m = new THREE.MeshLambertMaterial({ color, flatShading: true, map: map ?? undefined });
+  const m = new THREE.MeshLambertMaterial({ color, flatShading: true, ...(map ? { map } : {}) });
   const toon = (r: THREE.Texture) => {
-    const t = new THREE.MeshToonMaterial({ color, map: map ?? undefined, gradientMap: r });
+    const t = new THREE.MeshToonMaterial({ color, ...(map ? { map } : {}), gradientMap: r });
     (t as unknown as { flatShading: boolean }).flatShading = true; // facets stay visible in the cel looks
     return t;
   };
@@ -66,17 +66,17 @@ const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
 export function meadowTexture(): THREE.CanvasTexture {
   return canvasTexture('meadow', 256, 256, (g, w, h) => {
     const r = rng(7);
-    g.fillStyle = '#2d4a40'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#3a5452'; g.fillRect(0, 0, w, h);
     const wrap = (x: number, y: number, fn: (x: number, y: number) => void) => { for (const dx of [0, -w]) for (const dy of [0, -h]) fn(x + dx, y + dy); };
-    const greens = ['#2a4a3d', '#34574b', '#274439', '#3a6150', '#315446'];
+    const greens = ['#3a5350', '#405c58', '#344e4c', '#46625e', '#3c5855'];
     for (let i = 0; i < 70; i++) { const x = r() * w, y = r() * h, rr = 8 + r() * 22; g.fillStyle = greens[(r() * greens.length) | 0]!; wrap(x, y, (X, Y) => { g.beginPath(); g.ellipse(X, Y, rr, rr * 0.7, 0, 0, 7); g.fill(); }); }
-    for (let i = 0; i < 420; i++) { // grass tufts: short V strokes
+    for (let i = 0; i < 120; i++) { // grass tufts: short V strokes
       const x = r() * w, y = r() * h; g.strokeStyle = r() < 0.5 ? '#4b7a5c' : '#22392f'; g.lineWidth = 1.4;
       wrap(x, y, (X, Y) => { g.beginPath(); g.moveTo(X - 2, Y); g.lineTo(X - 1, Y - 4); g.moveTo(X, Y); g.lineTo(X, Y - 5); g.moveTo(X + 2, Y); g.lineTo(X + 1, Y - 3.5); g.stroke(); });
     }
-    for (let i = 0; i < 16; i++) { // snow patches with a soft blue shadow edge
+    for (let i = 0; i < 8; i++) { // snow patches with a soft blue shadow edge
       const x = r() * w, y = r() * h, rr = 3 + r() * 7;
-      wrap(x, y, (X, Y) => { g.fillStyle = '#a9bfc6'; g.beginPath(); g.ellipse(X + 1, Y + 1.5, rr, rr * 0.6, 0, 0, 7); g.fill(); g.fillStyle = '#e3eef0'; g.beginPath(); g.ellipse(X, Y, rr * 0.9, rr * 0.5, 0, 0, 7); g.fill(); });
+      wrap(x, y, (X, Y) => { g.fillStyle = '#78989e'; g.beginPath(); g.ellipse(X + 1, Y + 1.5, rr, rr * 0.6, 0, 0, 7); g.fill(); g.fillStyle = '#b0c4c5'; g.beginPath(); g.ellipse(X, Y, rr * 0.9, rr * 0.5, 0, 0, 7); g.fill(); });
     }
   });
 }
@@ -115,8 +115,8 @@ export function cliffTexture(): THREE.CanvasTexture {
 export function roadTexture(): THREE.CanvasTexture {
   return canvasTexture('road', 64, 128, (g, w, h) => {
     const r = rng(5);
-    g.fillStyle = '#b9a37c'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 90; i++) { g.fillStyle = r() < 0.5 ? '#9c8762' : '#d3c196'; g.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
+    g.fillStyle = '#a3957f'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 90; i++) { g.fillStyle = r() < 0.5 ? '#897b69' : '#b9ae98'; g.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
     g.fillStyle = 'rgba(80,60,36,0.22)'; g.fillRect(w * 0.18, 0, 3, h); g.fillRect(w * 0.76, 0, 3, h); // two wheel ruts
     g.fillStyle = 'rgba(240,246,248,0.55)'; g.fillRect(0, 0, 2, h); g.fillRect(w - 2, 0, 2, h); // snow on the verges
   });
@@ -126,9 +126,9 @@ export function roadTexture(): THREE.CanvasTexture {
 export function waterTexture(): THREE.CanvasTexture {
   return canvasTexture('water', 64, 128, (g, w, h) => {
     const r = rng(13);
-    g.fillStyle = '#3f7fb4'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 46; i++) { g.fillStyle = r() < 0.5 ? '#5aa0d0' : '#2f6a9c'; g.fillRect(r() * w, r() * h, 2 + r() * 3, 6 + r() * 14); }
-    for (let i = 0; i < 18; i++) { g.fillStyle = 'rgba(230,244,252,0.7)'; g.fillRect(r() * w, r() * h, 1.5, 4 + r() * 8); }
+    g.fillStyle = '#315969'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 26; i++) { g.fillStyle = r() < 0.5 ? '#527b91' : '#29485f'; g.fillRect(r() * w, r() * h, 2 + r() * 3, 6 + r() * 14); }
+    for (let i = 0; i < 9; i++) { g.fillStyle = 'rgba(230,244,252,0.45)'; g.fillRect(r() * w, r() * h, 1.5, 4 + r() * 8); }
   });
 }
 

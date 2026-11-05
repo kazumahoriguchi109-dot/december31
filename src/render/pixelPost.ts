@@ -5,11 +5,9 @@ import type { Era } from '../domain/types';
 
 /** E0: a fixed hand-made palette (no dithering, no smooth gradients). Snow, greens, navy, wood, red roofs, gold, sand, stone, water, skin. */
 const PAL0 = [
-  0x0b1220, 0x142238, 0x1e3350, 0x2f4d73, 0x4a6a96, 0x0f1f1a, 0x1a3328, 0x274b3a, 0x386a4c, 0x4f8a5c,
-  0xdde8ee, 0xb9ccd8, 0x8aa4b8, 0x3c4a5c, 0x5f7288, 0x8d9db0, 0xc0ccd8, 0x3b2619, 0x5c3d2a, 0x8a5a3c,
-  0xb97d4f, 0x7a2f2a, 0xa8453b, 0xd9695a, 0xa87a2c, 0xd9ac5b, 0xf6dc8a, 0xfff1c0, 0x8f7a58, 0xb9a37c,
-  0xd9c9a0, 0x2a6a9a, 0x4aa3df, 0x8ccbef, 0xe8b88f, 0xf0c7a0, 0x527d69, 0xf0eee5, 0xd05a4e, 0x6d7f95,
-  0x05080d, 0x3a5f78, 0x24405f, 0x6f86b8, 0x4f6ea8, 0x2f6b4c, 0xc4453b, 0x1b1b1b,
+  0x101d30, 0x263d52, 0x4c6477, 0x8299aa, 0xc9d8df, 0xf0eee5,
+  0x19352e, 0x39594b, 0x708374, 0x3d302b, 0x786052, 0xb88b68,
+  0x9a5145, 0xd1a96b, 0xf2d8a1, 0x427c99, 0x8bb9c9, 0xe8b88f,
 ].map((c) => [(c >> 16) & 255, (c >> 8) & 255, c & 255] as const);
 
 export class PixelPost {
@@ -102,13 +100,13 @@ export class PixelPost {
         const s = src + x * 4, o = (y * w + x) * 4;
         let R = colBuf[s]!, G = colBuf[s + 1]!, B = colBuf[s + 2]!;
         if (e0) { const p = PAL0[this.lut![32768 + (((R >> 3) << 10) | ((G >> 3) << 5) | (B >> 3))]!]!; R = p[0]; G = p[1]; B = p[2]; }
-        else { R = Math.min(255, Math.round(R / 21) * 21); G = Math.min(255, Math.round(G / 21) * 21); B = Math.min(255, Math.round(B / 21) * 21); }
+        // E1 keeps the rendered colours: independent RGB rounding caused coloured contour noise on snow gradients.
         // outline: this pixel differs in shape from the one to its left or above (so lines are one pixel thick)
         const me = idAt(x, y);
         const l = x > 0 ? idAt(x - 1, y) : me, u = y > 0 ? idAt(x, y - 1) : me;
         if ((l !== me && (l !== 0 || me !== 0)) || (u !== me && (u !== 0 || me !== 0))) {
           if (e0) { R = 0x0b; G = 0x12; B = 0x20; }
-          else { R = Math.round(R * 0.26); G = Math.round(G * 0.28); B = Math.round(B * 0.34); }
+          else { R = Math.round(R * 0.62); G = Math.round(G * 0.65); B = Math.round(B * 0.70); }
         }
         d[o] = R; d[o + 1] = G; d[o + 2] = B; d[o + 3] = 255;
       }

@@ -1,0 +1,627 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:december31:screens:1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "designVersion",
+    "sourceOfTruth",
+    "screens",
+    "errorRoutes",
+    "guardedTransitions",
+    "memoryEffects",
+    "revisionSource"
+  ],
+  "properties": {
+    "designVersion": {
+      "type": "string",
+      "const": "1.1"
+    },
+    "sourceOfTruth": {
+      "type": "string",
+      "const": "docs/SCREENS.md"
+    },
+    "screens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "heading",
+          "allowedDestinations",
+          "initialFocus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "heading": {
+            "type": "string"
+          },
+          "allowedDestinations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "UI_BOOT",
+                "UI_LOAD",
+                "UI_TITLE",
+                "UI_NEW",
+                "UI_LOAD_SLOT",
+                "UI_PLAY",
+                "UI_PAUSE",
+                "UI_SLOTS",
+                "UI_CONFIRM",
+                "UI_SETTINGS",
+                "UI_HINT",
+                "UI_LOG",
+                "UI_CREDITS",
+                "UI_ERROR",
+                "UI_IMPORT",
+                "UI_EXIT"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "initialFocus": {
+            "type": "string"
+          }
+        }
+      },
+      "uniqueItems": false
+    },
+    "errorRoutes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "E_GRAPHICS",
+        "E_CONTEXT",
+        "E_STORAGE",
+        "E_CORRUPT",
+        "E_VERSION",
+        "E_CAPABILITY",
+        "E_TAB",
+        "E_CONFLICT",
+        "E_ASSET"
+      ],
+      "properties": {
+        "E_GRAPHICS": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_CONTEXT": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_STORAGE": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_CORRUPT": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_VERSION": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_CAPABILITY": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_TAB": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_CONFLICT": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "E_ASSET": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "guardedTransitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "event",
+          "guard",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          },
+          "event": {
+            "type": "string"
+          },
+          "guard": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string",
+            "enum": [
+              "UI_BOOT",
+              "UI_LOAD",
+              "UI_TITLE",
+              "UI_NEW",
+              "UI_LOAD_SLOT",
+              "UI_PLAY",
+              "UI_PAUSE",
+              "UI_SLOTS",
+              "UI_CONFIRM",
+              "UI_SETTINGS",
+              "UI_HINT",
+              "UI_LOG",
+              "UI_CREDITS",
+              "UI_ERROR",
+              "UI_IMPORT",
+              "UI_EXIT"
+            ]
+          }
+        }
+      },
+      "uniqueItems": false
+    },
+    "memoryEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "New",
+        "Save",
+        "SaveAs",
+        "Auto",
+        "LoadManual",
+        "LoadAuto",
+        "Import",
+        "Restore",
+        "FreshAutoMaintenance"
+      ],
+      "properties": {
+        "New": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "replace-after-complete"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "selected-manual"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "auto"
+            }
+          }
+        },
+        "Save": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "selected-manual"
+            }
+          }
+        },
+        "SaveAs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "progress-unchanged-binding-after-complete"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "selected-manual"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "selected-manual"
+            }
+          }
+        },
+        "Auto": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "auto"
+            }
+          }
+        },
+        "LoadManual": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "replace-after-complete"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "selected-manual"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "selected-manual"
+            }
+          }
+        },
+        "LoadAuto": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "replace-after-complete"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "loaded-binding"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "auto"
+            }
+          }
+        },
+        "Import": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "unchanged"
+            }
+          }
+        },
+        "Restore": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "unchanged"
+            }
+          }
+        },
+        "FreshAutoMaintenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "game",
+            "activeManualSlot",
+            "lastPlayed"
+          ],
+          "properties": {
+            "game": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "activeManualSlot": {
+              "type": "string",
+              "const": "unchanged"
+            },
+            "lastPlayed": {
+              "type": "string",
+              "const": "clear-only-if-auto"
+            }
+          }
+        }
+      }
+    },
+    "revisionSource": {
+      "type": "string",
+      "const": "meta.writeRevision+1; slot.revision is CAS-only"
+    }
+  }
+}

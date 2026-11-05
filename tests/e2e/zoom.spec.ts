@@ -39,7 +39,7 @@ async function layoutProblems(page: Page, where: string) {
   expect(p, where).toEqual([]);
 }
 
-test('200% zoom: title, settings, credits and the opening through P03 have no overflow and stay playable', async ({ page }) => {
+test('200% zoom: title, settings, credits and the opening through P03 have no overflow and stay playable', async ({ page }, testInfo) => {
   await page.goto('/');
   await page.locator('#b-new').waitFor();
   await layoutProblems(page, 'title');
@@ -56,7 +56,7 @@ test('200% zoom: title, settings, credits and the opening through P03 have no ov
   await act(page, 'move_p01_panel'); await layoutProblems(page, 'P01');
   await act(page, 'p01_right');
   await act(page, 'move_mill'); await layoutProblems(page, 'mill');
-  await page.screenshot({ path: '/private/tmp/claude-501/-Users-horiguchikazuma-Library-Application-Support-Claude-scratch-workspaces-db8f33c4-c2cc-4413-8eb8-49d88799c664-927d8735-b70a-4584-8cd9-eb16b0185f3b-scratch-2026-11-01-5a3021/208e21b4-e8f0-433f-963a-452081fd57ac/scratchpad/zoom-mill.png' });
+  await page.screenshot({ path: testInfo.outputPath('zoom-mill.png') });
   await act(page, 'p02_drain'); await act(page, 'p02_stopper');
   await act(page, 'move_gate_near'); await act(page, 'p03_wait'); await act(page, 'move_gate_far');
   await act(page, 'p03_latch'); await act(page, 'p03_call'); await layoutProblems(page, 'gate far');

@@ -2,6 +2,7 @@ import { Game, type Action } from '../app/game';
 import { currentObjective } from '../domain/objectives';
 import { WorldView } from '../render/world';
 import { copy, puzzles } from '../content/load';
+import { dialogueEmotion, portrait } from './portraits';
 
 const VIEW_NAMES: Record<string, string> = {
   front: '正面', wall_side: '側面', observe: '観測点', apparatus_side: '装置の側面', portal_front: '枠の表', portal_back: '枠の裏',
@@ -45,6 +46,7 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
           <div id="stagemsg" class="stagemsg" hidden></div>
         </div>
         <section id="dlg" class="dlg" aria-labelledby="dlg-speaker" hidden>
+          <div id="dlg-portrait" class="dlg-portrait" aria-hidden="true"></div>
           <h2 id="dlg-speaker" class="dlg-speaker"></h2>
           <p id="dlg-text" class="dlg-text" aria-hidden="true"></p>
           <p id="dlg-sr" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -147,7 +149,7 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
   function renderPanel() {
     const acts = game.actions().filter((a) => a.id !== 'practice_side' && a.id !== 'practice_front' && a.id !== 'practice_close' && a.id !== 'confirm_no' && a.id !== 'confirm_yes' && (!a.id.startsWith('hint_') || a.id === 'hint_open') && !a.id.startsWith('confirm_return_'));
     // target list = every hotspot object, plus movement destinations; same actionIds as the canvas
-    const objs = acts.filter((a) => a.world || a.group === 'move');
+    const objs = acts.filter((a) => (a.world || a.group === 'move') && !(a.id === 'p05_object' && game.state.player.view === 'observe'));
     el('#targets').innerHTML = objs.map((a) => `<li>${btn(a)}</li>`).join('');
     const groups: Record<string, Action[]> = {};
     for (const a of acts) if (a.group !== 'object' && a.group !== 'move' && !a.world) (groups[a.group] ??= []).push(a); // world objects are already in the target list
@@ -199,21 +201,42 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
 
   // Evolution cues (docs/STORY.md): non-authoritative overlay on the committed state. Never replayed on load.
   const CUE_FOR: Record<string, string> = { p01_solved: 'CUE_EVOLVE_P01', p03_solved: 'CUE_EVOLVE_P03', p05_solved: 'CUE_EVOLVE_P05', p06_solved: 'CUE_RETURN_OPEN', ending: 'CUE_HOME_STABLE' };
+  let cueFrame = 0;
   function playCue(name: string) {
     mixer.play('cue');
+    cancelAnimationFrame(cueFrame);
     const svg = document.querySelector('#cue') as unknown as SVGSVGElement;
     const dur = game.reducedMotion ? 150 : 1200;
-    const ring = (r: number, cx: number, cy: number) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#FFD166" stroke-width=".02"/>`;
-    svg.innerHTML = `<g class="cue-a">${ring(.12, -.35, .18)}</g><g class="cue-b">${ring(.18, .35, .18)}</g><g class="cue-c" opacity="0">${ring(.1, 0, 0)}${ring(.18, 0, 0)}</g>`;
+    const ring = (r: number) => `<circle cx="0" cy="0" r="${r}" fill="none" stroke="#FFD166" stroke-width="2"/>`;
+    svg.innerHTML = `<g class="cue-a">${ring(12)}</g><g class="cue-b">${ring(12)}${ring(18)}</g><g class="cue-c" opacity="0">${ring(10)}${ring(18)}</g>`;
     svg.dataset['cue'] = name; svg.dataset['last'] = name; svg.dataset['dur'] = String(dur);
     svg.removeAttribute('hidden');
-    const done = () => { svg.setAttribute('hidden', ''); svg.dataset['cue'] = ''; };
-    if (game.reducedMotion) { svg.querySelector('.cue-a')?.setAttribute('opacity', '0'); svg.querySelector('.cue-b')?.setAttribute('opacity', '0'); svg.querySelector('.cue-c')?.setAttribute('opacity', '1'); setTimeout(done, dur); return; }
-    const mv = (sel: string, dx: number, dy: number) => (svg.querySelector(sel) as SVGElement).animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${dx}px,${dy}px)`, opacity: 0 }], { duration: dur * .5, fill: 'forwards' });
-    // user-space units: the svg viewBox is 2 wide; translate in user units via CSS px on SVG elements scales with the viewBox
-    mv('.cue-a', .35, -.18); mv('.cue-b', -.35, -.18);
-    const c = (svg.querySelector('.cue-c') as SVGElement).animate([{ opacity: 0 }, { opacity: 0, offset: .4 }, { opacity: 1, offset: .5 }, { opacity: 1, offset: .85 }, { opacity: 0 }], { duration: dur, fill: 'forwards' });
-    c.onfinish = done;
+    const started = performance.now();
+    const destination: Record<string, [number, number, number]> = {
+      CUE_ENTRY: [0, 1.5, 0], CUE_EVOLVE_P01: [0, .3, 5],
+      CUE_EVOLVE_P03: [10, 1.3, 12], CUE_RETURN_OPEN: [0, 1.5, 0], CUE_HOME_STABLE: [1.2, 2.3, 5.33],
+    };
+    const draw = (now: number) => {
+      if (!svg.isConnected || now - started >= dur) { svg.setAttribute('hidden', ''); svg.dataset['cue'] = ''; cueFrame = 0; return; }
+      const rect = stage.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+      // Projection is sampled after rendering and on every cue frame: resizing, camera and actor offsets stay aligned.
+      const feet = view.projectedFeet() ?? [{ x: .325, y: .66 }, { x: .675, y: .66 }];
+      const target = destination[name] ? view.project(destination[name]!) : { x: .5, y: .5 };
+      const progress = Math.min(1, (now - started) / (dur * .5));
+      // Briefly hold at the feet before the two lights travel to the apparatus.
+      const travel = Math.max(0, (progress - .22) / .78);
+      feet.forEach((foot, i) => {
+        const node = svg.querySelector(i ? '.cue-b' : '.cue-a')!;
+        node.setAttribute('transform', `translate(${(foot.x + (target.x - foot.x) * travel) * rect.width} ${(foot.y + (target.y - foot.y) * travel) * rect.height})`);
+        node.setAttribute('opacity', game.reducedMotion || name === 'CUE_HOME_STABLE' ? '0' : String(1 - travel));
+      });
+      const centre = svg.querySelector('.cue-c')!;
+      centre.setAttribute('transform', `translate(${target.x * rect.width} ${target.y * rect.height})`);
+      centre.setAttribute('opacity', game.reducedMotion || name === 'CUE_HOME_STABLE' ? '1' : String(progress < .8 ? 0 : Math.min(1, (progress - .8) * 5) * Math.min(1, (1 - (now - started) / dur) * 5)));
+      cueFrame = requestAnimationFrame(draw);
+    };
+    draw(started);
   }
 
   let dlgShownId: string | null = null;
@@ -229,7 +252,11 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
     el('#readout').toggleAttribute('hidden', line !== null);
     if (!show || !line) { dlgShownId = null; el('#dlg-actions').innerHTML = ''; return; } // no stale buttons behind a hidden box
     el('#dlg-speaker').textContent = line.speaker;
-    if (dlgShownId !== line.id) { typeLine(el('#dlg-text'), line.text); el('#dlg-sr').textContent = `${line.speaker}。${line.text}`; } // read out once, whole, however the text is revealed
+    if (dlgShownId !== line.id) {
+      el('#dlg-portrait').innerHTML = portrait(line.speaker, dialogueEmotion(line.id));
+      box.dataset['speaker'] = line.speaker === 'トト' ? 'toto' : 'player';
+      typeLine(el('#dlg-text'), line.text); el('#dlg-sr').textContent = `${line.speaker}。${line.text}`;
+    } // read out once, whole, however the text is revealed
     const hadFocus = box.contains(document.activeElement); // the buttons are rebuilt; keep keyboard focus on them
     el('#dlg-actions').innerHTML = game.actions().filter((a) => a.group === 'dialogue').map((a) => btn(a)).join('');
     if (hadFocus && dlgShownId === line.id) el<HTMLElement>('[data-action-id="dlg_next"]', box).focus();
@@ -291,6 +318,7 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
     const preset = opts.presetOverride() ?? (holding ? WorldView.presetFor('observatory', 'observe') : WorldView.presetFor(s.player.anchor, s.player.view));
     const square = WorldView.isSquare(preset);
     stage.classList.toggle('square', square);
+    el('.main').classList.toggle('p05-layout', s.player.anchor === 'observatory');
     document.getElementById('etching')!.toggleAttribute('hidden', !square);
     const note = el('#stagemsg');
     note.textContent = '';
@@ -309,7 +337,7 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
     view.render({
       era: era as 'E0' | 'E1' | 'E2' | 'E3', reducedMotion: game.reducedMotion, presetId: preset, anchor: hold ? hold.anchor : s.player.anchor, view: hold ? 'observe' : s.player.view,
       p04Solved: s.puzzles.p04.solved, p05: opts.p05Override() ?? { a: s.puzzles.p05.a, b: s.puzzles.p05.b },
-      p01: s.puzzles.p01, p02: s.puzzles.p02,
+      p01: s.puzzles.p01, p02: s.puzzles.p02, speaker: game.currentLine()?.speaker, dialogueId: game.currentLine()?.id,
       p03: {
         gateOpen: s.puzzles.p03.gateLatched || s.toto.anchor === 'p03_plate' || game.rt.selfPlate,
         latched: s.puzzles.p03.gateLatched, plateDown: s.toto.anchor === 'p03_plate' || game.rt.selfPlate,
@@ -360,13 +388,14 @@ export function mountUi(root: HTMLElement, game: Game, opts: UiOptions) {
   game.onChange((events) => {
     const solved = events.some((e) => /_solved$/.test(e.type) || e.type === 'ending');
     mixer.play(solved ? 'solve' : events.some((e) => e.type === 'moved') ? 'move' : events.length ? 'press' : 'deny');
-    for (const e of events) { const q = e.type === 'moved' && e.from === 'room' ? 'CUE_ENTRY' : CUE_FOR[e.type]; if (q) { playCue(q); break; } }
+    const cue = events.map(e => e.type === 'moved' && e.from === 'room' ? 'CUE_ENTRY' : CUE_FOR[e.type]).find(Boolean);
     if (events.some((e) => e.type === 'p05_solved')) {
       const ms = game.reducedMotion ? 200 : 1300;
       hold = { until: game.now() + ms, anchor: 'observatory' };
       setTimeout(() => refresh(), ms + 20);
     }
     refresh();
+    if (cue) playCue(cue);
   });
   new ResizeObserver(() => refresh()).observe(stage);
   window.addEventListener('resize', () => refresh());

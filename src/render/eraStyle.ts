@@ -1,6 +1,6 @@
 // The look of each era. The geometry and landmark positions never change between eras; what changes is how the world is drawn:
-//   E0  flat 2D pixel art   : 320x180, two-tone unlit-style cel lighting, hard texels, flat sky bands, ~50-colour palette, black outlines
-//   E1  richer 2D / 2.5D    : 640x360, three-tone cel shading, banded depth haze (layers), coloured outlines, a moon
+//   E0  flat 2D pixel art   : 320x180, two-tone unlit-style cel lighting, hard texels, flat sky bands, 18-colour palette, black outlines
+//   E1  richer 2D / 2.5D    : 640x360, three-tone cel shading, depth haze, coloured outlines, a moon
 //   E2  lit low-poly 3D     : full resolution, smooth lighting, textured ground, smooth sky gradient
 //   E3  rich 3D             : E2 plus soft shadows, depth haze, falling snow, warm lamp and window glow, starry sky with a moon
 // Presentation only: nothing here is read by the game logic.
@@ -98,9 +98,9 @@ export class EraStyle {
       const sp2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: warmTex, blending: THREE.AdditiveBlending, depthWrite: false, opacity: a, fog: false }));
       sp2.scale.set(s, s, 1); sp2.position.set(x, y, z); sp2.userData['flat'] = true; this.glow.add(sp2);
     };
-    const poolMat = new THREE.MeshBasicMaterial({ map: dotTexture('warmpool', 'rgba(255,190,100,0.55)', 'rgba(255,150,60,0)', 128), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const poolMat = new THREE.MeshBasicMaterial({ map: dotTexture('warmpool', 'rgba(255,190,100,0.35)', 'rgba(255,150,60,0)', 128), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
     for (const [x, y, z] of lamps) {
-      mk(x, y, z, 2.3, 0.85);
+      mk(x, y, z, 1.65, 0.6);
       const pool = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), poolMat); pool.rotation.x = -Math.PI / 2; pool.position.set(x, y - 1.2, z); pool.userData['flat'] = true; this.glow.add(pool);
     }
     mk(9.58, 1.0, 6.0, 1.7, 0.8); mk(28, 4.4, 26.6, 2.4, 0.7); mk(26, 4.4, 26.6, 1.3, 0.6); mk(30, 4.4, 26.6, 1.3, 0.6); mk(19.2, 2.8, 20.8, 1.6, 0.75);
@@ -164,8 +164,8 @@ export class EraStyle {
     const e3 = era === 'E3';
     // lights
     this.amb.color.set(0xffffff);
-    if (era === 'E0') { this.amb.intensity = 1.05; this.hemi.intensity = 0; this.sun.intensity = 1.1; this.sun.color.set(0xffffff); }
-    else if (era === 'E1') { this.amb.intensity = 0.85; this.hemi.intensity = 0; this.sun.intensity = 1.4; this.sun.color.set(0xfff1dc); }
+    if (era === 'E0') { this.amb.intensity = 1.25; this.hemi.intensity = 0; this.sun.intensity = 0.35; this.sun.color.set(0xffffff); }
+    else if (era === 'E1') { this.amb.intensity = 0.55; this.hemi.intensity = .45; this.hemi.color.set(0xb9d5ef); this.hemi.groundColor.set(0x647080); this.sun.intensity = 1.8; this.sun.color.set(0xfff1dc); }
     else if (era === 'E2') { this.amb.intensity = 1.0; this.hemi.intensity = 0; this.sun.intensity = 1.6; this.sun.color.set(0xffffff); }
     else { this.amb.intensity = 0.5; this.amb.color.set(0xb4c4ff); this.hemi.intensity = 0.75; this.hemi.color.set(0xa4bcff); this.hemi.groundColor.set(0x44584e); this.sun.intensity = 1.7; this.sun.color.set(0xffdca8); }
     // shadow volume follows the camera
@@ -184,13 +184,13 @@ export class EraStyle {
     this.moon.visible = era !== 'E0';
     this.glow.visible = e3;
     this.snow.visible = e3 && !ctx.wallView;
-    // depth haze: layered in E1 (it is posterised afterwards into bands), smooth in E3
+    // depth haze in E1 and E3; the E1 pixel grid and cel lighting carry its distinct look
     const fogOn = era === 'E1' || e3;
     return { clear: e3 ? 0x1c3048 : 0x1e2f45, fog: fogOn };
   }
 
   fogFor(era: Era): THREE.Fog | null {
-    if (era === 'E1') return new THREE.Fog(0x3a5f78, 10, 30);
+    if (era === 'E1') return new THREE.Fog(0x638199, 14, 38);
     if (era === 'E3') return new THREE.Fog(0x22405a, 7, 36);
     return null;
   }

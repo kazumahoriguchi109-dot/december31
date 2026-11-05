@@ -1,0 +1,354 @@
+{
+  "designVersion": "1.1",
+  "sourceOfTruth": "docs/SCREENS.md",
+  "screens": [
+    {
+      "id": "UI_BOOT",
+      "heading": "起動",
+      "allowedDestinations": [
+        "UI_LOAD"
+      ],
+      "initialFocus": "none"
+    },
+    {
+      "id": "UI_LOAD",
+      "heading": "準備しています",
+      "allowedDestinations": [
+        "UI_TITLE",
+        "UI_ERROR"
+      ],
+      "initialFocus": "status"
+    },
+    {
+      "id": "UI_TITLE",
+      "heading": "12月31日",
+      "allowedDestinations": [
+        "UI_NEW",
+        "UI_LOAD_SLOT",
+        "UI_SLOTS",
+        "UI_SETTINGS",
+        "UI_CREDITS",
+        "UI_EXIT"
+      ],
+      "initialFocus": "new-game"
+    },
+    {
+      "id": "UI_NEW",
+      "heading": "物語をはじめる",
+      "allowedDestinations": [
+        "UI_PLAY",
+        "UI_CONFIRM",
+        "UI_TITLE",
+        "UI_ERROR"
+      ],
+      "initialFocus": "first-empty-slot-else-manual-1"
+    },
+    {
+      "id": "UI_LOAD_SLOT",
+      "heading": "続きを読み込んでいます",
+      "allowedDestinations": [
+        "UI_PLAY",
+        "UI_ERROR"
+      ],
+      "initialFocus": "status"
+    },
+    {
+      "id": "UI_PLAY",
+      "heading": "現在の目的",
+      "allowedDestinations": [
+        "UI_PAUSE",
+        "UI_HINT",
+        "UI_CREDITS",
+        "UI_ERROR"
+      ],
+      "initialFocus": "objective-heading"
+    },
+    {
+      "id": "UI_PAUSE",
+      "heading": "ひと休み",
+      "allowedDestinations": [
+        "UI_PLAY",
+        "UI_SLOTS",
+        "UI_SETTINGS",
+        "UI_LOG",
+        "UI_CONFIRM"
+      ],
+      "initialFocus": "resume"
+    },
+    {
+      "id": "UI_SLOTS",
+      "heading": "セーブ一覧",
+      "allowedDestinations": [
+        "UI_LOAD_SLOT",
+        "UI_CONFIRM",
+        "UI_IMPORT",
+        "UI_TITLE",
+        "UI_PAUSE",
+        "UI_ERROR"
+      ],
+      "initialFocus": "first-slot"
+    },
+    {
+      "id": "UI_CONFIRM",
+      "heading": "操作を確認",
+      "allowedDestinations": [
+        "UI_NEW",
+        "UI_LOAD_SLOT",
+        "UI_PLAY",
+        "UI_SLOTS",
+        "UI_TITLE",
+        "UI_PAUSE",
+        "UI_SETTINGS",
+        "UI_HINT",
+        "UI_IMPORT",
+        "UI_ERROR"
+      ],
+      "initialFocus": "cancel"
+    },
+    {
+      "id": "UI_SETTINGS",
+      "heading": "設定",
+      "allowedDestinations": [
+        "UI_TITLE",
+        "UI_PAUSE",
+        "UI_CONFIRM",
+        "UI_ERROR"
+      ],
+      "initialFocus": "master-volume"
+    },
+    {
+      "id": "UI_HINT",
+      "heading": "手がかり",
+      "allowedDestinations": [
+        "UI_PLAY",
+        "UI_CONFIRM"
+      ],
+      "initialFocus": "close"
+    },
+    {
+      "id": "UI_LOG",
+      "heading": "これまでの会話",
+      "allowedDestinations": [
+        "UI_PAUSE"
+      ],
+      "initialFocus": "back"
+    },
+    {
+      "id": "UI_CREDITS",
+      "heading": "制作について",
+      "allowedDestinations": [
+        "UI_TITLE"
+      ],
+      "initialFocus": "back-to-title"
+    },
+    {
+      "id": "UI_ERROR",
+      "heading": "操作を続けられません",
+      "allowedDestinations": [
+        "UI_CONFIRM",
+        "UI_LOAD",
+        "UI_LOAD_SLOT",
+        "UI_TITLE",
+        "UI_SLOTS",
+        "UI_PLAY"
+      ],
+      "initialFocus": "safe-action"
+    },
+    {
+      "id": "UI_IMPORT",
+      "heading": "セーブファイルを確認",
+      "allowedDestinations": [
+        "UI_CONFIRM",
+        "UI_SLOTS",
+        "UI_ERROR"
+      ],
+      "initialFocus": "cancel"
+    },
+    {
+      "id": "UI_EXIT",
+      "heading": "このタブを閉じて終了できます",
+      "allowedDestinations": [
+        "UI_TITLE"
+      ],
+      "initialFocus": "back-to-title"
+    }
+  ],
+  "errorRoutes": {
+    "E_GRAPHICS": [
+      "UI_LOAD",
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_CONTEXT": [
+      "UI_PLAY",
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_STORAGE": [
+      "UI_PLAY",
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_CORRUPT": [
+      "UI_CONFIRM",
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_VERSION": [
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_CAPABILITY": [
+      "UI_LOAD",
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_TAB": [
+      "UI_LOAD",
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_CONFLICT": [
+      "UI_SLOTS",
+      "UI_TITLE"
+    ],
+    "E_ASSET": [
+      "UI_LOAD",
+      "UI_TITLE"
+    ]
+  },
+  "guardedTransitions": [
+    {
+      "from": "UI_NEW",
+      "event": "validate-auto",
+      "guard": "auto-future-schema-even-if-shape-valid",
+      "to": "UI_ERROR"
+    },
+    {
+      "from": "UI_LOAD_SLOT",
+      "event": "validate-auto",
+      "guard": "auto-future-schema-even-if-shape-valid",
+      "to": "UI_ERROR"
+    },
+    {
+      "from": "UI_PLAY",
+      "event": "autosave-failure",
+      "guard": "auto-future-schema-even-if-shape-valid",
+      "to": "UI_ERROR"
+    },
+    {
+      "from": "UI_NEW",
+      "event": "validate-target",
+      "guard": "selected-manual-corrupt-or-future",
+      "to": "UI_ERROR"
+    },
+    {
+      "from": "UI_NEW",
+      "event": "confirm-new",
+      "guard": "firstRunAllEmpty",
+      "to": "UI_PLAY"
+    },
+    {
+      "from": "UI_NEW",
+      "event": "confirm-new",
+      "guard": "not-firstRunAllEmpty",
+      "to": "UI_CONFIRM"
+    },
+    {
+      "from": "UI_IMPORT",
+      "event": "validate-import",
+      "guard": "valid-selected-slot",
+      "to": "UI_CONFIRM"
+    },
+    {
+      "from": "UI_CONFIRM",
+      "event": "import-complete",
+      "guard": "always",
+      "to": "UI_SLOTS"
+    },
+    {
+      "from": "UI_CONFIRM",
+      "event": "restore-complete",
+      "guard": "always",
+      "to": "UI_SLOTS"
+    },
+    {
+      "from": "UI_SLOTS",
+      "event": "explicit-load",
+      "guard": "valid-selected-slot",
+      "to": "UI_LOAD_SLOT"
+    },
+    {
+      "from": "UI_ERROR",
+      "event": "fresh-auto-request",
+      "guard": "corrupt-current-schema-auto-and-valid-source",
+      "to": "UI_CONFIRM"
+    },
+    {
+      "from": "UI_CONFIRM",
+      "event": "fresh-auto-complete",
+      "guard": "pending-action-new",
+      "to": "UI_PLAY"
+    },
+    {
+      "from": "UI_CONFIRM",
+      "event": "fresh-auto-complete",
+      "guard": "pending-action-load",
+      "to": "UI_LOAD_SLOT"
+    },
+    {
+      "from": "UI_CONFIRM",
+      "event": "fresh-auto-complete",
+      "guard": "pending-action-maintenance",
+      "to": "UI_SLOTS"
+    }
+  ],
+  "memoryEffects": {
+    "New": {
+      "game": "replace-after-complete",
+      "activeManualSlot": "selected-manual",
+      "lastPlayed": "auto"
+    },
+    "Save": {
+      "game": "unchanged",
+      "activeManualSlot": "unchanged",
+      "lastPlayed": "selected-manual"
+    },
+    "SaveAs": {
+      "game": "progress-unchanged-binding-after-complete",
+      "activeManualSlot": "selected-manual",
+      "lastPlayed": "selected-manual"
+    },
+    "Auto": {
+      "game": "unchanged",
+      "activeManualSlot": "unchanged",
+      "lastPlayed": "auto"
+    },
+    "LoadManual": {
+      "game": "replace-after-complete",
+      "activeManualSlot": "selected-manual",
+      "lastPlayed": "selected-manual"
+    },
+    "LoadAuto": {
+      "game": "replace-after-complete",
+      "activeManualSlot": "loaded-binding",
+      "lastPlayed": "auto"
+    },
+    "Import": {
+      "game": "unchanged",
+      "activeManualSlot": "unchanged",
+      "lastPlayed": "unchanged"
+    },
+    "Restore": {
+      "game": "unchanged",
+      "activeManualSlot": "unchanged",
+      "lastPlayed": "unchanged"
+    },
+    "FreshAutoMaintenance": {
+      "game": "unchanged",
+      "activeManualSlot": "unchanged",
+      "lastPlayed": "clear-only-if-auto"
+    }
+  },
+  "revisionSource": "meta.writeRevision+1; slot.revision is CAS-only"
+}

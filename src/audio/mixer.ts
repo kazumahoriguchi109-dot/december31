@@ -1,4 +1,4 @@
-// Original, synthesized audio (Web Audio oscillators only; no sample files, nothing borrowed).
+// Original synthesized score + three Kenney CC0 interaction samples (assets/audio/SOURCES.md).
 // Music is a slow looping pad per era; effects are short tones. Volumes come from the settings record.
 type Era = 'E0' | 'E1' | 'E2' | 'E3';
 const ROOTS: Record<Era, number[]> = {
@@ -12,12 +12,26 @@ const WAVE: Record<Era, OscillatorType> = { E0: 'square', E1: 'triangle', E2: 's
 // Output scaling of the music and effects buses (the sliders multiply these). Raised after an offline measurement showed the
 // default mix peaking near -26 dBFS; the loudest sliders with every effect at once must still stay under the clipping ceiling.
 const MUSIC_GAIN = 0.55, SFX_GAIN = 0.75;
+const SAMPLE_URLS = {
+  press: new URL('./samples/press.wav', import.meta.url).href,
+  move: new URL('./samples/move.wav', import.meta.url).href,
+  deny: new URL('./samples/deny.wav', import.meta.url).href,
+};
+
 
 export class Mixer {
   private ctx: AudioContext | null = null;
   private master!: GainNode; private music!: GainNode; private sfx!: GainNode;
   private vol = { master: 0.7, music: 0.6, sfx: 0.8 };
   private era: Era = 'E0';
+  private buffers = new Map<string, AudioBuffer>();
+  private sampleLoad: Promise<void> | null = null;
+  private activeEffects = new Map<string, { bus: GainNode; sources: Set<AudioScheduledSourceNode> }>();
+  private readonly visibilityChanged = () => {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state === 'closed') return;
+    void (document.hidden ? ctx.suspend() : ctx.resume()).catch(() => {});
+  };
   private timer = 0; private step = 0;
   /** For tests and the captions: what was last played. */
   last = { music: '' as string, sfx: '' as string, count: 0 };
@@ -28,6 +42,9 @@ export class Mixer {
   }
   private apply() {
     const t = this.ctx!.currentTime;
+    this.master.gain.cancelScheduledValues(t);
+    this.music.gain.cancelScheduledValues(t);
+    this.sfx.gain.cancelScheduledValues(t);
     this.master.gain.setTargetAtTime(this.vol.master, t, 0.05);
     this.music.gain.setTargetAtTime(this.vol.music * MUSIC_GAIN, t, 0.05);
     this.sfx.gain.setTargetAtTime(this.vol.sfx * SFX_GAIN, t, 0.05);
@@ -39,21 +56,54 @@ export class Mixer {
       if (!AC) return;
       this.ctx = new AC();
       this.master = this.ctx.createGain(); this.music = this.ctx.createGain(); this.sfx = this.ctx.createGain();
+      // GainNode starts at 1. Set saved levels before connecting: a muted start must never leak a ramp from full volume.
+      this.master.gain.value = this.vol.master;
+      this.music.gain.value = this.vol.music * MUSIC_GAIN;
+      this.sfx.gain.value = this.vol.sfx * SFX_GAIN;
       this.music.connect(this.master); this.sfx.connect(this.master); this.master.connect(this.ctx.destination);
-      this.apply();
+      void this.loadSamples(this.ctx);
       this.timer = window.setInterval(() => this.tick(), 2400);
-      document.addEventListener('visibilitychange', () => { if (document.hidden) void this.ctx?.suspend(); else void this.ctx?.resume(); });
+      document.addEventListener('visibilitychange', this.visibilityChanged);
       this.tick();
     }
-    void this.ctx.resume();
+    if (!document.hidden) void this.ctx.resume().catch(() => {});
+  }
+  // Decode after a user gesture. Missing assets fall back to the original synth voice.
+  private loadSamples(ctx: BaseAudioContext): Promise<void> {
+    return this.sampleLoad ??= Promise.all(Object.entries(SAMPLE_URLS).map(async ([name, url]) => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return;
+        const buffer = await ctx.decodeAudioData(await response.arrayBuffer());
+        this.buffers.set(name, buffer);
+      } catch { /* no network/storage dependency for playing the game */ }
+    })).then(() => undefined);
+  }
+  get loadedSamples() { return [...this.buffers.keys()]; }
+  private sample(name: string, at: number, output: GainNode, sources?: Set<AudioScheduledSourceNode>): boolean {
+    const buffer = this.buffers.get(name);
+    if (!buffer) return false;
+    const source = this.ctx!.createBufferSource(); source.buffer = buffer;
+    const gain = this.ctx!.createGain(); gain.gain.value = name === 'deny' ? .2 : .28;
+    sources?.add(source);
+    source.connect(gain); gain.connect(output);
+    source.onended = () => { source.disconnect(); gain.disconnect(); sources?.delete(source); this.releaseOutput(output, sources); };
+    source.start(at); return true;
+  }
+  private releaseOutput(output: GainNode, sources?: Set<AudioScheduledSourceNode>) {
+    if (!sources || sources.size) return;
+    output.disconnect();
+    for (const [name, voice] of this.activeEffects) if (voice.sources === sources) this.activeEffects.delete(name);
   }
   setEra(e: string) { this.era = e in ROOTS ? (e as Era) : 'E2'; } // the room (era 'ROOM') uses the calm E2 voice
-  private tone(freq: number, start: number, dur: number, type: OscillatorType, to: GainNode, peak: number) {
+  private tone(freq: number, start: number, dur: number, type: OscillatorType, to: GainNode, peak: number, sources?: Set<AudioScheduledSourceNode>) {
     const c = this.ctx!; const o = c.createOscillator(); const g = c.createGain();
     o.type = type; o.frequency.value = freq;
     g.gain.setValueAtTime(0.0001, start);
     g.gain.exponentialRampToValueAtTime(peak, start + Math.min(0.08, dur / 3));
     g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    sources?.add(o);
+    o.onended = () => { o.disconnect(); g.disconnect(); sources?.delete(o); this.releaseOutput(to, sources); };
     o.connect(g); g.connect(to); o.start(start); o.stop(start + dur + 0.05);
   }
   private tick(at?: number) {
@@ -79,7 +129,21 @@ export class Mixer {
     this.last.sfx = name; this.last.count++;
     if (!this.ctx || (at === undefined && this.ctx.state !== 'running')) return;
     const t = at ?? this.ctx.currentTime;
-    const s = (f: number, d: number, off = 0, type: OscillatorType = 'triangle', p = 0.6) => this.tone(f, t + off, d, type, this.sfx, p);
+    let output = this.sfx, sources: Set<AudioScheduledSourceNode> | undefined;
+    if (at === undefined) {
+      // A fresh gesture replaces the same feedback; a 15ms release avoids an abrupt sample cut and unbounded synth overlap.
+      const previous = this.activeEffects.get(name);
+      if (previous) {
+        previous.bus.gain.cancelScheduledValues(t);
+        previous.bus.gain.setValueAtTime(previous.bus.gain.value, t);
+        previous.bus.gain.linearRampToValueAtTime(0, t + .015);
+        for (const source of previous.sources) source.stop(t + .016);
+      }
+      output = this.ctx.createGain(); output.connect(this.sfx); sources = new Set();
+      this.activeEffects.set(name, { bus: output, sources });
+    }
+    if (this.sample(name, t, output, sources)) return;
+    const s = (f: number, d: number, off = 0, type: OscillatorType = 'triangle', p = 0.6) => this.tone(f, t + off, d, type, output, p, sources);
     switch (name) {
       case 'move': s(330, 0.12); break;
       case 'press': s(440, 0.1, 0, 'square', 0.3); break;
@@ -100,6 +164,7 @@ export class Mixer {
     this.master = ctx.createGain(); this.music = ctx.createGain(); this.sfx = ctx.createGain();
     this.music.connect(this.master); this.sfx.connect(this.master); this.master.connect(ctx.destination);
     this.master.gain.value = volumes.master; this.music.gain.value = volumes.music * MUSIC_GAIN; this.sfx.gain.value = volumes.sfx * SFX_GAIN;
+    await this.loadSamples(ctx);
     let t0 = 0;
     for (const seg of plan) {
       this.setEra(seg.era);
@@ -111,5 +176,10 @@ export class Mixer {
     this.ctx = null;
     return buf.getChannelData(0);
   }
-  dispose() { clearInterval(this.timer); void this.ctx?.close(); this.ctx = null; }
+  dispose() {
+    clearInterval(this.timer); document.removeEventListener('visibilitychange', this.visibilityChanged);
+    this.activeEffects.clear();
+    const ctx = this.ctx; this.ctx = null;
+    if (ctx && ctx.state !== 'closed') void ctx.close().catch(() => {});
+  }
 }
