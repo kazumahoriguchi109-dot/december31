@@ -58,8 +58,9 @@ export function pixelActor(kind: Kind) {
      poly([10,24,16,27,23,24,22,28,16,30,11,28],p.trim);
     }else{
      // A long asymmetric scarf tail is legible even in E0's monochrome palette.
-     rect(10,24,13,3,p.trim);rect(19,26,4,10,p.trim);rect(18,35,5,2,p.trim);
-     rect(19,37,1,2,p.trim);rect(22,37,1,2,p.trim);
+     const scarf=era?p.trim:'#e6d3aa';
+     rect(10,24,13,3,scarf);rect(19,26,4,10,scarf);rect(18,35,5,2,scarf);
+     rect(19,37,1,2,scarf);rect(22,37,1,2,scarf);
     }
     rect(15,31,1,5,p.shade);rect(11,37,12,1,p.shade);
    }
