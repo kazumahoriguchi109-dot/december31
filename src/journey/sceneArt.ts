@@ -35,3 +35,10 @@ export function pixelActor(kind:'player'|'toto'){
  return{sprite,update(era:number,facing:number,walk:number){let dir=Math.round(facing/(Math.PI/2));dir=((dir%4)+4)%4;(sprite.material as THREE.SpriteMaterial).map=textures[era]![dir]![Math.sin(walk)>0?1:0]!;}};
 }
 export function snowTexture(){const cv=document.createElement('canvas');cv.width=cv.height=128;const c=cv.getContext('2d')!;c.fillStyle='#e1e5d9';c.fillRect(0,0,128,128);let seed=31;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);for(let i=0;i<210;i++){c.fillStyle=i%4?'#d4ddd1':'#edf0e4';const x=rand()*128,y=rand()*128;c.fillRect(x,y,2+rand()*5,1+rand()*2);}const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(6,14);t.magFilter=THREE.NearestFilter;return t;}
+
+/** A shallow swept path: soft irregular edges, with no extra collision or height step. */
+export function trail(parent:THREE.Object3D,points:readonly (readonly [number,number])[],width:number,color=0xc7bb9c){
+ const positions:number[]=[],indices:number[]=[];points.forEach(([x,z],i)=>{const before=points[Math.max(0,i-1)]!,after=points[Math.min(points.length-1,i+1)]!,dx=after[0]-before[0],dz=after[1]-before[1],l=Math.hypot(dx,dz)||1,half=width*(.5+Math.sin(i*2.3)*.035);positions.push(x-dz/l*half,.033,z+dx/l*half,x+dz/l*half,.033,z-dx/l*half);if(i){const n=i*2;indices.push(n-2,n-1,n,n-1,n+1,n);}});
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setIndex(indices);geo.computeVertexNormals();const mat=material(color);mat.side=THREE.DoubleSide;const mesh=new THREE.Mesh(geo,mat);mesh.receiveShadow=true;parent.add(mesh);return mesh;
+}
+export function snowBank(parent:THREE.Object3D,x:number,z:number,rx:number,rz:number){const m=new THREE.Mesh(new THREE.CircleGeometry(1,12),material(0xebeee3));m.rotation.x=-Math.PI/2;m.position.set(x,.046,z);m.scale.set(rx,rz,1);m.receiveShadow=true;parent.add(m);return m;}

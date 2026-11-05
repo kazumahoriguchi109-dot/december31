@@ -12,3 +12,8 @@ P05: physical A/B levers cycle three discrete stops via E. Observation station E
 P06: return to original frame; back area unlocks after E3. T hold one plate, walk around frame and occupy other -> permanently open. T reunite then E frame -> both return to room, ending + credits.
 
 Model owns movement, collision, events, puzzle logic and availability, mutating state only through its functions. UI owns dialogue queues, pause/settings/title/persistence/audio. Renderer is non-authoritative and must derive all plates/gates/rings from state. Default moving inputs are camera-relative handled by model based on quarter. State save uses new version2 and separate key, never loads legacy saves. No old save migration yet. All conclusions about feel/fun require actual user play.
+
+## Cycle 002 — first instrument readability
+The visible P01 plinth is a 3.2m square with a collision footprint of ±1.8m. Its crank is operated only from the east standing point `MAP.tileControl` (2.6, -5.5), within1.1m. The route visibly curves around the plinth. Nearby early-era Toto walks to the player's east side rather than standing behind their sprite. The game names the handle in the objective and interaction text. Returning in3D, the camera gently raises near the instrument to keep its circuit visible at every quarter turn. No extra puzzle unlock, location, or progression requirement was added.
+
+The reduced-motion preference now updates UI styling immediately as well as renderer behavior and storage. Cycle001 preview4195 remains immutable. Cycle002 uses its own clone, development5196 and frozen candidate4196. Because origins differ, their saves are independent; no automatic save migration occurs.

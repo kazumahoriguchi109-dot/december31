@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {MAP,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
 import {poseFigure} from '../render/characterPose';
-import {C,asset,box,cylinder,glyph,line,torus,fence,material,pixelActor,snowTexture} from './sceneArt';
+import {C,asset,box,cylinder,glyph,line,torus,fence,material,pixelActor,snowTexture,trail,snowBank} from './sceneArt';
 
 /** The renderer observes state; all travel, puzzle gates and saves belong to the model. */
 export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
@@ -27,9 +27,14 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  fence(outdoor,-12,12,8);fence(outdoor,-12,12,-65,3);
  // Low edges of the plateau express the physical boundary; the right-hand stair remains open.
  for(const [a,b]of[[-12,6.2],[10.8,12]])fence(outdoor,a!,b!,-49,3);
- for(let z=4;z>-64;z-=1.35){const x=z< -43&&z> -50?8.5:z< -49?3:Math.sin(z*.12)*.9;const y=heightAt({x,z});if(z>-24&&z<-22)continue;const path=box(z< -43&&z> -49?stair:outdoor,2.7,.025,1.5,x,y+.018,z,0xc7bb9c);if(z< -43&&z> -49)path.rotation.x=Math.atan(.5);}
+ for(let z=4;z>-64;z-=1.35){const x=z< -43&&z> -50?8.5:z< -49?3:Math.sin(z*.12)*.9;const y=heightAt({x,z});if((z>-24&&z<-22)||(z>-8.7&&z<-3.0))continue;const path=box(z< -43&&z> -49?stair:outdoor,2.7,.025,1.5,x,y+.018,z,0xc7bb9c);if(z< -43&&z> -49)path.rotation.x=Math.atan(.5);}
+ // The worn approach bends around the raised P01 table, toward the actual standing point.
+ trail(outdoor,[[0,-2.6],[.3,-3.1],[1.1,-3.4],[2.4,-3.7],[3.25,-4.3],[3.3,-5.5],[3.3,-6.8],[2.8,-8.1],[1.5,-8.7],[.1,-9.1]],1.35);
+ trail(outdoor,[[2.6,-5.5],[3.3,-5.5]],1.05,0xb7ae96);
+ for(let i=0;i<35;i++){const z=3.5-i*1.26;if((z>-8.8&&z<-3)||(z>-24&&z<-22))continue;const x=Math.sin(z*.12)*.9;const side=i%2?-1:1;snowBank(outdoor,x+side*(1.28+(i%3)*.07),z,.22+(i%3)*.09,.26);}
+ for(const [x,z,rx,rz]of[[-1.8,-4.2,.5,.2],[-1.85,-7.7,.55,.24],[1.5,-7.85,.48,.18],[1.35,-4.15,.4,.18],[2.35,-3.65,.32,.14],[3.95,-5.8,.22,.65],[3.7,-7.2,.28,.4]]as const)snowBank(outdoor,x,z,rx,rz);
  // A few footprints carry the path across the broad clearing, without masquerading as controls.
- for(let i=0;i<55;i++){const z=5-i*1.2;if(z>-24&&z<-22)continue;const x=(i%2?-.3:.3)+(z<-49?3:0);if(z<-43&&z>-49)continue;box(outdoor,.16,.012,.3,x,heightAt({x,z})+.04,z,0xa9b6ad);}
+ for(let i=0;i<55;i++){const z=5-i*1.2;if(z>-24&&z<-22)continue;const x=(i%2?-.3:.3)+(z<-49?3:0);if((z<-43&&z>-49)||(z>-8.7&&z<-3.1))continue;box(outdoor,.16,.012,.3,x,heightAt({x,z})+.04,z,0xa9b6ad);}
  // Optional discoveries are physical scenery, never automatic puzzle answers.
  for(let i=0;i<7;i++){const z=-3.5-i*.45;for(const x of[-6.16,-5.84]){const f=box(outdoor,.14,.018,.27,x,.04,z,0x839b93);f.rotation.y=.25;}}glyph(outdoor,'∴',-6,.7,-5,'#d1dfd5',.5);
  const pond=new THREE.Mesh(new THREE.CircleGeometry(2.15,24),material(0x8bb7c1));pond.rotation.x=-Math.PI/2;pond.position.set(7,.035,-18);pond.scale.y=.68;outdoor.add(pond);for(let i=0;i<5;i++)box(outdoor,.7,.01,.035,6.1+i*.42,.05,-18+(i%2)*.32,0xc2d7d7);glyph(outdoor,'◇',7,.65,-18,'#d1dfd5',.5);
@@ -38,10 +43,22 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  for(const [x,z]of[[-3,-3],[4,-13],[3,-27],[-5,-38],[10.7,-48],[7,-60]]as const)asset(outdoor,'lantern',x,heightAt({x,z}),z,.8);
  for(let i=0;i<50;i++){const x=(i%2?-1:1)*(8.6+Math.sin(i*9.1)*1.5),z=6-i*1.42;if(z<-43&&z>-49)continue;const y=heightAt({x,z});for(let j=0;j<3;j++){const tuft=box(outdoor,.07,.16+j*.045,.07,x+j*.12,y+.08,z,0x708f7a);tuft.rotation.z=(j-1)*.2;}}
  for(const x of[-12,12])for(let z=7;z>-65;z-=3){const y=heightAt({x,z});box(outdoor,.13,.75,.13,x,y+.375,z,C.wood);if(z-3>-49||z<=-49)line(outdoor,new THREE.Vector3(x,y+.55,z),new THREE.Vector3(x,y+.55,z-3),.035,C.wood);}
- // P01: all four directions remain above the base, no foreground frames.
+ // P01 is a raised stone mechanism. The east crank is reached from tileControl, never over the lines.
+ box(outdoor,3.5,.1,3.5,MAP.tile.x,.05,MAP.tile.z,C.stone);
  const tileBase=box(outdoor,3.2,.16,3.2,MAP.tile.x,.08,MAP.tile.z,C.navy),tile=new THREE.Group();tile.position.set(MAP.tile.x,.18,MAP.tile.z);outdoor.add(tile);
- box(tile,1.35,.06,.19,-.55,.015,0,C.gold);box(tile,.19,.06,1.35,0,.015,-.55,C.gold);cylinder(tile,.19,.07,0,.025,0,C.gold);
- box(outdoor,.2,.07,1.4,0,.19,-8.2,C.paper);box(outdoor,1.4,.07,.2,2.2,.19,-6,C.paper);glyph(outdoor,'↻',-1.5,.45,-6,'#f0ddb1',.65);
+ box(tile,1.65,.06,.19,-.75,.015,0,C.gold);box(tile,.19,.06,1.65,0,.015,-.75,C.gold);cylinder(tile,.19,.07,0,.025,0,C.gold);
+ for(const x of[-1.4,1.4])for(const z of[-7.4,-4.6])cylinder(outdoor,.045,.03,x,.18,z,C.gold,8);
+ box(outdoor,.2,.07,1.4,0,.19,-8.2,C.paper);box(outdoor,.55,.07,.2,1.775,.19,-6,C.paper);
+ cylinder(outdoor,.17,.08,2.04,.15,-6,C.stone);cylinder(outdoor,.09,.03,2.04,.21,-6,C.paper);
+ const crankX=MAP.tileControl.x-.65,crankZ=MAP.tileControl.z+.25;
+ box(outdoor,.42,.14,.46,crankX,.07,crankZ,C.stone);cylinder(outdoor,.09,.52,crankX,.32,crankZ,C.wood,10);
+ line(outdoor,new THREE.Vector3(1.55,.14,crankZ),new THREE.Vector3(crankX,.14,crankZ),.055,C.gold);
+ const crank=new THREE.Group();crank.position.set(crankX,.62,crankZ);crank.rotation.x=-Math.PI/3;outdoor.add(crank);torus(crank,.29,.045,0,0,0,C.gold);
+ for(let i=0;i<3;i++){const a=i*Math.PI*2/3;line(crank,new THREE.Vector3(),new THREE.Vector3(Math.cos(a)*.28,Math.sin(a)*.28,0),.025,C.wood);}
+ const grip=cylinder(crank,.055,.17,.28,0,.065,C.wood,8);grip.rotation.x=Math.PI/2;
+ // A shallow worn foot board locates the hands at the crank, without adding another floating marker.
+ box(outdoor,.65,.025,.85,MAP.tileControl.x,.035,MAP.tileControl.z,0xa6a68e);
+ for(const z of[-5.76,-5.34])box(outdoor,.11,.012,.24,MAP.tileControl.x,.054,z,0x7f9386).rotation.y=Math.PI/2;
  const p1Gate=new THREE.Group();outdoor.add(p1Gate);fence(p1Gate,-12,12,-10);const p1Opening=box(p1Gate,4,1.3,.25,0,.65,-10,C.wood);
  // Waterworks: visible stream, sluice, stopped wheel, and a genuine bridge over the collision water band.
  box(outdoor,24,.12,2,0,-.035,-23,C.water);for(let x=-12;x<12;x+=2){box(outdoor,1.4,.015,.06,x,.04,-22.6,0x91c5cf);box(outdoor,1.1,.015,.055,x+.3,.04,-23.4,0x91c5cf);}
@@ -82,14 +99,16 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   const movingP=started?distance(s.player,lastP):0,movingT=started?distance(s.toto,lastT):0;walkP+=movingP*7;walkT+=movingT*7;
   [player,toto].forEach((g,i)=>{const a=i?s.toto:s.player;g.position.set(a.x,(inRoom?0:heightAt(a))+.52*1.05,a.z);g.rotation.y=a.facing+Math.PI;const moving=i?movingT:movingP;poseFigure(g,{speaking:false,waiting:i===1&&s.toto.waiting,walk:options.reducedMotion||moving<.001?0:Math.sin(i?walkT:walkP),worried:s.solved[4]&&!s.portalOpen});shadows[i]!.position.set(a.x,(inRoom?0:heightAt(a))+.015,a.z);});
   lastP={...s.player};lastT={...s.toto};started=true;
-  tile.rotation.y=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];bridge.visible=!!s.solved[1];spill.visible=s.p2Drain;sluice.position.y=s.p2Drain?.7:.35;pin.rotation.z=s.p2Stopper?0:Math.PI/2;if(s.solved[1]&&!options.reducedMotion)wheel.rotation.z=time*.55;
+  tile.rotation.y=-s.p1*Math.PI/2;crank.rotation.z=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];bridge.visible=!!s.solved[1];spill.visible=s.p2Drain;sluice.position.y=s.p2Drain?.7:.35;pin.rotation.z=s.p2Stopper?0:Math.PI/2;if(s.solved[1]&&!options.reducedMotion)wheel.rotation.z=time*.55;
   const occupied=distance(s.player,MAP.gatePlate)<=.9||distance(s.toto,MAP.gatePlate)<=.9,openGate=s.gateLatched||occupied;
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
   const flatWall=!s.wallSeen&&(s.era<2||s.quarter%2===0);wallPattern.visible=flatWall;stair.visible=!flatWall;
   armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;castle.visible=s.mode!=='observe';portalFill.visible=!s.portalOpen;resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);
   if(camera.zoom!==(inRoom?1.4:1)){camera.zoom=inRoom?1.4:1;camera.updateProjectionMatrix();}
-  const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z);const q=s.era>=2?s.quarter*Math.PI/2:0;const y=inRoom?12:s.era===0?20:s.era===1?16:12;const d=inRoom?9:s.era===0?8:s.era===1?10:13;
+  const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
+  // On the return trip a steeper reading angle keeps the table beyond the actors' silhouettes, even after Q.
+  const y=inRoom?12:s.era===0?20:s.era===1?16:12+tableView*6;const d=inRoom?9:s.era===0?8:s.era===1?10:13-tableView*5;
   camera.position.copy(origin).add(new THREE.Vector3(Math.sin(q)*d,y,Math.cos(q)*d));camera.lookAt(origin);for(const tree of trees){const dx=tree.position.x-s.player.x,dz=tree.position.z-s.player.z,forward=dx*Math.sin(q)+dz*Math.cos(q),cross=dx*Math.cos(q)-dz*Math.sin(q);tree.visible=!(s.era>=2&&forward>0&&forward<10&&Math.abs(cross)<2.6);}
   sun.position.copy(origin).add(new THREE.Vector3(-10,20,10));sun.target.position.copy(origin);
   optical.position.set(3,4.6,-55);optical.lookAt(3,4.6,-60);const observe=!inRoom&&s.mode==='observe';player.visible=toto.visible=!observe&&(inRoom||s.era>=2);pixels.forEach((p,i)=>{const a=i?s.toto:s.player;p.sprite.visible=!inRoom&&!observe&&s.era<2;p.sprite.position.set(a.x,heightAt(a)+.025,a.z);if(s.era<2)p.update(s.era,a.facing,(i?movingT:movingP)>.001?(i?walkT:walkP):0);});shadows.forEach(m=>m.visible=!observe);snow.visible=!inRoom&&s.era===3&&!observe;snow.position.set(s.player.x,0,s.player.z);if(!options.reducedMotion)snow.position.y=-(time*.25)%3;

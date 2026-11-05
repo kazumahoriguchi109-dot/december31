@@ -48,7 +48,7 @@ function begin(fresh:boolean){
 function action(id:string,value?:string){
  audio.unlock();
  if(id==='volume'){preferences.volume=Math.max(0,Math.min(1,Number(value)));audio.setVolume(preferences.volume);savePreferences(preferences);return;}
- if(id==='motion'){preferences.reducedMotion=value==='true';savePreferences(preferences);return;}
+ if(id==='motion'){preferences.reducedMotion=value==='true';ui.setSettings(preferences);savePreferences(preferences);return;}
  if(id==='new'){begin(true);return;}if(id==='continue'){begin(false);return;}
  if(id==='title'){saveNow();dialogue=[];ui.setDialogue(null);ui.setEvolution(null);setScreen('title');return;}
  if(id==='pause'&&screen==='game'){saveNow();setScreen('pause');return;}

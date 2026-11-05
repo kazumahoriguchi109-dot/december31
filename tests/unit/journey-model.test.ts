@@ -12,8 +12,9 @@ function walk(s:JourneyState,to:Point){
  throw new Error(`Cannot walk from ${s.player.x},${s.player.z} to ${to.x},${to.z}`);
 }
 function begin(){const s=createState();walk(s,MAP.console);interact(s);return s;}
+function solveTile(s:JourneyState){walk(s,{x:2.6,z:-3});walk(s,MAP.tileControl);interact(s);walk(s,{x:2.6,z:-8.5});}
 function toGate(){
- const s=begin();walk(s,{x:0,z:-5});interact(s);walk(s,MAP.drain);interact(s);walk(s,MAP.stopper);interact(s);walk(s,{x:0,z:-20});walk(s,{x:0,z:-26});walk(s,MAP.gatePlate);return s;
+ const s=begin();solveTile(s);walk(s,MAP.drain);interact(s);walk(s,MAP.stopper);interact(s);walk(s,{x:0,z:-20});walk(s,{x:0,z:-26});walk(s,MAP.gatePlate);return s;
 }
 function toWall(){
  const s=toGate();partner(s);walk(s,{x:0,z:-33});walk(s,{x:0,z:-37});walk(s,MAP.latch);interact(s);partner(s);wait(s,360);expect(s.solved[2]).toBe(true);walk(s,{x:8,z:-42});return s;
@@ -23,7 +24,7 @@ describe('evolution direct-control model',()=>{
  it('moves continuously, normalizes diagonal input, and cannot tunnel through first gate',()=>{
   const s=begin(),before={...s.player};step(s,{x:1,z:-1,run:false},.1);
   expect(distance(before,s.player)).toBeCloseTo(.3,5);
-  walk(s,{x:2,z:-5});walk(s,{x:2,z:-9});walk(s,{x:0,z:-9});for(let i=0;i<90;i++)step(s,{x:0,z:-1,run:true},100);
+  walk(s,{x:2.6,z:-3});walk(s,{x:2.6,z:-9});walk(s,{x:0,z:-9});for(let i=0;i<90;i++)step(s,{x:0,z:-1,run:true},100);
   expect(s.player.z).toBeGreaterThan(-9.46);expect(s.solved[0]).toBe(false);
  });
  it('keeps Toto separated after straight walks, turns, retracing and a close saved position',()=>{
@@ -39,10 +40,24 @@ describe('evolution direct-control model',()=>{
   expect(distance(restored.toto,raw.toto)).toBeLessThan(.04);
   wait(restored);expect(distance(restored.player,restored.toto)).toBeGreaterThanOrEqual(.94);
  });
- it('keeps the first tile visible while allowing interaction from its edge',()=>{
-  const s=begin();for(let i=0;i<150;i++)step(s,{x:0,z:-1,run:false},1/60);
-  expect(distance(s.player,MAP.tile)).toBeGreaterThanOrEqual(.6);
-  expect(context(s)?.id).toBe('tile');interact(s);expect(s.solved[0]).toBe(true);
+ it('blocks the entire first tile and permits operation only from its east control',()=>{
+  const s=begin();let notices=0;
+  for(let i=0;i<150;i++)notices+=step(s,{x:0,z:-1,run:false},1/60).filter(e=>e.id==='blocked-tile').length;
+  expect(notices).toBe(1);step(s,{x:0,z:0,run:false},1/60);
+  expect(step(s,{x:0,z:-1,run:false},1/60).some(e=>e.id==='blocked-tile')).toBe(false);
+  expect(s.player.z).toBeGreaterThanOrEqual(-4.2);
+  expect(context(s)?.id).not.toBe('tile');expect(interact(s).some(e=>e.type==='evolution')).toBe(false);
+  walk(s,{x:2.6,z:-3});walk(s,MAP.tileControl);
+  expect(context(s)?.id).toBe('tile');expect(context(s)?.point).toEqual(MAP.tileControl);
+  wait(s);expect(s.toto.x-s.player.x).toBeCloseTo(1.15,1);expect(Math.abs(s.toto.z-s.player.z)).toBeLessThan(.03);
+  expect(validateSave(s)).not.toBeNull();
+  interact(s);expect(s.solved[0]).toBe(true);
+  // Solving the pattern never makes the physical plinth walkable.
+  for(let i=0;i<60;i++)step(s,{x:-1,z:0,run:true},1/60);
+  expect(s.player.x).toBeGreaterThanOrEqual(1.8);expect(validateSave(s)).not.toBeNull();
+  const invalid=structuredClone(s);invalid.player={x:1.7,z:-5,facing:0};expect(validateSave(invalid)).toBeNull();
+  const invalidFriend=structuredClone(s);invalidFriend.toto.x=-1.7;invalidFriend.toto.z=-7.7;expect(validateSave(invalidFriend)).toBeNull();
+  walk(s,{x:3.8,z:-5.5});expect(context(s)?.id).not.toBe('tile');
  });
  it('self standing opens the gate, but walking away closes it',()=>{
   const s=toGate();expect(gateOpen(s)).toBe(true);walk(s,{x:0,z:-33});wait(s,180);expect(gateOpen(s)).toBe(false);
@@ -50,7 +65,7 @@ describe('evolution direct-control model',()=>{
   expect(s.player.z).toBeGreaterThan(-34.41);
  });
  it('the bridge and gate cannot be bypassed at their sides',()=>{
-  const s=begin();walk(s,{x:0,z:-5});interact(s);walk(s,{x:5,z:-21});
+  const s=begin();solveTile(s);walk(s,{x:5,z:-21});
   for(let i=0;i<100;i++)step(s,{x:0,z:-1,run:true},.1);
   expect(s.player.z).toBeGreaterThan(-21.71);
   walk(s,MAP.drain);interact(s);walk(s,MAP.stopper);interact(s);
