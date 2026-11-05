@@ -23,6 +23,11 @@ function obstruction(s:JourneyState,p:Point,from:Point,following=false):string {
  if(s.phase==='room')return Math.abs(p.x)>3.7 || p.z< -3.7 || p.z>2.7?'room':'';
  if(p.x< -12+RADIUS || p.x>12-RADIUS || p.z< -65+RADIUS || p.z>8-RADIUS)return 'edge';
  if(s.era<3 && p.z>3.35)return 'rear';
+ for(const control of [MAP.drainControl,MAP.stopperControl]){
+  if(distance(p,{x:control.x-.55,z:control.z-.55})<.45)return 'mill';
+ }
+ if(p.x> -9.2&&p.x< -2.8&&p.z> -21.8&&p.z< -16.5)return 'mill';
+ if(p.x> -7.7&&p.x< -6.3&&p.z> -17&&p.z< -14.9)return 'mill';
  if(Math.abs(p.x-MAP.tile.x)<1.8 && Math.abs(p.z-MAP.tile.z)<1.8)return 'tile';
  if(!s.solved[0] && Math.abs(p.z+10)<.55)return 'p01';
  if(p.z< -21.7 && p.z> -24.3 && (!s.solved[1] || Math.abs(p.x)>1.7))return 'water';
@@ -33,7 +38,7 @@ function obstruction(s:JourneyState,p:Point,from:Point,following=false):string {
  if(!following && s.toto.waiting && s.toto.plate==='gate' && (p.z> -25.2 || p.z< -40.5))return 'friend';
  return '';
 }
-const blockCopy:Record<string,string>={tile:'台の上には乗れない。右側のハンドルを回せそうだ。',p01:'線の先で、道が閉じている。',water:'流れが深い。このままでは渡れない。',gate:'門はまだ閉じている。',wall:'白い壁の形が気になる。',cliff:'段差が大きい。歩ける道を探そう。',rear:'枠の向こうは、まだ平らに見える。',frame:'枠の脇を回ってみよう。',friend:'トトと合流してから先へ進もう。'};
+const blockCopy:Record<string,string>={mill:'装置の手前に、二つの操作ハンドルがある。',tile:'台の上には乗れない。右側のハンドルを回せそうだ。',p01:'線の先で、道が閉じている。',water:'流れが深い。このままでは渡れない。',gate:'門はまだ閉じている。',wall:'白い壁の形が気になる。',cliff:'段差が大きい。歩ける道を探そう。',rear:'枠の向こうは、まだ平らに見える。',frame:'枠の脇を回ってみよう。',friend:'トトと合流してから先へ進もう。'};
 
 function moveActor(s:JourneyState,actor:Actor,dx:number,dz:number,following=false):string {
  const from={x:actor.x,z:actor.z};let reason='';
@@ -89,12 +94,13 @@ function advanceFriend(s:JourneyState,dt:number):void {
  while(r.path.length>1 && distance(s.toto,r.path[0]!)<.16)r.path.shift();
  // At the first control, stand beside the player so both silhouettes stay
  // outside the plinth and its pattern remains visible in the fixed early view.
- if(s.phase==='world' && s.era<2 && distance(s.player,MAP.tileControl)<=1.1){
+ const millControl=distance(s.player,MAP.drainControl)<=.8?MAP.drain:distance(s.player,MAP.stopperControl)<=.8?MAP.stopper:null;
+ if(s.phase==='world' && (millControl || (s.era<2 && distance(s.player,MAP.tileControl)<=1.1))){
   const beside={x:s.player.x+1.15,z:s.player.z};
   if(distance(s.toto,s.player)<2 && clearSegment(s,s.toto,beside)){
    const d=distance(s.toto,beside),travel=Math.min(d,3*dt);
    if(d>.02)moveActor(s,s.toto,(beside.x-s.toto.x)/d*travel,(beside.z-s.toto.z)/d*travel,true);
-   s.toto.facing=Math.atan2(MAP.tile.x-s.toto.x,MAP.tile.z-s.toto.z);
+   const focus=millControl??MAP.tile;s.toto.facing=Math.atan2(focus.x-s.toto.x,focus.z-s.toto.z);
    r.path=[{x:s.player.x,z:s.player.z}];return;
   }
  }
@@ -154,7 +160,7 @@ export function step(s:JourneyState,input:InputFrame,dt:number):JourneyEvent[] {
  const r=runtime(s);
  if(blocked && blocked!==r.blocked && blockCopy[blocked]){
   const events=[notice(`blocked-${blocked}`,blockCopy[blocked]!)];
-  ev.push(...(blocked==='tile'?once(s,'tile-control-hint',events):events));
+  ev.push(...(blocked==='tile'||blocked==='mill'?once(s,`${blocked}-control-hint`,events):events));
  }
  r.blocked=blocked;
  advanceFriend(s,seconds);
@@ -178,8 +184,8 @@ export function context(s:JourneyState):ContextAction|null {
  if(s.solved[2])options.push(action('post','標柱を調べる','いつから、こんな形だったんだろう',{x:-6,z:-40}));
  options.push(action('tile',s.solved[0]?'光る石を調べる':'ハンドルを回す',s.solved[0]?'線はつながったまま':'つなぎ口の向きを変える',MAP.tileControl));
  if(s.solved[0]){
-  options.push(action('drain',s.solved[1]?'水の流れを見る':s.p2Drain?'排水口を閉じる':'排水口を開く',s.p2Drain?'水は横の穴へ流れている':'水は車輪へ流れている',MAP.drain));
-  options.push(action('stopper',s.solved[1]?'水車を調べる':s.p2Stopper?'止め具を外す':'止め具を戻す',s.p2Stopper?'車輪が固定されている':'車輪は自由に回れる',MAP.stopper));
+  options.push(action('drain',s.solved[1]?'水の流れを見る':s.p2Drain?'排水口を閉じる':'排水口を開く',s.p2Drain?'水は横の穴へ流れている':'水は車輪へ流れている',MAP.drainControl));
+  options.push(action('stopper',s.solved[1]?'水車を調べる':s.p2Stopper?'止め具を外す':'止め具を戻す',s.p2Stopper?'車輪が固定されている':'車輪は自由に回れる',MAP.stopperControl));
  }
  if(s.solved[1]){
   if(!s.gateLatched&&!s.toto.waiting)options.push(action('wait','トトにここで待ってもらう','Tでも指示できる',MAP.gatePlate));
@@ -198,7 +204,7 @@ export function context(s:JourneyState):ContextAction|null {
   }
   options.push(action('portal',s.portalOpen?'一緒に帰る':'光る枠を調べる',s.portalOpen?(s.toto.waiting?'Tでトトを呼ぼう':distance(s.player,s.toto)>1.8?'トトが来るのを待とう':'二人で部屋へ戻る'):'入口に二つの光が残っている',MAP.portal,!s.portalOpen||(!s.toto.waiting&&distance(s.player,s.toto)<=1.8)));
  }
- return options.filter(a=>distance(s.player,a.point)<=(a.id==='tile'?1.1:INTERACT)).sort((a,b)=>distance(s.player,a.point)-distance(s.player,b.point))[0]??null;
+ return options.filter(a=>a.id==='drain'||a.id==='stopper'?s.player.z>=-14.5&&distance(s.player,a.point)<=.8:distance(s.player,a.point)<=(a.id==='tile'?1.1:INTERACT)).sort((a,b)=>distance(s.player,a.point)-distance(s.player,b.point))[0]??null;
 }
 
 export function interact(s:JourneyState):JourneyEvent[] {
@@ -269,7 +275,7 @@ export function objective(s:JourneyState):string {
  if(s.phase==='ending')return 'ふたりで、帰ってきた';
  if(s.portalOpen)return s.toto.waiting?'トトと合流して、一緒に帰ろう':'光る枠から、二人で帰ろう';
  if(!s.solved[0])return distance(s.player,MAP.tileControl)<=1.1?'ハンドルで、道をつなごう':'石の台の右側へ回ろう';
- if(!s.solved[1])return '水車の道を進もう';
+ if(!s.solved[1])return '水車の手前、二つのハンドルを調べよう';
  if(!s.solved[2])return s.gateLatched?'トトと門の先へ':'二人で門を越えよう';
  if(!s.solved[3])return '白い模様の先へ進もう';
  if(!s.solved[4])return '観測台から、輪をつなげよう';

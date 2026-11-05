@@ -3,13 +3,16 @@ import {createRenderer} from './renderer';
 import {createUI} from './ui';
 import {createJourneyAudio} from './audio';
 import {loadJourney,saveJourney,loadPreferences,savePreferences} from './persistence';
-import type {JourneyEvent,JourneyState} from './contract';
+import type {JourneyEvent,JourneyState,Expression} from './contract';
 import './style.css';
 
 let state:JourneyState=createState();
 let preferences=loadPreferences();
 let screen:'title'|'game'|'pause'|'credits'='title';
-let dialogue:{speaker:string,text:string}[]=[];
+let dialogue:{speaker:string,text:string,expression:Expression}[]=[];
+let pendingInteraction:{id:string,at:number}|null=null;
+let actionCue:{id:string,start:number,duration:number}|null=null;
+const expressionFor=(id:string,text:string):Expression=>/home|solved|portal-open|latch-fixed/.test(id)?'relieved':/arrival/.test(id)?'surprised':/wall|discovery|[？?]/.test(id+text)?'curious':'neutral';
 let transitionUntil=0, toastUntil=0, resonance=false, guardHeld=false,pendingEnding=false;
 let lastSave=0,wasMoving=false,lastTime=performance.now();
 const keys=new Set<string>();
@@ -22,25 +25,26 @@ ui.setSettings(preferences);ui.setContinue(!!loadJourney());ui.setScreen('title'
 const unlockNames=['','色と流れが生まれた','世界に奥行きが生まれた','ふたりの跡が見える'];
 function saveNow(){const ok=saveJourney(state);lastSave=performance.now();ui.setSaveStatus(ok?'保存しました':'保存できません。このページを閉じると進行が失われます');}
 function toast(text:string){ui.setToast(text);toastUntil=performance.now()+4500;}
-function setScreen(next:typeof screen){screen=next;keys.clear();guardHeld=false;ui.setScreen(next);if(next==='game'){renderer.resize();ui.canvas.focus();}if(next==='title')ui.setContinue(!!loadJourney());}
+function setScreen(next:typeof screen){screen=next;keys.clear();guardHeld=false;if(next!=='game'){pendingInteraction=null;actionCue=null;}ui.setScreen(next);if(next==='game'){renderer.resize();ui.canvas.focus();}if(next==='title')ui.setContinue(!!loadJourney());}
 function showLine(){ui.setDialogue(dialogue[0]??null);if(!dialogue.length&&pendingEnding){pendingEnding=false;setScreen('credits');}}
 function events(list:JourneyEvent[]){
  for(const event of list){
-  if(event.type==='dialogue')dialogue.push({speaker:event.speaker??'トト',text:event.text??event.id});
+  if(event.type==='dialogue')dialogue.push({speaker:event.speaker??'トト',text:event.text??event.id,expression:expressionFor(event.id,event.text??'')});
   else if(event.type==='notice')toast(event.text??'');
   else if(event.type==='sound')audio.play(event.id);
   else if(event.type==='evolution'){
    const era=event.era??state.era;audio.setEra(era);audio.play('evolution');ui.setEvolution(era);
    transitionUntil=performance.now()+(preferences.reducedMotion?300:1900);toast(unlockNames[era]??'');keys.clear();
-  }else if(event.type==='ending')pendingEnding=true;
+  }else if(event.type==='ending'){pendingEnding=true;ui.setToast('');toastUntil=0;actionCue=null;}
  }
  if(list.length){saveNow();showLine();}
 }
-function available(){return screen==='game'&&!dialogue.length&&performance.now()>=transitionUntil;}
+function interactionBusy(){return !!pendingInteraction||!!(actionCue&&actionCue.id!=='partner'&&performance.now()<actionCue.start+actionCue.duration);}
+function available(){return screen==='game'&&!dialogue.length&&!interactionBusy()&&performance.now()>=transitionUntil;}
 function begin(fresh:boolean){
  const existing=loadJourney();
  if(fresh&&existing&&!window.confirm('この新しい試遊版の進行を最初からにしますか？ 公開版のセーブには影響しません。'))return;
- state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
+ state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
  if(fresh)events(step(state,{x:0,z:0,run:false},0));
  else if(state.phase==='ending')setScreen('credits');
  showLine();saveNow();
@@ -56,8 +60,13 @@ function action(id:string,value?:string){
  if(id==='credits'){setScreen('credits');return;}
  if(id==='next'&&screen==='game'&&dialogue.length){dialogue.shift();audio.play('line');showLine();keys.clear();return;}
  if(!available())return;
- if(id==='interact')events(interact(state));
- else if(id==='partner')events(partner(state));
+ if(id==='interact'){
+  const target=context(state);
+  const animate=target?.enabled&&(['lever-a','lever-b'].includes(target.id)||target.id==='tile'&&!state.solved[0]||['drain','stopper'].includes(target.id)&&!state.solved[1]||target.id==='latch'&&!state.gateLatched);
+  if(animate&&target){const now=performance.now();keys.clear();actionCue={id:target.id,start:now,duration:preferences.reducedMotion?180:750};pendingInteraction={id:target.id,at:now+(preferences.reducedMotion?100:450)};}
+  else events(interact(state));
+ }
+ else if(id==='partner'){const before=state.toto.waiting;events(partner(state));if(before!==state.toto.waiting)actionCue={id:'partner',start:performance.now(),duration:preferences.reducedMotion?180:700};}
  else if(id==='rotate'){
   const previous=state.quarter;events(rotate(state));
   if(state.quarter!==previous){guardHeld=[...keys].some(k=>movementKeys.has(k));transitionUntil=performance.now()+(preferences.reducedMotion?100:280);}
@@ -89,6 +98,8 @@ window.addEventListener('beforeunload',()=>{if(screen!=='title')saveJourney(stat
 window.addEventListener('resize',()=>renderer.resize());
 function frame(now:number){
  const dt=Math.min(.05,Math.max(0,(now-lastTime)/1000));lastTime=now;
+ if(pendingInteraction&&screen==='game'&&now>=pendingInteraction.at){const id=pendingInteraction.id;pendingInteraction=null;const target=context(state);if(target?.id===id&&target.enabled)events(interact(state));else actionCue=null;}
+ if(actionCue&&now>=actionCue.start+actionCue.duration)actionCue=null;
  if(transitionUntil&&now>=transitionUntil){transitionUntil=0;ui.setEvolution(null);}
  if(toastUntil&&now>toastUntil){ui.setToast('');toastUntil=0;}
  const active=available()&&!guardHeld;
@@ -100,7 +111,9 @@ function frame(now:number){
  if((moving&&now-lastSave>2000)||(wasMoving&&!moving)){saveNow();}wasMoving=moving;
  if(screen!=='title'){
   ui.render(state,dialogue.length?null:context(state),objective(state));
-  renderer.render(state,screen==='game'&&!dialogue.length?dt:0,{reducedMotion:preferences.reducedMotion,quality:'normal',resonance});
+  const interactButton=document.getElementById('journey-interact') as HTMLButtonElement;
+  if(interactionBusy())interactButton.disabled=true;interactButton.setAttribute('aria-busy',String(interactionBusy()));
+  renderer.render(state,screen==='game'?dt:0,{reducedMotion:preferences.reducedMotion,quality:'normal',resonance,speaker:dialogue[0]?(dialogue[0].speaker==='トト'?'toto':'player'):undefined,expression:dialogue[0]?.expression??'neutral',action:actionCue?{id:actionCue.id,progress:Math.min(1,(now-actionCue.start)/actionCue.duration)}:undefined});
  }
  requestAnimationFrame(frame);
 }
@@ -108,4 +121,4 @@ ui.canvas.tabIndex=0;ui.canvas.setAttribute('aria-label','ゲーム画面。WASD
 requestAnimationFrame(frame);
 
 // Read-only telemetry for automated input tests. Removed from production by Vite.
-if(import.meta.env.DEV)Object.defineProperty(window,'__journeyProbe',{value:()=>({state:structuredClone(state),screen,dialogue:dialogue[0]??null,context:context(state),guardHeld,transition:performance.now()<transitionUntil})});
+if(import.meta.env.DEV)Object.defineProperty(window,'__journeyProbe',{value:()=>({state:structuredClone(state),screen,dialogue:dialogue[0]??null,context:context(state),guardHeld,transition:performance.now()<transitionUntil||interactionBusy(),action:actionCue?{id:actionCue.id,progress:Math.min(1,(performance.now()-actionCue.start)/actionCue.duration)}:null})});

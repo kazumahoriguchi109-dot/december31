@@ -1,4 +1,4 @@
-import type { ContextAction, JourneyState } from './contract';
+import type { ContextAction, JourneyState, Expression } from './contract';
 import { portrait, type DialogueEmotion } from '../ui/portraits';
 import keyart from '../ui/assets/winter-keyart.jpg';
 import './style.css';
@@ -8,7 +8,7 @@ export interface JourneyUI {
  canvas: HTMLCanvasElement;
  render(state: JourneyState, context: ContextAction | null, objective: string): void;
  setScreen(screen: Screen): void;
- setDialogue(line: {speaker: string; text: string} | null): void;
+ setDialogue(line: {speaker: string; text: string; expression?: Expression} | null): void;
  setToast(text: string): void;
  setEvolution(era: number | null): void;
  setContinue(has: boolean): void;
@@ -22,6 +22,15 @@ const EVOLUTIONS = [
  {title: '向こう側にも、かたちがある。', text: '見る向きを変えると、違うものが見える。', keys: 'Q 見回す'},
  {title: 'ふたりの跡が、響きあう。', text: '帰り道に残った、ふたつの光。', keys: 'R 共鳴を感じる'},
 ];
+// Prefer the authored performance from the controller; older callers retain a conservative text fallback.
+const EXPRESSION: Record<Expression, DialogueEmotion> = {neutral:'neutral',curious:'question',surprised:'surprise',relieved:'relief'};
+function emotionFor(line:{text:string;expression?:Expression}):DialogueEmotion {
+ if(line.expression)return EXPRESSION[line.expression];
+ if(/[？?]|かな|かも|なんで|でも、まだ/.test(line.text))return 'question';
+ if(/あれ……|本当に、ゲーム|体が軽い|横があった|氷の下にも/.test(line.text))return 'surprise';
+ if(/戻ってきた|一緒に帰ろう|いっしょに遊ぼう|橋も下り|もう離れても|門は閉じない|歩いて来られた|ありがとう/.test(line.text))return 'relief';
+ return 'neutral';
+}
 const text = (node: HTMLElement, value: string) => { if (node.textContent !== value) node.textContent = value; };
 const show = (node: HTMLElement, visible: boolean) => { node.hidden = !visible; };
 
@@ -40,7 +49,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
     <div class="journey-context" id="journey-context" hidden><p id="journey-context-hint"></p><button class="journey-button journey-interact" data-action="interact" id="journey-interact"><kbd>E</kbd><span id="journey-context-label">調べる</span><span class="journey-space">/ Space</span></button></div>
     <nav class="journey-abilities" aria-label="できること"><button data-action="partner" id="journey-partner" hidden><kbd>T</kbd><span>トトに声をかける</span></button><button data-action="rotate" id="journey-rotate" hidden><kbd>Q</kbd><span>見回す</span></button><button data-action="resonance" id="journey-resonance" hidden><kbd>R</kbd><span>共鳴</span></button></nav>
    </div>
-   <section id="journey-dialogue" class="journey-dialogue" aria-labelledby="journey-speaker" hidden><div class="journey-portrait" id="journey-portrait" aria-hidden="true"></div><div class="journey-dialogue-copy"><h2 id="journey-speaker"></h2><p id="journey-line" role="status" aria-live="polite" aria-atomic="true"></p></div><button class="journey-button journey-next" data-action="next">つづきを聞く <span aria-hidden="true">→</span></button></section>
+   <section id="journey-dialogue" class="journey-dialogue" aria-labelledby="journey-speaker" hidden><div class="journey-portrait" id="journey-portrait" aria-hidden="true"></div><div class="journey-dialogue-copy"><h2 id="journey-speaker"></h2><p id="journey-line" role="status" aria-live="polite" aria-atomic="true"></p></div><button class="journey-button journey-next" data-action="next"><span>つづきを聞く</span><kbd aria-hidden="true">E</kbd></button></section>
    <div id="journey-evolution" class="journey-evolution" hidden><span class="journey-evolution-mark" aria-hidden="true">◯ ◎</span><h2 id="journey-evolution-title"></h2><p id="journey-evolution-text"></p><p id="journey-evolution-keys"></p></div>
    <p id="journey-toast" class="journey-toast" role="status" aria-live="polite" hidden></p>
   </div>
@@ -63,7 +72,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
  root.addEventListener('click',event=>{const button=(event.target as Element).closest<HTMLButtonElement>('[data-action]');if(button&&!button.disabled){onAction(button.dataset['action']!);}});
  get<HTMLInputElement>('journey-volume').addEventListener('input',event=>{const value=(event.target as HTMLInputElement).value;text(get('journey-volume-output'),`${Math.round(Number(value)*100)}%`);onAction('volume',value);});
  get<HTMLInputElement>('journey-motion').addEventListener('change',event=>onAction('motion',String((event.target as HTMLInputElement).checked)));
- function syncExploration(){show(bottom,screen==='game'&&!talking);show(walkHelp,screen==='game'&&!talking&&!observed);show(dialogue,screen==='game'&&talking);}
+ function syncExploration(){app.dataset['talking']=String(talking);show(bottom,screen==='game'&&!talking);show(walkHelp,screen==='game'&&!talking&&!observed);show(dialogue,screen==='game'&&talking);}
  return {
   canvas,
   render(state,context,objective){
@@ -85,7 +94,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   setScreen(next){if(next===screen)return;screen=next;app.dataset['screen']=next;show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();const focus=next==='game'?canvas:next==='pause'?get<HTMLButtonElement>('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):next==='title'?get<HTMLButtonElement>('journey-continue').hidden?get('journey-new'):get('journey-continue'):get('journey-credits').querySelector('button');(focus as HTMLElement|null)?.focus({preventScroll:true});},
   setDialogue(line){
    talking=!!line;
-   if(line){const key=`${line.speaker}\n${line.text}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion:DialogueEmotion=/戻って|いっしょに|ありがとう|つながった|開いた|回った|もちろん/.test(line.text)?'relief':/え。|わ、|入った|変わった/.test(line.text)?'surprise':/[？?]|かな|かも|なんで/.test(line.text)?'question':'neutral';get('journey-portrait').innerHTML=portrait(line.speaker,emotion);dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';}}
+   if(line){const key=`${line.speaker}\n${line.text}\n${line.expression??''}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion=emotionFor(line);get('journey-portrait').innerHTML=portrait(line.speaker,emotion);dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';dialogue.dataset['emotion']=emotion;}}
    else dialogueKey='';syncExploration();
   },
   setToast(value){clearTimeout(toastTimer);text(toast,value);show(toast,!!value);if(value)toastTimer=setTimeout(()=>show(toast,false),4500);},

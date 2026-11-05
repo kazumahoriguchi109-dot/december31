@@ -17,3 +17,12 @@ Model owns movement, collision, events, puzzle logic and availability, mutating 
 The visible P01 plinth is a 3.2m square with a collision footprint of ±1.8m. Its crank is operated only from the east standing point `MAP.tileControl` (2.6, -5.5), within1.1m. The route visibly curves around the plinth. Nearby early-era Toto walks to the player's east side rather than standing behind their sprite. The game names the handle in the objective and interaction text. Returning in3D, the camera gently raises near the instrument to keep its circuit visible at every quarter turn. No extra puzzle unlock, location, or progression requirement was added.
 
 The reduced-motion preference now updates UI styling immediately as well as renderer behavior and storage. Cycle001 preview4195 remains immutable. Cycle002 uses its own clone, development5196 and frozen candidate4196. Because origins differ, their saves are independent; no automatic save migration occurs.
+
+## Cycle 003 — readable acting and conversation
+Two original actor presentations now share wardrobe cues across pixel and3D eras. Conversation passes an explicit speaker and expression to the renderer/UI; only the speaker gestures, while the listener remains calm. Presentation facing turns toward the other child or the device without changing collision/movement state.
+
+Physical device actions use a transient750ms gesture, committing the model once at450ms. Movement/new actions remain locked until the gesture ends. Reduced motion uses180/100ms and meaningful static poses. Escape before commit cancels the pending operation; after commit it preserves the changed state. These presentation cues are not saved. Returning home clears old world notifications.
+
+P02 uses foreground controls `drainControl=(-6,-14)` and `stopperControl=(-3,-14)`, linked visibly to the original mechanisms. Interaction radius is.8m and the approach stays south of z=-14.5. The mill, channel and handle supports have occupied footprints. The marked approach crosses at z=-13 and branches toward the controls. P02 solution conditions are unchanged. Nearby floating markers retreat to keep faces/gestures visible.
+
+Conversation typography and portraits are larger; paper and wardrobe colors identify the speaker. Reduced height and text enlargement were checked, but this does not replace real-device browser zoom or first-time human playtesting. Exact finger/handle contact, spoken audio and human listening quality are not claimed.

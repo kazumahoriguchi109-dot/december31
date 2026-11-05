@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import {MAP,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
-import {poseFigure} from '../render/characterPose';
-import {C,asset,box,cylinder,glyph,line,torus,fence,material,pixelActor,snowTexture,trail,snowBank} from './sceneArt';
+import {poseJourneyActor} from './acting';
+import {pixelActor,createJourneyActor} from './actorArt';
+import {C,asset,box,cylinder,glyph,line,torus,fence,material,snowTexture,trail,snowBank,bankStones,waterTexture,lightPool} from './sceneArt';
 
 /** The renderer observes state; all travel, puzzle gates and saves belong to the model. */
 export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
@@ -10,7 +11,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const outdoor=new THREE.Group(),room=new THREE.Group(),trees:THREE.Group[]=[];scene.add(outdoor,room);
  const hemi=new THREE.HemisphereLight(0xd8e5df,0x6d7965,2.1),sun=new THREE.DirectionalLight(0xffe0ab,2.3);sun.position.set(-10,20,10);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.1,far:65});sun.shadow.bias=-.001;sun.shadow.normalBias=.03;scene.add(hemi,sun,sun.target);
  const camera=new THREE.OrthographicCamera(-16,16,10,-10,.1,150),optical=new THREE.PerspectiveCamera(56,1,.03,70);
- const player=asset(scene,'player',0,0,0,1.05),toto=asset(scene,'toto',1,0,1,1.05);
+ const player=createJourneyActor('player'),toto=createJourneyActor('toto');for(const actor of[player,toto]){actor.scale.setScalar(1.05);actor.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=o.receiveShadow=true;}});scene.add(actor);}
  const pixels=[pixelActor('player'),pixelActor('toto')];pixels.forEach(p=>scene.add(p.sprite));
  const shadows=[player,toto].map(g=>{const m=new THREE.Mesh(new THREE.CircleGeometry(.33,16),new THREE.MeshBasicMaterial({color:0x273a36,transparent:true,opacity:.24,depthWrite:false}));m.rotation.x=-Math.PI/2;scene.add(m);return m;});
  // A continuous, bounded walkable clearing. Scenery sits outside the traversable corridor.
@@ -61,10 +62,32 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  for(const z of[-5.76,-5.34])box(outdoor,.11,.012,.24,MAP.tileControl.x,.054,z,0x7f9386).rotation.y=Math.PI/2;
  const p1Gate=new THREE.Group();outdoor.add(p1Gate);fence(p1Gate,-12,12,-10);const p1Opening=box(p1Gate,4,1.3,.25,0,.65,-10,C.wood);
  // Waterworks: visible stream, sluice, stopped wheel, and a genuine bridge over the collision water band.
- box(outdoor,24,.12,2,0,-.035,-23,C.water);for(let x=-12;x<12;x+=2){box(outdoor,1.4,.015,.06,x,.04,-22.6,0x91c5cf);box(outdoor,1.1,.015,.055,x+.3,.04,-23.4,0x91c5cf);}
+ const river=box(outdoor,24,.12,2,0,-.035,-23,C.water),riverTexture=waterTexture();river.material.color.set(0xffffff);river.material.map=riverTexture;river.material.roughness=.48;
+ const banks:[number,number][]=[];for(let x=-11.6;x<12;x+=.87){if(Math.abs(x)<2.4)continue;for(const z of[-21.86,-24.14])banks.push([x+.08*Math.sin(x*3),z]);}for(let i=0;i<7;i++)banks.push([-8.82,-18.7-i*.44]);bankStones(outdoor,banks);
+ for(let x=-11;x<12;x+=2.4){if(Math.abs(x)<2.5)continue;snowBank(outdoor,x,-21.76,.7,.19);snowBank(outdoor,x+.4,-24.24,.65,.2);}
+ trail(outdoor,[[.3,-13],[-1.4,-13],[-3,-13],[-4.5,-13],[-6,-13]],1.1,0xaca890);
+ trail(outdoor,[[-3,-13],[-3,-14]],.75,0xaca890);
+ trail(outdoor,[[-6,-13],[-6,-14]],.75,0xaca890);
+ for(const [x,z,rx,rz]of[[-8.6,-18.5,.5,.22],[-8.7,-21.1,.42,.6],[-5.35,-21.3,.5,.24],[-6.5,-17.8,.35,.16],[-2.5,-16.5,.35,.18]]as const)snowBank(outdoor,x,z,rx,rz);
  const bridge=new THREE.Group();outdoor.add(bridge);for(let z=-24.1;z<=-21.8;z+=.28)box(bridge,4,.12,.24,0,.07,z,C.wood);for(const x of[-1.85,1.85]){line(bridge,new THREE.Vector3(x,.8,-24),new THREE.Vector3(x,.8,-22),.055,C.wood);for(const z of[-24,-23,-22])box(bridge,.12,.9,.12,x,.45,z,C.wood);}
- asset(outdoor,'mill_house',-7,0,-20,1.15);const wheel=new THREE.Group();wheel.position.set(MAP.mill.x,1.35,MAP.mill.z);outdoor.add(wheel);torus(wheel,1.14,.13,0,0,0,C.wood);for(let i=0;i<8;i++){const a=i*Math.PI/4;line(wheel,new THREE.Vector3(),new THREE.Vector3(Math.cos(a)*1.12,Math.sin(a)*1.12,0),.07,C.wood);}cylinder(outdoor,.25,.5,-5,.25,-18,C.stone);
- box(outdoor,.42,.06,5,-4.7,.04,-20.5,C.water);const spill=box(outdoor,.55,.07,2.6,MAP.drain.x,.06,-16.7,C.water);for(const x of[-7.4,-6.6])box(outdoor,.15,.16,2.8,x,.08,-16.7,C.stone);cylinder(outdoor,.65,.035,-7,.025,-15.25,0x8bb7c1);const sluice=box(outdoor,.8,.65,.2,MAP.drain.x,.4,MAP.drain.z,C.navy);glyph(outdoor,'≈',MAP.drain.x,1.2,MAP.drain.z);const pin=box(outdoor,.18,.6,.18,MAP.stopper.x,.55,MAP.stopper.z,C.gold);glyph(outdoor,'⊣',MAP.stopper.x,1.25,MAP.stopper.z);
+ const millHouse=asset(outdoor,'mill_house',-7,0,-20,1.15);millHouse.rotation.y=Math.PI;
+ const millLight=new THREE.PointLight(0xffc67b,0,7,2);millLight.position.set(-6.17,1.45,-18.4);outdoor.add(millLight);const millGlow=lightPool(outdoor,-6.17,-18,1.8);
+ asset(outdoor,'firewood',-8.35,0,-18.8,.75);asset(outdoor,'barrel',-8.6,0,-20,.65);
+ const wheel=new THREE.Group();wheel.position.set(MAP.mill.x,1.35,MAP.mill.z);outdoor.add(wheel);torus(wheel,1.14,.13,0,0,0,C.wood);torus(wheel,.92,.055,0,0,.09,C.gold);for(let i=0;i<12;i++){const a=i*Math.PI/6,paddle=box(wheel,.32,.13,.38,Math.cos(a)*1.08,Math.sin(a)*1.08,0,0x8b6546);paddle.rotation.z=a;}for(let i=0;i<8;i++){const a=i*Math.PI/4;line(wheel,new THREE.Vector3(),new THREE.Vector3(Math.cos(a)*1.12,Math.sin(a)*1.12,0),.07,C.wood);}cylinder(outdoor,.25,.5,-5,.25,-18,C.stone);
+ box(outdoor,.42,.06,5,-4.7,.04,-20.5,C.water);const spill=box(outdoor,.55,.07,2.6,MAP.drain.x,.06,-16.7,C.water);for(const x of[-7.4,-6.6])box(outdoor,.15,.16,2.8,x,.08,-16.7,C.stone);cylinder(outdoor,.65,.035,-7,.025,-15.25,0x8bb7c1);const sluice=box(outdoor,.8,.65,.2,MAP.drain.x,.4,MAP.drain.z,C.navy);const pin=box(outdoor,.18,.6,.18,MAP.stopper.x,.55,MAP.stopper.z,C.gold);
+ // The work enclosure matches the model's occupied mill area; controls are reached from its foreground.
+ box(outdoor,6.4,.05,5.3,-6,-.015,-19.15,0x9aa49b);
+ // Keep the floor under the existing water / wheels: the foundation top is below water and tread detail.
+ for(const [x1,x2]of[[-9.2,-7.7],[-6.3,-2.8]]as const){for(let x=x1;x<x2+.05;x+=.75)box(outdoor,.1,.58,.1,x,.29,-16.5,C.wood);line(outdoor,new THREE.Vector3(x1,.48,-16.5),new THREE.Vector3(x2,.48,-16.5),.045,C.wood);}
+ for(const x of[-9.2,-2.8]){for(let z=-21.8;z<=-16.5;z+=1.1)box(outdoor,.1,.58,.1,x,.29,z,C.wood);line(outdoor,new THREE.Vector3(x,.48,-21.8),new THREE.Vector3(x,.48,-16.5),.045,C.wood);}
+ const drainHandle=new THREE.Group(),stopHandle=new THREE.Group();
+ for(const [control,g,mark]of[[MAP.drainControl,drainHandle,'≈'],[MAP.stopperControl,stopHandle,'⊣']]as const){
+  const x=control.x-.55,z=control.z-.55;g.position.set(x,.65,z);g.rotation.x=-Math.PI/3;outdoor.add(g);box(outdoor,.38,.12,.42,x,.06,z,C.stone);cylinder(outdoor,.085,.55,x,.345,z,C.wood,10);torus(g,.24,.04,0,0,0,C.gold);line(g,new THREE.Vector3(-.23,0,0),new THREE.Vector3(.23,0,0),.028,C.wood);line(g,new THREE.Vector3(0,-.23,0),new THREE.Vector3(0,.23,0),.028,C.wood);const grip=cylinder(g,.045,.14,.22,0,.06,C.wood,8);grip.rotation.x=Math.PI/2;
+  box(outdoor,.7,.025,.65,control.x,.035,control.z,0xa6a68e);glyph(outdoor,mark,x,1.1,z,'#f0ddb1',.48);
+ }
+ // The rods visibly connect each distant handwheel to its own mechanism without crossing the walk path.
+ line(outdoor,new THREE.Vector3(-6.55,.25,-14.55),new THREE.Vector3(-6.55,.25,-17.8),.04,C.gold);line(outdoor,new THREE.Vector3(-6.55,.25,-17.8),new THREE.Vector3(MAP.drain.x,.25,MAP.drain.z),.04,C.gold);
+ line(outdoor,new THREE.Vector3(-3.55,.25,-14.55),new THREE.Vector3(-3.55,.25,-18.5),.04,C.gold);line(outdoor,new THREE.Vector3(-3.55,.25,-18.5),new THREE.Vector3(MAP.stopper.x,.55,MAP.stopper.z),.04,C.gold);
  // Cooperation: both plates and the latch sit at the model's coordinates.
  fence(outdoor,-12,-2,-35);fence(outdoor,2,12,-35);const gate=box(outdoor,4,1.6,.18,0,.8,-35,C.navy);
  const gatePlate=cylinder(outdoor,.85,.08,MAP.gatePlate.x,.05,MAP.gatePlate.z,C.gold);torus(outdoor,.53,.035,MAP.gatePlate.x,.12,MAP.gatePlate.z,C.paper).rotation.x=-Math.PI/2;glyph(outdoor,'◎',MAP.gatePlate.x,.8,MAP.gatePlate.z,'#f0ddb1',.55);
@@ -89,17 +112,24 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const indoorLight=new THREE.PointLight(0xffc77d,14,12,2);indoorLight.position.set(2.4,2.2,-2.5);room.add(indoorLight);
  // Snow is GPU points, no CPU pixel readback; reduced motion keeps the scene still.
  const snowPositions=new Float32Array(180*3);for(let i=0;i<180;i++){snowPositions[i*3]=(Math.sin(i*17.13)*.5+.5)*26-13;snowPositions[i*3+1]=1+(i%19)*.5;snowPositions[i*3+2]=(Math.sin(i*7.73)*.5+.5)*26-13;}const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(snowPositions,3));const snow=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:0xece6d4,size:.07,transparent:true,opacity:.7}));scene.add(snow);
- let width=1,height=1,lastEra=-1,lastRoom=false,lastQuality='',time=0,walkP=0,walkT=0,lastP={x:0,z:0},lastT={x:0,z:0},started=false;
+ let width=1,height=1,lastEra=-1,lastRoom=false,lastQuality='',time=0,walkP=0,walkT=0,lastP={x:0,z:0},lastT={x:0,z:0},started=false;const presentationFacing=[0,0];
  function resize(){const rect=canvas.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);lastEra=-1;camera.left=-8*width/height;camera.right=8*width/height;camera.top=8;camera.bottom=-8;camera.updateProjectionMatrix();optical.aspect=width/height;optical.updateProjectionMatrix();}
  resize();
  return {resize,dispose(){renderer.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points){o.geometry.dispose();}});},render(s:JourneyState,dt:number,options:RenderOptions){
-  time+=Math.min(.1,dt);const inRoom=s.phase!=='world';outdoor.visible=!inRoom;room.visible=inRoom;scene.fog=inRoom?null:new THREE.Fog(s.era===3?0x688693:0x8ba1a5,30,85);scene.background=new THREE.Color(inRoom?0x292e32:s.era===3?0x688693:0x8ba1a5);
+  time+=Math.max(0,Math.min(.1,dt));const inRoom=s.phase!=='world';outdoor.visible=!inRoom;room.visible=inRoom;scene.fog=inRoom?null:new THREE.Fog(s.era===3?0x688693:0x8ba1a5,30,85);scene.background=new THREE.Color(inRoom?0x292e32:s.era===3?0x688693:0x8ba1a5);
   if(lastEra!==s.era||lastQuality!==options.quality||lastRoom!==inRoom){const scale=!inRoom&&s.era===0?Math.min(1,360/width):!inRoom&&s.era===1?Math.min(1,720/width):options.quality==='low'?1:Math.min(devicePixelRatio||1,1.5);renderer.setPixelRatio(1);renderer.setSize(Math.round(width*scale),Math.round(height*scale),false);canvas.style.imageRendering=!inRoom&&s.era<2?'pixelated':'auto';renderer.shadowMap.enabled=(inRoom||s.era===3)&&options.quality!=='low';lastEra=s.era;lastQuality=options.quality;lastRoom=inRoom;}
-  sun.intensity=inRoom?1.4:s.era===0?1.15:s.era===3?2.6:2;hemi.intensity=inRoom?1.5:s.era===0?2.3:1.8;
+  sun.color.set(inRoom?0xffe0ab:s.era===3?0xffe7c0:0xffefda);sun.intensity=inRoom?1.4:s.era===0?1.15:s.era===3?2.15:1.8;millLight.intensity=s.era===3?2.4:0;millGlow.visible=s.era>=1;millGlow.material.opacity=s.era===3?.55:.28;if(!options.reducedMotion)riverTexture.offset.x=-time*.028;hemi.intensity=inRoom?1.5:s.era===0?2.3:1.8;
   const movingP=started?distance(s.player,lastP):0,movingT=started?distance(s.toto,lastT):0;walkP+=movingP*7;walkT+=movingT*7;
-  [player,toto].forEach((g,i)=>{const a=i?s.toto:s.player;g.position.set(a.x,(inRoom?0:heightAt(a))+.52*1.05,a.z);g.rotation.y=a.facing+Math.PI;const moving=i?movingT:movingP;poseFigure(g,{speaking:false,waiting:i===1&&s.toto.waiting,walk:options.reducedMotion||moving<.001?0:Math.sin(i?walkT:walkP),worried:s.solved[4]&&!s.portalOpen});shadows[i]!.position.set(a.x,(inRoom?0:heightAt(a))+.015,a.z);});
+  const actionTargets:Record<string,{x:number;z:number}>={begin:MAP.console,tile:{x:MAP.tileControl.x-.65,z:MAP.tileControl.z+.25},drain:{x:MAP.drainControl.x-.55,z:MAP.drainControl.z-.55},stopper:{x:MAP.stopperControl.x-.55,z:MAP.stopperControl.z-.55},latch:MAP.latch,'lever-a':MAP.leverA,'lever-b':MAP.leverB,wall:MAP.wall,observe:MAP.observe,portal:MAP.portal};
+  [player,toto].forEach((g,i)=>{const a=i?s.toto:s.player,other=i?s.player:s.toto,kind=i?'toto':'player',moving=i?movingT:movingP;let facing=a.facing;
+   if(options.speaker&&distance(a,other)>.2)facing=Math.atan2(other.x-a.x,other.z-a.z);
+   if(i===0&&options.action){const target=actionTargets[options.action.id]??other;facing=Math.atan2(target.x-a.x,target.z-a.z);}
+   if(!started||options.reducedMotion)presentationFacing[i]=facing;else if(dt>0){const delta=Math.atan2(Math.sin(facing-presentationFacing[i]!),Math.cos(facing-presentationFacing[i]!));presentationFacing[i]!+=delta*Math.min(1,dt*10);}
+   g.position.set(a.x,(inRoom?0:heightAt(a))+.52*1.05,a.z);g.rotation.y=presentationFacing[i]!+Math.PI;
+   poseJourneyActor(g,{kind,speaking:options.speaker===kind,expression:options.speaker===kind?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,waiting:i===1&&s.toto.waiting,walk:moving<.001?0:Math.sin(i?walkT:walkP),time,reducedMotion:options.reducedMotion});shadows[i]!.position.set(a.x,(inRoom?0:heightAt(a))+.015,a.z);
+  });
   lastP={...s.player};lastT={...s.toto};started=true;
-  tile.rotation.y=-s.p1*Math.PI/2;crank.rotation.z=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];bridge.visible=!!s.solved[1];spill.visible=s.p2Drain;sluice.position.y=s.p2Drain?.7:.35;pin.rotation.z=s.p2Stopper?0:Math.PI/2;if(s.solved[1]&&!options.reducedMotion)wheel.rotation.z=time*.55;
+  tile.rotation.y=-s.p1*Math.PI/2;crank.rotation.z=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];bridge.visible=!!s.solved[1];spill.visible=s.p2Drain;sluice.position.y=s.p2Drain?.7:.35;drainHandle.rotation.z=s.p2Drain?0:Math.PI/2;stopHandle.rotation.z=s.p2Stopper?0:Math.PI/2;pin.rotation.z=s.p2Stopper?0:Math.PI/2;if(s.solved[1]&&!options.reducedMotion)wheel.rotation.z=time*.55;
   const occupied=distance(s.player,MAP.gatePlate)<=.9||distance(s.toto,MAP.gatePlate)<=.9,openGate=s.gateLatched||occupied;
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
@@ -111,7 +141,8 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   const y=inRoom?12:s.era===0?20:s.era===1?16:12+tableView*6;const d=inRoom?9:s.era===0?8:s.era===1?10:13-tableView*5;
   camera.position.copy(origin).add(new THREE.Vector3(Math.sin(q)*d,y,Math.cos(q)*d));camera.lookAt(origin);for(const tree of trees){const dx=tree.position.x-s.player.x,dz=tree.position.z-s.player.z,forward=dx*Math.sin(q)+dz*Math.cos(q),cross=dx*Math.cos(q)-dz*Math.sin(q);tree.visible=!(s.era>=2&&forward>0&&forward<10&&Math.abs(cross)<2.6);}
   sun.position.copy(origin).add(new THREE.Vector3(-10,20,10));sun.target.position.copy(origin);
-  optical.position.set(3,4.6,-55);optical.lookAt(3,4.6,-60);const observe=!inRoom&&s.mode==='observe';player.visible=toto.visible=!observe&&(inRoom||s.era>=2);pixels.forEach((p,i)=>{const a=i?s.toto:s.player;p.sprite.visible=!inRoom&&!observe&&s.era<2;p.sprite.position.set(a.x,heightAt(a)+.025,a.z);if(s.era<2)p.update(s.era,a.facing,(i?movingT:movingP)>.001?(i?walkT:walkP):0);});shadows.forEach(m=>m.visible=!observe);snow.visible=!inRoom&&s.era===3&&!observe;snow.position.set(s.player.x,0,s.player.z);if(!options.reducedMotion)snow.position.y=-(time*.25)%3;
+  optical.position.set(3,4.6,-55);optical.lookAt(3,4.6,-60);const observe=!inRoom&&s.mode==='observe';player.visible=toto.visible=!observe&&(inRoom||s.era>=2);pixels.forEach((p,i)=>{const a=i?s.toto:s.player;p.sprite.visible=!inRoom&&!observe&&s.era<2;p.sprite.position.set(a.x,heightAt(a)+.025,a.z);if(s.era<2)p.update(s.era,presentationFacing[i]!,options.reducedMotion?0:(i?movingT:movingP)>.001?(i?walkT:walkP):0,{speaking:options.speaker===(i?'toto':'player'),expression:options.speaker===(i?'toto':'player')?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,reducedMotion:options.reducedMotion});});shadows.forEach(m=>m.visible=!observe);snow.visible=!inRoom&&s.era===3&&!observe;snow.position.set(s.player.x,0,s.player.z);if(!options.reducedMotion)snow.position.y=-(time*.25)%3;
+  scene.traverse(o=>{if(o.userData['journeyMarker']){const p=o.getWorldPosition(new THREE.Vector3());o.visible=distance(s.player,p)>=2&&distance(s.toto,p)>=.9;}});
   renderer.render(scene,observe?optical:camera);
  }};
 }

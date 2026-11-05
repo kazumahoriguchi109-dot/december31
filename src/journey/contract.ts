@@ -14,7 +14,7 @@ export interface InputFrame {x:number;z:number;run:boolean}
 export interface JourneyEvent {type:'dialogue'|'evolution'|'sound'|'notice'|'ending';id:string;text?:string;speaker?:'主人公'|'トト';era?:Era}
 export interface ContextAction {id:string;label:string;hint:string;point:Point;enabled:boolean}
 export const MAP = {
- spawn:{x:0,z:0}, console:{x:0,z:-2.5}, tile:{x:0,z:-6}, tileControl:{x:2.6,z:-5.5}, mill:{x:-5,z:-18}, drain:{x:-7,z:-18}, stopper:{x:-3.6,z:-18.7},
+ spawn:{x:0,z:0}, console:{x:0,z:-2.5}, tile:{x:0,z:-6}, tileControl:{x:2.6,z:-5.5}, mill:{x:-5,z:-18}, drain:{x:-7,z:-18}, stopper:{x:-3.6,z:-18.7}, drainControl:{x:-6,z:-14}, stopperControl:{x:-3,z:-14},
  gatePlate:{x:-3,z:-31.5}, gate:{x:0,z:-35}, latch:{x:2,z:-38},
  wall:{x:8,z:-43}, wallTop:{x:8,z:-50.5}, observe:{x:3,z:-54}, leverA:{x:0,z:-56}, leverB:{x:6,z:-56}, ring:{x:3,z:-58},
  castle:{x:3,z:-62}, portal:{x:0,z:4}, frontPlate:{x:0,z:2.5}, backPlate:{x:0,z:5.5},
@@ -26,7 +26,8 @@ export function heightAt(p:Point):number {
  if(p.x>=6.5&&p.x<=10.5&&p.z< -43)return Math.max(0,Math.min(3,(-p.z-43)/6*3));
  return 0;
 }
-export interface RenderOptions {reducedMotion:boolean;quality:'normal'|'low';resonance?:boolean}
+export type Expression = 'neutral'|'curious'|'surprised'|'relieved';
+export interface RenderOptions {reducedMotion:boolean;quality:'normal'|'low';resonance?:boolean;speaker?:'player'|'toto';expression?:Expression;action?:{id:string;progress:number}}
 export interface JourneyRenderer {
  render(state:JourneyState,dt:number,options:RenderOptions):void;
  resize():void;dispose():void;
