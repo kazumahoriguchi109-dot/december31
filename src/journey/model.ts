@@ -1,14 +1,14 @@
-import { MAP, distance, heightAt, inControlArea, type Actor, type ContextAction, type InputFrame, type JourneyEvent, type JourneyState, type Point } from './contract';
+import { MAP, distance, heightAt, inControlArea, PLATE_RADIUS, isOnPlate, type Actor, type ContextAction, type InputFrame, type JourneyEvent, type JourneyState, type Point } from './contract';
 
-const RADIUS = .28, INTERACT = 1.65, PLATE = .9;
-const transient = new WeakMap<JourneyState, { path:Point[]; blocked:string; initialized:boolean;rejoining:boolean }>();
-const runtime = (s:JourneyState) => { let r=transient.get(s); if(!r){r={path:[],blocked:'',initialized:false,rejoining:false};transient.set(s,r);} return r; };
+const RADIUS = .28, INTERACT = 1.65, PLATE = PLATE_RADIUS;
+const transient = new WeakMap<JourneyState, { path:Point[]; blocked:string; initialized:boolean;rejoining:boolean;lastPlayer:Point|null;still:number;restTarget:Point|null;restHold:Point|null;restPath:Point[];restQuarter:number;viewStill:number;restCooldown:number }>();
+const runtime = (s:JourneyState) => { let r=transient.get(s); if(!r){r={path:[],blocked:'',initialized:false,rejoining:false,lastPlayer:null,still:0,restTarget:null,restHold:null,restPath:[],restQuarter:s.quarter,viewStill:0,restCooldown:0};transient.set(s,r);} return r; };
 const notice=(id:string,text:string):JourneyEvent=>({type:'notice',id,text});
 const line=(id:string,text:string,speaker:'主人公'|'トト'='トト'):JourneyEvent=>({type:'dialogue',id,text,speaker});
 const sound=(id:string):JourneyEvent=>({type:'sound',id});
 const once=(s:JourneyState,id:string,events:JourneyEvent[])=>{if(s.seen.includes(id))return [];s.seen.push(id);return events;};
 const platePoint=(plate:JourneyState['toto']['plate']):Point|null=>plate==='gate'?MAP.gatePlate:plate==='front'?MAP.frontPlate:plate==='back'?MAP.backPlate:null;
-const onPlate=(actor:Point,plate:Point)=>distance(actor,plate)<=PLATE;
+const onPlate=isOnPlate;
 
 export function createState():JourneyState {
  return {version:3,phase:'room',player:{x:0,z:1.3,facing:Math.PI},toto:{x:1,z:1.1,facing:Math.PI,waiting:false,plate:null},era:0,quarter:0,mode:'walk',p1:0,p2Drain:true,p2Stopper:true,gateLatched:false,wallSeen:false,ringA:0,ringB:1,solved:[false,false,false,false,false,false],portalOpen:false,seen:[],steps:0};
@@ -113,10 +113,87 @@ export function millCompanionStaging(s:JourneyState):{target:Point;ready:boolean
  return {target,ready:distance(s.toto,target)<.08,directPathClear:clearSegment(s,s.toto,target)};
 }
 
+function narrowRestArea(p:Point):boolean {
+ return (p.z> -25.5&&p.z< -20.5)||(p.z> -36.8&&p.z< -33.2)||
+  (p.x>6.2&&p.x<10.8&&p.z> -49.5&&p.z< -42.3)||
+  [MAP.gatePlate,MAP.frontPlate,MAP.backPlate].some(plate=>distance(p,plate)<2.5);
+}
+function safeRestSegment(s:JourneyState,a:Point,b:Point):boolean {
+ if(!clearSegment(s,a,b))return false;
+ const count=Math.max(1,Math.ceil(distance(a,b)/.08));
+ for(let i=0;i<=count;i++){
+  const point={x:a.x+(b.x-a.x)*i/count,z:a.z+(b.z-a.z)*i/count};
+  if([MAP.gatePlate,MAP.frontPlate,MAP.backPlate].some(plate=>distance(point,plate)<=PLATE+.02))return false;
+ }
+ return true;
+}
+function playerClearRestSegment(s:JourneyState,a:Point,b:Point):boolean {
+ if(!safeRestSegment(s,a,b))return false;
+ const dx=b.x-a.x,dz=b.z-a.z,length2=dx*dx+dz*dz;
+ const t=length2?Math.max(0,Math.min(1,((s.player.x-a.x)*dx+(s.player.z-a.z)*dz)/length2)):0;
+ const closest=distance(s.player,{x:a.x+dx*t,z:a.z+dz*t}),initial=distance(s.player,a);
+ // An already-overlapping actor may only move outwards, never deeper through the player.
+ return initial<.7?closest>=initial-.00001&&distance(s.player,b)>=initial:closest>=.7;
+}
+function restRoute(s:JourneyState,target:Point):Point[]|null {
+ const start={x:s.toto.x,z:s.toto.z};
+ if(playerClearRestSegment(s,start,target))return [target];
+ const startAngle=Math.atan2(start.z-s.player.z,start.x-s.player.x),endAngle=Math.atan2(target.z-s.player.z,target.x-s.player.x);
+ let shortest=endAngle-startAngle;while(shortest>Math.PI)shortest-=Math.PI*2;while(shortest< -Math.PI)shortest+=Math.PI*2;
+ for(const radius of [1.05,1.3])for(const turn of [shortest,shortest>0?shortest-Math.PI*2:shortest+Math.PI*2]){
+  const count=Math.max(1,Math.ceil(Math.abs(turn)/(Math.PI/8))),path:Point[]=[];
+  for(let i=0;i<=count;i++){const angle=startAngle+turn*i/count;path.push({x:s.player.x+Math.cos(angle)*radius,z:s.player.z+Math.sin(angle)*radius});}
+  path.push(target);let previous=start,valid=true;
+  for(const point of path){if(narrowRestArea(point)||!playerClearRestSegment(s,previous,point)){valid=false;break;}previous=point;}
+  if(valid)return path;
+ }
+ return null;
+}
+
+function clearsFocusedObject(s:JourneyState,candidate:Point):boolean {
+ const focus=context(s);if(!focus||!['latch','lever-a','lever-b','observe','wall'].includes(focus.id))return true;
+ const q=s.quarter*Math.PI/2,dx=candidate.x-focus.point.x,dz=candidate.z-focus.point.z;
+ return Math.abs(dx*Math.cos(q)-dz*Math.sin(q))>=.85&&distance(candidate,focus.point)>=1;
+}
+/** Only open, flat ground permits a camera-aware rest position. No gameplay object moves. */
+function restBesideCamera(s:JourneyState,dt:number):boolean {
+ const r=runtime(s);
+ if(s.phase!=='world'||s.era<2||s.toto.plate!==null||r.rejoining||r.still<.12||narrowRestArea(s.player)||narrowRestArea(s.toto)||distance(s.player,s.toto)>2.5){r.restTarget=null;r.restHold=null;r.restPath=[];return false;}
+ if(!r.restTarget){
+  if(r.viewStill<.18||r.restCooldown>0)return !!r.restHold&&distance(s.toto,r.restHold)<.04;
+  const q=s.quarter*Math.PI/2;
+  const radii=s.solved[2]&&distance(s.player,MAP.portal)>5?[1.05,1.9,2]:[1.05];
+  const candidates=radii.flatMap(radius=>[1,-1].map(side=>({x:s.player.x+Math.cos(q)*radius*side,z:s.player.z-Math.sin(q)*radius*side})).sort((a,b)=>distance(s.toto,a)-distance(s.toto,b)));
+  for(const point of candidates){
+   if(!clearsFocusedObject(s,point)||narrowRestArea(point)||Math.abs(heightAt(point)-heightAt(s.player))>=.02||!safeRestSegment(s,s.player,point))continue;
+   const route=restRoute(s,point);if(route){r.restTarget=point;r.restPath=route;break;}
+  }
+ }
+ const destination=r.restTarget;if(!destination)return false;
+ while(r.restPath.length>1&&distance(s.toto,r.restPath[0]!)<.015)r.restPath.shift();
+ const target=r.restPath[0]??destination;
+ if(!playerClearRestSegment(s,s.toto,target)){r.restTarget=null;r.restPath=[];return false;}
+ const d=distance(s.toto,target);
+ if(distance(s.toto,destination)<.02){r.restHold=destination;r.restTarget=null;r.restPath=[];r.restCooldown=.3;return true;}
+ const travel=Math.min(d,2.3*dt),count=Math.max(1,Math.ceil(travel/.06));
+ for(let i=0;i<count;i++){
+  const remaining=distance(s.toto,target);if(remaining<.00001)break;
+  const amount=Math.min(remaining,travel/count);
+  moveActor(s,s.toto,(target.x-s.toto.x)/remaining*amount,(target.z-s.toto.z)/remaining*amount,true);
+ }
+ s.toto.facing=Math.atan2(s.player.x-s.toto.x,s.player.z-s.toto.z);
+ r.path=[{x:s.player.x,z:s.player.z}];return true;
+}
+
 function advanceFriend(s:JourneyState,dt:number):void {
  if(s.toto.waiting)return;
  if(movingToPlate(s)){advanceToPlate(s,dt);return;}
- const r=runtime(s);if(!r.initialized){r.path=recoverTrail(s);r.initialized=true;}const last=r.path.at(-1);
+ const r=runtime(s);
+ const playerMoved=!r.lastPlayer||distance(r.lastPlayer,s.player)>.00001;
+ r.still=playerMoved?0:r.still+dt;if(playerMoved){r.restTarget=null;r.restHold=null;r.restPath=[];}r.lastPlayer={x:s.player.x,z:s.player.z};
+ if(r.restQuarter!==s.quarter){r.restQuarter=s.quarter;r.viewStill=0;}else r.viewStill+=dt;
+ r.restCooldown=Math.max(0,r.restCooldown-dt);
+ if(!r.initialized){r.path=recoverTrail(s);r.initialized=true;}const last=r.path.at(-1);
  if(!last || distance(last,s.player)>.18)r.path.push({x:s.player.x,z:s.player.z});
  if(r.path.length>500)r.path.splice(0,r.path.length-500);
  while(r.path.length>1 && distance(s.toto,r.path[0]!)<.16)r.path.shift();
@@ -132,6 +209,7 @@ function advanceFriend(s:JourneyState,dt:number):void {
    r.path=[{x:s.player.x,z:s.player.z}];return;
   }
  }
+ if(!millControl&&!inControlArea(s.player,'tile')&&restBesideCamera(s,dt))return;
  // Old breadcrumbs can run through the player's current position after a turn.
  // Once the final approach is unobstructed, reserve a metre of personal space.
  const separation=distance(s.player,s.toto);

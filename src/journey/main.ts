@@ -117,10 +117,12 @@ function frame(now:number){
  if(moving)audio.step(input.run&&state.era>=1);
  if((moving&&now-lastSave>2000)||(wasMoving&&!moving)){saveNow();}wasMoving=moving;
  if(screen!=='title'){
-  ui.render(state,dialogue.length?null:context(state),objective(state));
+  const shownContext=dialogue.length?null:context(state);
+  const focusContext=available()&&!guardHeld&&shownContext?.enabled?shownContext:null;
+  ui.render(state,shownContext,objective(state));
   const interactButton=document.getElementById('journey-interact') as HTMLButtonElement;
   if(interactionBusy())interactButton.disabled=true;interactButton.setAttribute('aria-busy',String(interactionBusy()));
-  renderer.render(state,screen==='game'?dt:0,{reducedMotion:preferences.reducedMotion,quality:'normal',resonance,speaker:!dialogueBlocked()&&dialogue[0]?(dialogue[0].speaker==='トト'?'toto':'player'):undefined,expression:!dialogueBlocked()?dialogue[0]?.expression??'neutral':'neutral',action:actionCue?{id:actionCue.id,progress:Math.min(1,(now-actionCue.start)/actionCue.duration)}:undefined});
+  renderer.render(state,screen==='game'?dt:0,{reducedMotion:preferences.reducedMotion,quality:'normal',resonance,focusActionId:focusContext?.id,focusActionPoint:focusContext?.point,speaker:!dialogueBlocked()&&dialogue[0]?(dialogue[0].speaker==='トト'?'toto':'player'):undefined,expression:!dialogueBlocked()?dialogue[0]?.expression??'neutral':'neutral',action:actionCue?{id:actionCue.id,progress:Math.min(1,(now-actionCue.start)/actionCue.duration)}:undefined});
  }
  requestAnimationFrame(frame);
 }

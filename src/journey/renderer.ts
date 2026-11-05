@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {MAP,CONTROL_AREAS,inControlArea,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
+import {MAP,CONTROL_AREAS,isOnPlate,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
 import {poseJourneyActor} from './acting';
 import {pixelActor,createJourneyActor} from './actorArt';
 import {C,asset,box,cylinder,glyph,line,torus,fence,material,snowTexture,trail,snowBank,bankStones,waterTexture,lightPool,operatingArea} from './sceneArt';
@@ -92,7 +92,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  // Cooperation: both plates and the latch sit at the model's coordinates.
  fence(outdoor,-12,-2,-35);fence(outdoor,2,12,-35);const gate=box(outdoor,4,1.6,.18,0,.8,-35,C.navy);
  const gatePlate=cylinder(outdoor,.85,.08,MAP.gatePlate.x,.05,MAP.gatePlate.z,C.gold);torus(outdoor,.53,.035,MAP.gatePlate.x,.12,MAP.gatePlate.z,C.paper).rotation.x=-Math.PI/2;glyph(outdoor,'◎',MAP.gatePlate.x,.8,MAP.gatePlate.z,'#f0ddb1',.55);
- const latch=box(outdoor,.35,.9,.35,MAP.latch.x,.45,MAP.latch.z,C.wood);glyph(outdoor,'⌁',MAP.latch.x,1.2,MAP.latch.z);
+ const latch=box(outdoor,.35,.9,.35,MAP.latch.x,.45,MAP.latch.z,C.wood);const latchLever=new THREE.Group();latchLever.position.set(MAP.latch.x,.82,MAP.latch.z);outdoor.add(latchLever);box(latchLever,.48,.09,.12,.13,0,0,C.gold);cylinder(latchLever,.09,.15,.35,.04,0,C.wood);line(outdoor,new THREE.Vector3(2.23,.1,-38),new THREE.Vector3(2.23,.1,-35),.03,C.gold);glyph(outdoor,'⌁',MAP.latch.x,1.2,MAP.latch.z);
  glyph(outdoor,'◐',MAP.wall.x,1.2,MAP.wall.z+.2,'#f0ddb1',.6);
  // Optical apparatus. Ring segments preserve r/z = .4 only at A1/B2.
  const apparatus=new THREE.Group();apparatus.position.set(3,4.6,-55);outdoor.add(apparatus);
@@ -106,18 +106,26 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   const handle=new THREE.Group();handle.position.set(point.x,3.7,point.z);outdoor.add(handle);leverHandles.push(handle);box(handle,.095,.66,.095,0,.31,0,color);box(handle,.47,.13,.15,0,.67,0,C.wood);for(const x of[-.25,.25])cylinder(handle,.09,.16,x,.67,0,color,10).rotation.z=Math.PI/2;
   const railX=label==='A'?2.2:3.8;line(outdoor,new THREE.Vector3(point.x,3.2,point.z),new THREE.Vector3(railX,3.2,point.z),.035,color);line(outdoor,new THREE.Vector3(railX,3.2,point.z),new THREE.Vector3(railX,3.2,-57.6),.035,color);for(const z of[-56.4,-57.5])box(outdoor,.16,.15,.22,railX,3.12,z,C.stone);
   // The letter remains attached to its apparatus when Q changes the camera orientation.
-  const badge=glyph(outdoor,label,point.x,4.65,point.z,'#f0ddb1',.52);badge.userData['journeyMarker']=false;
+  const badge=glyph(outdoor,label,point.x,5.05,point.z,'#f0ddb1',.52);badge.userData['journeyMarker']=false;
  }
 
- cylinder(outdoor,.65,.06,MAP.observe.x,3.05,MAP.observe.z,C.navy);glyph(outdoor,'◉',MAP.observe.x,3.7,MAP.observe.z,'#f0ddb1',.65);
+ const observerBase=cylinder(outdoor,.65,.06,MAP.observe.x,3.05,MAP.observe.z,C.navy);glyph(outdoor,'◉',MAP.observe.x,3.7,MAP.observe.z,'#f0ddb1',.65);
  // Castle is the apparent destination, behind the optical ring rather than in its line of sight.
  const castle=asset(outdoor,'castle',3,3,-64,1.1);
  // Portal and its two distinct plate shapes, matching the final cooperative puzzle.
  const portal=new THREE.Group();portal.position.set(MAP.portal.x,0,MAP.portal.z);outdoor.add(portal);for(const x of[-1.25,1.25])box(portal,.23,3,.23,x,1.5,0,C.gold);box(portal,2.7,.23,.23,0,3,0,C.gold);
- const portalFill=box(portal,2.25,2.7,.06,0,1.4,0,C.navy);const front=cylinder(outdoor,.64,.06,MAP.frontPlate.x,.04,MAP.frontPlate.z,C.gold),back=cylinder(outdoor,.64,.06,MAP.backPlate.x,.04,MAP.backPlate.z,C.gold);const resonance=new THREE.Group();outdoor.add(resonance);for(const [index,p]of[MAP.frontPlate,MAP.backPlate].entries()){for(let i=0;i<=index;i++){const ring=torus(resonance,.34+i*.13,.035,p.x,.1,p.z,C.paper);ring.rotation.x=-Math.PI/2;}for(const x of[-.14,.14])box(resonance,.12,.02,.24,p.x+x,.11,p.z,C.gold);glyph(resonance,index?'◎':'○',p.x,.5,p.z,'#f0ddb1',.52);}for(const z of[1,3.3,4.7,6.5]){for(const x of[-.2,.2])box(resonance,.13,.025,.27,1.8+x,.08,z,C.gold);}
+ const portalFill=box(portal,2.25,2.7,.06,0,1.4,0,0x76aeb4);portalFill.material.transparent=true;portalFill.material.opacity=.18;portalFill.material.depthWrite=false;portalFill.castShadow=false;const portalSeal=new THREE.Group();portal.add(portalSeal);for(const side of[-1,1])line(portalSeal,new THREE.Vector3(-.95*side,.22,.04),new THREE.Vector3(.95*side,2.58,.04),.025,C.paper);const front=cylinder(outdoor,.64,.06,MAP.frontPlate.x,.04,MAP.frontPlate.z,C.gold),back=cylinder(outdoor,.64,.06,MAP.backPlate.x,.04,MAP.backPlate.z,C.gold);const resonance=new THREE.Group();outdoor.add(resonance);for(const [index,p]of[MAP.frontPlate,MAP.backPlate].entries()){for(let i=0;i<=index;i++){const ring=torus(resonance,.34+i*.13,.035,p.x,.1,p.z,C.paper);ring.rotation.x=-Math.PI/2;}for(const x of[-.14,.14])box(resonance,.12,.02,.24,p.x+x,.11,p.z,C.gold);glyph(resonance,index?'◎':'○',p.x,.5,p.z,'#f0ddb1',.52);}for(const z of[1,3.3,4.7,6.5]){for(const x of[-.2,.2])box(resonance,.13,.025,.27,1.8+x,.08,z,C.gold);}
+ // Context selection follows main's one enabled action; no proximity-based second selection.
+ const focusRing=torus(scene,.76,.028,0,.07,0,C.paper);focusRing.rotation.x=-Math.PI/2;focusRing.visible=false;
+ const companionTarget=new THREE.Group(),travellingRing=new THREE.Group(),arrivedRing=new THREE.Group();companionTarget.add(travellingRing,arrivedRing);outdoor.add(companionTarget);
+ for(let i=0;i<16;i++){const a=i*Math.PI/8,b=a+Math.PI/16;line(travellingRing,new THREE.Vector3(Math.cos(a)*1.02,.1,Math.sin(a)*1.02),new THREE.Vector3(Math.cos(b)*1.02,.1,Math.sin(b)*1.02),.035,C.paper);}
+ const arrivalHoop=torus(arrivedRing,1.02,.045,0,.1,0,C.paper);arrivalHoop.rotation.x=-Math.PI/2;
+ for(const x of[-.16,.16]){box(travellingRing,.13,.025,.29,x,.095,.63,C.paper);box(arrivedRing,.13,.025,.29,x,.095,.63,C.paper);}
  // Warm home, same real coordinates for arrival and ending.
  box(room,8,.4,7,0,-.2,-.5,0x896849);for(let x=-3.8;x<4;x+=.6)box(room,.025,.01,7,x,.006,-.5,0x6c513b);box(room,8,3,.2,0,1.5,-4,0xc2b59c);box(room,.2,3,7,-4,1.5,-.5,0xb7b09a);box(room,.2,3,7,4,1.5,-.5,0xb7b09a);
  asset(room,'woven_rug',0,.02,.4,1.3);box(room,2,.7,.9,MAP.console.x,.35,MAP.console.z,C.wood);box(room,1.45,.95,.12,0,1.2,-2.85,C.navy);const screen=box(room,1.25,.72,.025,0,1.2,-2.77,0x73a6ab);glyph(room,'▶',0,1.9,-2.5,'#f0ddb1',.55);asset(room,'bookshelf',-3,0,-3.2,1);asset(room,'armchair',3.4,0,1.9,1);asset(room,'table_lamp',2.4,.7,-2.5,1);
+ const focusObjects:Record<string,THREE.Object3D[]>={tile:[crank],drain:[drainHandle],stopper:[stopHandle],latch:[latch,latchLever],'lever-a':[leverHandles[0]!],'lever-b':[leverHandles[1]!],observe:[observerBase],portal:[portal],begin:[screen]};
+ const focusTint=new THREE.Color(0xe8c77b);
  const windowFrame=box(room,2,1.8,.08,3,1.7,-3.84,C.wood);box(room,1.7,1.5,.04,3,1.7,-3.78,0x8baab3);box(room,.08,1.6,.04,3,1.7,-3.73,C.paper);box(room,1.8,.08,.04,3,1.7,-3.73,C.paper);
  const indoorLight=new THREE.PointLight(0xffc77d,14,12,2);indoorLight.position.set(2.4,2.2,-2.5);room.add(indoorLight);
  // Snow is GPU points, no CPU pixel readback; reduced motion keeps the scene still.
@@ -148,14 +156,19 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
    poseJourneyActor(g,{kind,speaking:options.speaker===kind,expression:options.speaker===kind?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,waiting:i===1&&s.toto.waiting,walk:moving<.001?0:Math.sin(i?walkT:walkP),time,reducedMotion:options.reducedMotion});shadows[i]!.position.set(a.x,(inRoom?0:heightAt(a))+.015,a.z);
   });
   lastP={...s.player};lastT={...s.toto};started=true;
-  for(const id of ['tile','drain','stopper']as const){const active=!inRoom&&inControlArea(s.player,id);controlPads[id]!.border.material.color.set(active?0xe9d599:0x50635c);controlPads[id]!.pad.material.color.set(active?0xc4bc91:0xa3ad9b);}
+  const focusPoint=options.focusActionPoint;focusRing.visible=!!options.focusActionId&&!!focusPoint&&s.mode!=='observe';if(focusPoint)focusRing.position.set(focusPoint.x,(inRoom?0:heightAt(focusPoint))+.075,focusPoint.z);
+  const destination=s.toto.plate==='gate'?MAP.gatePlate:s.toto.plate==='front'?MAP.frontPlate:s.toto.plate==='back'?MAP.backPlate:null;companionTarget.visible=!!destination;if(destination){companionTarget.position.set(destination.x,heightAt(destination),destination.z);const arrived=s.toto.waiting&&isOnPlate(s.toto,destination);arrivedRing.visible=arrived;travellingRing.visible=!arrived;}
+  for(const id of ['tile','drain','stopper']as const){const active=!inRoom&&options.focusActionId===id;controlPads[id]!.border.material.color.set(active?0xe9d599:0x50635c);controlPads[id]!.pad.material.color.set(active?0xc4bc91:0xa3ad9b);}
+  for(const [id,objects]of Object.entries(focusObjects))for(const obj of objects)obj.traverse(o=>{if(o instanceof THREE.Mesh&&o.material instanceof THREE.MeshStandardMaterial){o.material.emissive.copy(focusTint);o.material.emissiveIntensity=options.focusActionId===id?.24:0;}});
+  for(const [point,mesh]of [[MAP.gatePlate,gatePlate],[MAP.frontPlate,front],[MAP.backPlate,back]]as const){const selected=options.focusActionId==='wait'&&options.focusActionPoint&&distance(options.focusActionPoint,point)<.01;mesh.material.emissive.copy(focusTint);mesh.material.emissiveIntensity=selected?.3:0;}
+  latchLever.rotation.y=s.gateLatched?Math.PI/2:0;
   leverHandles[0]!.rotation.x=(s.ringA-1)*.42;leverHandles[1]!.rotation.x=(s.ringB-1)*.42;
   tile.rotation.y=-s.p1*Math.PI/2;crank.rotation.z=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];bridge.visible=!!s.solved[1];spill.visible=s.p2Drain;sluice.position.y=s.p2Drain?.7:.35;drainHandle.rotation.z=s.p2Drain?0:Math.PI/2;stopHandle.rotation.z=s.p2Stopper?0:Math.PI/2;pin.rotation.z=s.p2Stopper?0:Math.PI/2;if(s.solved[1]&&!options.reducedMotion)wheel.rotation.z=time*.55;
-  const occupied=distance(s.player,MAP.gatePlate)<=.9||distance(s.toto,MAP.gatePlate)<=.9,openGate=s.gateLatched||occupied;
+  const occupied=isOnPlate(s.player,MAP.gatePlate)||isOnPlate(s.toto,MAP.gatePlate),openGate=s.gateLatched||occupied;
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
   const flatWall=!s.wallSeen&&(s.era<2||s.quarter%2===0);wallPattern.visible=flatWall;stair.visible=!flatWall;
-  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=!s.portalOpen;resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);
+  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=portalSeal.visible=!s.portalOpen;for(const piece of portal.children.slice(0,3)){if(piece instanceof THREE.Mesh&&piece.material instanceof THREE.MeshStandardMaterial){piece.material.color.set(s.portalOpen?C.paper:C.gold);piece.material.emissiveIntensity=Math.max(piece.material.emissiveIntensity,s.portalOpen?.2:0);}}resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.frontPlate)||isOnPlate(s.toto,MAP.frontPlate)?C.paper:s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.backPlate)||isOnPlate(s.toto,MAP.backPlate)?C.paper:s.era===3?C.gold:C.stone);
   if(camera.zoom!==(inRoom?1.4:1)){camera.zoom=inRoom?1.4:1;camera.updateProjectionMatrix();}
   const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
   // On the return trip a steeper reading angle keeps the table beyond the actors' silhouettes, even after Q.

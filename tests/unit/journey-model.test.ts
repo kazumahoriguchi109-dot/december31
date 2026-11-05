@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAP, distance, heightAt, type JourneyState, type Point } from '../../src/journey/contract';
+import { MAP, distance, heightAt, isOnPlate, type JourneyState, type Point } from '../../src/journey/contract';
 import { createState, step, context, interact, partner, rotate, gateOpen, validateSave, movingToPlate, stepCompanion, millCompanionStaging } from '../../src/journey/model';
 
 const wait=(s:JourneyState,n=180)=>{for(let i=0;i<n;i++)step(s,{x:0,z:0,run:false},1/60);};
@@ -178,6 +178,100 @@ describe('evolution direct-control model',()=>{
   walk(s,{x:8,z:-50.4});expect(s.solved[3]).toBe(true);
   walk(s,{x:4,z:-50.4});for(let i=0;i<100;i++)step(s,{x:-1,z:0,run:true},.1);
   expect(s.player.z).toBeLessThanOrEqual(-49);expect(heightAt(s.player)).toBe(3);
+ });
+ it('walks into camera-horizontal separation at rest in all four views and after reload',()=>{
+  let s=toWall();walk(s,{x:3,z:-40});
+  for(let quarter=0;quarter<4;quarter++){
+   if(quarter)rotate(s);const player={...s.player};
+   for(let i=0;i<180;i++){const before={...s.toto};stepCompanion(s,1/60);expect(distance(before,s.toto)).toBeLessThanOrEqual(.082);expect(validateSave(s)).not.toBeNull();}
+   const q=s.quarter*Math.PI/2,screenX=(s.toto.x-s.player.x)*Math.cos(q)-(s.toto.z-s.player.z)*Math.sin(q);
+   expect(Math.abs(screenX)).toBeGreaterThan(1);expect(s.player).toEqual(player);
+   s=validateSave(s)!;for(let i=0;i<120;i++)stepCompanion(s,1/60);
+   const resumedX=(s.toto.x-s.player.x)*Math.cos(q)-(s.toto.z-s.player.z)*Math.sin(q);
+   expect(Math.abs(resumedX)).toBeGreaterThan(1);
+  }
+ });
+ it('finishes an in-flight rest movement without reversing for repeated Q presses',()=>{
+  const s=toWall();walk(s,{x:3,z:-40});wait(s);rotate(s);
+  let direction:Point|null=null;
+  for(let i=0;i<30;i++){const before={...s.toto};stepCompanion(s,1/60);if(distance(before,s.toto)>.005){direction={x:s.toto.x-before.x,z:s.toto.z-before.z};break;}}
+  expect(direction).not.toBeNull();
+  for(let i=0;i<5;i++){rotate(s);const before={...s.toto};stepCompanion(s,1/60);const dx=s.toto.x-before.x,dz=s.toto.z-before.z;expect(dx*direction!.x+dz*direction!.z).toBeGreaterThanOrEqual(0);}
+  wait(s);expect(validateSave(s)).not.toBeNull();
+ });
+ it('preserves narrow-route following, physical plate state and waiting through Q',()=>{
+  const base=toWall();rotate(base);interact(base);walk(base,MAP.wallTop);
+  for(const [player,toto] of [[{x:0,z:-23},{x:0,z:-22}],[{x:0,z:-35},{x:0,z:-34}],[{x:8,z:-46},{x:8,z:-45}]] as const){
+   const raw=structuredClone(base);Object.assign(raw.player,player);Object.assign(raw.toto,toto);const s=validateSave(raw)!;expect(s).not.toBeNull();
+   const before={...s.toto};for(let i=0;i<180;i++)stepCompanion(s,1/60);
+   expect(Math.abs(s.toto.x-before.x)).toBeLessThan(.001);expect(validateSave(s)).not.toBeNull();
+  }
+  const waitingState=structuredClone(base);Object.assign(waitingState.player,{x:-1.5,z:-31.5});Object.assign(waitingState.toto,{x:-3,z:-31.5,plate:'gate',waiting:true});
+  const gate=validateSave(waitingState)!;expect(gate).not.toBeNull();const waiting={...gate.toto};
+  for(let i=0;i<4;i++){const previous=gate.quarter;rotate(gate);expect(gate.quarter).not.toBe(previous);wait(gate);expect(gate.toto).toEqual(waiting);}
+
+ });
+ it('finishes a requested reunion once before arranging a camera-side rest position',()=>{
+  const raw=toWall();Object.assign(raw.player,{x:3,z:-39});Object.assign(raw.toto,{x:-3,z:-31.5,waiting:true,plate:'gate'});raw.quarter=1;
+  const s=validateSave(raw)!;expect(s).not.toBeNull();partner(s);let arrivals=0;
+  for(let i=0;i<600;i++){
+   const previous={...s.toto},events=stepCompanion(s,1/60);expect(distance(previous,s.toto)).toBeLessThanOrEqual(.082);
+   for(const event of events)if(event.id==='partner-rejoined'){arrivals++;expect(distance(s.player,s.toto)).toBeLessThanOrEqual(1.1);}
+  }
+  expect(arrivals).toBe(1);expect(s.toto.plate).toBeNull();expect(validateSave(s)).not.toBeNull();
+  expect(Math.abs(s.toto.z-s.player.z)).toBeGreaterThan(1);
+ });
+ it('keeps rest candidates clear of focused latch and lever mechanisms in every view',()=>{
+  const base=toWall();rotate(base);interact(base);walk(base,MAP.wallTop);
+  for(const [player,focus] of [[{x:2,z:-38.4},MAP.latch],[{x:6,z:-55},MAP.leverB],[{x:0,z:-55},MAP.leverA],[{x:3,z:-53},MAP.observe],[{x:8,z:-42.05},MAP.wall]] as const){
+   for(let quarter=0;quarter<4;quarter++){
+    const raw=structuredClone(base);Object.assign(raw.player,player);Object.assign(raw.toto,{x:player.x+.2,z:player.z+.9});raw.quarter=quarter as 0|1|2|3;
+    const s=validateSave(raw)!;expect(s).not.toBeNull();expect(context(s)?.point).toEqual(focus);
+    for(let i=0;i<240;i++){const before={...s.toto};stepCompanion(s,1/60);expect(distance(before,s.toto)).toBeLessThanOrEqual(.082);expect(validateSave(s)).not.toBeNull();}
+    const q=s.quarter*Math.PI/2,cross=Math.abs((s.toto.x-focus.x)*Math.cos(q)-(s.toto.z-focus.z)*Math.sin(q));
+    expect(cross,JSON.stringify({player,quarter,toto:s.toto})).toBeGreaterThanOrEqual(.83);
+    expect(distance(s.toto,focus)).toBeGreaterThanOrEqual(.98);
+   }
+  }
+ });
+ it('walks around the player when the safe object-side rest candidate changes sides',()=>{
+  const raw=toWall();rotate(raw);interact(raw);walk(raw,MAP.wallTop);Object.assign(raw.player,{x:6,z:-55});Object.assign(raw.toto,{x:6,z:-56.05});
+  const s=validateSave(raw)!;expect(s).not.toBeNull();let minimum=Infinity;
+  for(let i=0;i<240;i++){const previous={...s.toto};stepCompanion(s,1/60);minimum=Math.min(minimum,distance(s.player,s.toto));expect(distance(previous,s.toto)).toBeLessThanOrEqual(.082);expect(validateSave(s)).not.toBeNull();}
+  expect(minimum,`minimum separation ${minimum}`).toBeGreaterThanOrEqual(1);
+  expect(s.toto.z).toBeGreaterThan(-54.05);
+ });
+ it('increases an initially overlapping rest distance and keeps a blocked rest fallback outside the player',()=>{
+  const base=toWall();rotate(base);interact(base);walk(base,MAP.wallTop);
+  const raw=structuredClone(base);Object.assign(raw.player,{x:6,z:-55});Object.assign(raw.toto,{x:6,z:-55.2});
+  const s=validateSave(raw)!;expect(s).not.toBeNull();let previousDistance=distance(s.player,s.toto);
+  for(let i=0;i<240;i++){stepCompanion(s,1/60);const d=distance(s.player,s.toto);if(previousDistance<.6)expect(d).toBeGreaterThanOrEqual(previousDistance-.00001);else expect(d).toBeGreaterThanOrEqual(.6);previousDistance=d;expect(validateSave(s)).not.toBeNull();}
+  expect(s.toto.z).toBeGreaterThan(-54.05);
+  const blocked=structuredClone(base);Object.assign(blocked.player,{x:2,z:-37.7});Object.assign(blocked.toto,{x:2,z:-38.75});
+  const noRoute=validateSave(blocked)!;expect(noRoute).not.toBeNull();
+  for(let i=0;i<240;i++){stepCompanion(noRoute,1/60);expect(distance(noRoute.player,noRoute.toto)).toBeGreaterThanOrEqual(.6);expect(validateSave(noRoute)).not.toBeNull();}
+ });
+ it('uses a bounded further rest fallback at the old latch state, holds it and restores safely',()=>{
+  const base=toWall();
+  for(const quarter of [1,3] as const)for(const side of [-1,1]){
+   const raw=structuredClone(base);Object.assign(raw.player,{x:2.05,z:-37.097});Object.assign(raw.toto,{x:2.05+side*1.05,z:-37.097});raw.quarter=quarter;
+   let s=validateSave(raw)!;expect(s).not.toBeNull();const player={...s.player};let arrived=false;
+   for(let i=0;i<360;i++){
+    const before={...s.toto};stepCompanion(s,1/60);expect(distance(before,s.toto)).toBeLessThanOrEqual(.082);expect(distance(s.player,s.toto)).toBeLessThanOrEqual(2.02);expect(distance(s.player,s.toto)).toBeGreaterThanOrEqual(.6);expect(validateSave(s)).not.toBeNull();
+    if(s.toto.z< -39.05)arrived=true;if(arrived)expect(s.toto.z).toBeLessThan(-39.05);
+   }
+   expect(arrived).toBe(true);expect(s.player).toEqual(player);expect(Math.abs(s.toto.z-MAP.latch.z)).toBeGreaterThan(.85);expect(distance(s.toto,MAP.latch)).toBeGreaterThan(1);
+   s=validateSave(s)!;for(let i=0;i<240;i++){stepCompanion(s,1/60);expect(distance(s.player,s.toto)).toBeLessThanOrEqual(2.02);expect(validateSave(s)).not.toBeNull();}expect(s.toto.z).toBeLessThan(-39.05);
+  }
+ });
+ it('never corrects an unassigned companion onto any of the three pressure plates',()=>{
+  const base=toWall();rotate(base);interact(base);walk(base,MAP.wallTop);walk(base,MAP.leverA);interact(base);walk(base,MAP.leverB);interact(base);walk(base,MAP.observe);interact(base);interact(base);
+  for(const plate of [MAP.gatePlate,MAP.frontPlate,MAP.backPlate]){
+   const raw=structuredClone(base);Object.assign(raw.player,{x:plate.x+2.6,z:plate.z});Object.assign(raw.toto,{x:plate.x+3.3,z:plate.z+.7});
+   const s=validateSave(raw)!;expect(s).not.toBeNull();
+   for(let q=0;q<4;q++){rotate(s);for(let frame=0;frame<120;frame++){stepCompanion(s,1/60);expect(isOnPlate(s.toto,plate)).toBe(false);expect(validateSave(s)).not.toBeNull();}}
+   expect(s.portalOpen).toBe(false);expect(s.toto.plate).toBeNull();
+  }
  });
  it('completes all six through walked routes, physical plates and observation, with valid saves',()=>{
   const s=toWall();expect(validateSave(s)).not.toBeNull();rotate(s);interact(s);walk(s,MAP.wallTop);expect(s.solved[3]).toBe(true);

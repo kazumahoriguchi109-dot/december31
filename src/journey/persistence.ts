@@ -1,9 +1,10 @@
 import type { JourneyState } from './contract';
 import { validateSave } from './model';
 
-// Deliberately isolated from the original game's IndexedDB and storage keys. No migration or legacy reads.
-const JOURNEY_KEY = 'dec31-evolution-v3:journey';
-const PREFERENCES_KEY = 'dec31-evolution-v3:preferences';
+// Cycle-specific namespace: cycle004/005 v3 records and earlier saves remain untouched.
+// State schema version and preview namespace are independent. No automatic migration or legacy reads.
+const JOURNEY_KEY = 'dec31-evolution-c006:journey';
+const PREFERENCES_KEY = 'dec31-evolution-c006:preferences';
 export interface JourneyPreferences { volume: number; reducedMotion: boolean }
 const defaults = (): JourneyPreferences => ({ volume: .65, reducedMotion: false });
 

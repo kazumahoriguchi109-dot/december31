@@ -20,6 +20,8 @@ export const MAP = {
  castle:{x:3,z:-62}, portal:{x:0,z:4}, frontPlate:{x:0,z:2.5}, backPlate:{x:0,z:5.5},
 } as const;
 export const distance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.z-b.z);
+export const PLATE_RADIUS=.9;
+export const isOnPlate=(actor:Point,plate:Point)=>distance(actor,plate)<=PLATE_RADIUS;
 /** Shared permitted standing areas; renderer draws these same clipped circles. */
 export const CONTROL_AREAS={
  tile:{center:MAP.tileControl,radius:1.1,minX:MAP.tileControl.x,minZ:-Infinity},
@@ -37,7 +39,7 @@ export function heightAt(p:Point):number {
  return 0;
 }
 export type Expression = 'neutral'|'curious'|'surprised'|'relieved';
-export interface RenderOptions {reducedMotion:boolean;quality:'normal'|'low';resonance?:boolean;speaker?:'player'|'toto';expression?:Expression;action?:{id:string;progress:number}}
+export interface RenderOptions {reducedMotion:boolean;quality:'normal'|'low';resonance?:boolean;focusActionId?:string;focusActionPoint?:Point;speaker?:'player'|'toto';expression?:Expression;action?:{id:string;progress:number}}
 export interface JourneyRenderer {
  render(state:JourneyState,dt:number,options:RenderOptions):void;
  resize():void;dispose():void;
