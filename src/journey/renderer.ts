@@ -1,3 +1,4 @@
+import {MEMORIES} from './memories';
 import * as THREE from 'three';
 import {MAP,CONTROL_AREAS,isOnPlate,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
 import {poseJourneyActor} from './acting';
@@ -115,6 +116,13 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  // Portal and its two distinct plate shapes, matching the final cooperative puzzle.
  const portal=new THREE.Group();portal.position.set(MAP.portal.x,0,MAP.portal.z);outdoor.add(portal);for(const x of[-1.25,1.25])box(portal,.23,3,.23,x,1.5,0,C.gold);box(portal,2.7,.23,.23,0,3,0,C.gold);
  const portalFill=box(portal,2.25,2.7,.06,0,1.4,0,0x76aeb4);portalFill.material.transparent=true;portalFill.material.opacity=.18;portalFill.material.depthWrite=false;portalFill.castShadow=false;const portalSeal=new THREE.Group();portal.add(portalSeal);for(const side of[-1,1])line(portalSeal,new THREE.Vector3(-.95*side,.22,.04),new THREE.Vector3(.95*side,2.58,.04),.025,C.paper);const front=cylinder(outdoor,.64,.06,MAP.frontPlate.x,.04,MAP.frontPlate.z,C.gold),back=cylinder(outdoor,.64,.06,MAP.backPlate.x,.04,MAP.backPlate.z,C.gold);const resonance=new THREE.Group();outdoor.add(resonance);for(const [index,p]of[MAP.frontPlate,MAP.backPlate].entries()){for(let i=0;i<=index;i++){const ring=torus(resonance,.34+i*.13,.035,p.x,.1,p.z,C.paper);ring.rotation.x=-Math.PI/2;}for(const x of[-.14,.14])box(resonance,.12,.02,.24,p.x+x,.11,p.z,C.gold);glyph(resonance,index?'◎':'○',p.x,.5,p.z,'#f0ddb1',.52);}for(const z of[1,3.3,4.7,6.5]){for(const x of[-.2,.2])box(resonance,.13,.025,.27,1.8+x,.08,z,C.gold);}
+ // Paired, original paper-and-gold memory markers appear only with the unlocked view.
+ for(const m of MEMORIES){
+  const y=heightAt(m.point);const mark=new THREE.Group();mark.position.set(m.point.x,y,m.point.z);resonance.add(mark);
+  const halo=torus(mark,.53,.035,0,.06,0,C.paper);halo.rotation.x=-Math.PI/2;
+  for(const side of[-1,1]){const foot=box(mark,.14,.025,.32,side*.17,.08,0,side<0?C.gold:0x79c7d0);foot.rotation.y=side*.22;}
+  const star=glyph(mark,'✦',0,2.5,0,'#f0ddb1',.55);star.userData['journeyMarker']=false;
+ }
  // Context selection follows main's one enabled action; no proximity-based second selection.
  const focusRing=torus(scene,.76,.028,0,.07,0,C.paper);focusRing.rotation.x=-Math.PI/2;focusRing.visible=false;
  const companionTarget=new THREE.Group(),travellingRing=new THREE.Group(),arrivedRing=new THREE.Group();companionTarget.add(travellingRing,arrivedRing);outdoor.add(companionTarget);

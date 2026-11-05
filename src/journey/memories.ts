@@ -1,0 +1,11 @@
+import {distance, type JourneyState, type Point} from './contract';
+
+/** Optional memories are discovered by returning to places the children have changed. */
+export const MEMORIES = [
+ {id:'gate', point:{x:2.8,z:-39.8}, title:'門の向こう', lines:[['トト','あの門の前、ひとりで待つのは少しこわかった。'],['主人公','声をかけたら、ちゃんと来てくれたね。'],['トト','うん。離れても、声は届くんだね。']]},
+ {id:'water', point:{x:1.8,z:-19.5}, title:'水の音', lines:[['主人公','水が動いたとき、トト、いちばんに笑った。'],['トト','だって、止まっていた景色が動き出したんだよ。'],['主人公','ふたりで動かした景色だね。']]},
+ {id:'first', point:{x:4.5,z:-8.8}, title:'はじめの一歩', lines:[['トト','ここでは、まだ色もなかったね。'],['主人公','あのときは、帰り道がこんなに遠いと思わなかった。'],['トト','でも、隣にいたから歩けたよ。']]}] as const;
+export function memoryAt(s:JourneyState,enabled:boolean):typeof MEMORIES[number]|null {
+ if(!enabled||s.phase!=='world'||s.mode!=='walk'||s.era<3)return null;
+ return MEMORIES.find(m=>distance(s.player,m.point as Point)<1.25)??null;
+}
