@@ -163,7 +163,12 @@ function restBesideCamera(s:JourneyState,dt:number):boolean {
   if(r.viewStill<.18||r.restCooldown>0)return !!r.restHold&&distance(s.toto,r.restHold)<.04;
   const q=s.quarter*Math.PI/2;
   const radii=s.solved[2]&&distance(s.player,MAP.portal)>5?[1.05,1.9,2]:[1.05];
-  const candidates=radii.flatMap(radius=>[1,-1].map(side=>({x:s.player.x+Math.cos(q)*radius*side,z:s.player.z-Math.sin(q)*radius*side})).sort((a,b)=>distance(s.toto,a)-distance(s.toto,b)));
+  const screenSide=(s.toto.x-s.player.x)*Math.cos(q)-(s.toto.z-s.player.z)*Math.sin(q);
+  // Prefer the side already occupied on screen: switching sides necessarily crosses the player's silhouette.
+  const candidates=radii.flatMap(radius=>[1,-1].map(side=>({x:s.player.x+Math.cos(q)*radius*side,z:s.player.z-Math.sin(q)*radius*side,side})).sort((a,b)=>{
+   const crossA=a.side*screenSide<-.05?1:0,crossB=b.side*screenSide<-.05?1:0;
+   return crossA-crossB||distance(s.toto,a)-distance(s.toto,b);
+  }));
   for(const point of candidates){
    if(!clearsFocusedObject(s,point)||narrowRestArea(point)||Math.abs(heightAt(point)-heightAt(s.player))>=.02||!safeRestSegment(s,s.player,point))continue;
    const route=restRoute(s,point);if(route){r.restTarget=point;r.restPath=route;break;}
@@ -181,7 +186,8 @@ function restBesideCamera(s:JourneyState,dt:number):boolean {
   const amount=Math.min(remaining,travel/count);
   moveActor(s,s.toto,(target.x-s.toto.x)/remaining*amount,(target.z-s.toto.z)/remaining*amount,true);
  }
- s.toto.facing=Math.atan2(s.player.x-s.toto.x,s.player.z-s.toto.z);
+ // Face the direction of the actual next step while travelling; face the player once close.
+ s.toto.facing=distance(s.toto,destination)>.12?Math.atan2(target.x-s.toto.x,target.z-s.toto.z):Math.atan2(s.player.x-s.toto.x,s.player.z-s.toto.z);
  r.path=[{x:s.player.x,z:s.player.z}];return true;
 }
 

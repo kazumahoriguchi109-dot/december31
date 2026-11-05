@@ -191,6 +191,19 @@ describe('evolution direct-control model',()=>{
    expect(Math.abs(resumedX)).toBeGreaterThan(1);
   }
  });
+ it('prefers the current screen side while arranging in open ground',()=>{
+  const raw=toWall();rotate(raw);interact(raw);walk(raw,MAP.wallTop);
+  Object.assign(raw.player,{x:3,z:-40});Object.assign(raw.toto,{x:3.5,z:-39.2});raw.quarter=0;
+  const s=validateSave(raw)!;let moved=false;
+  for(let i=0;i<180;i++){const before={...s.toto};stepCompanion(s,1/60);
+   expect(s.toto.x-s.player.x).toBeGreaterThan(.3);
+   if(distance(before,s.toto)>.01&&distance(s.player,s.toto)>.2){
+    moved=true;const movementAngle=Math.atan2(s.toto.x-before.x,s.toto.z-before.z);
+    if(distance(s.player,s.toto)>1.18)expect(Math.cos(s.toto.facing-movementAngle)).toBeGreaterThan(.95);
+   }
+  }
+  expect(moved).toBe(true);expect(s.toto.x-s.player.x).toBeGreaterThan(1);
+ });
  it('finishes an in-flight rest movement without reversing for repeated Q presses',()=>{
   const s=toWall();walk(s,{x:3,z:-40});wait(s);rotate(s);
   let direction:Point|null=null;
