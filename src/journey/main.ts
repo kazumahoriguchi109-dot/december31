@@ -1,5 +1,5 @@
 import {createState,step,stepCompanion,millCompanionStaging,context,interact,partner,rotate,objective} from './model';
-import {memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation} from './memories';
+import {memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation,acknowledgeMemoryLine,unreadMemoryLines} from './memories';
 import {createRenderer} from './renderer';
 import {createUI} from './ui';
 import {createJourneyAudio} from './audio';
@@ -53,7 +53,10 @@ function begin(fresh:boolean){
  state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
  if(fresh)events(step(state,{x:0,z:0,run:false},0));
  else if(state.phase==='ending')setScreen('credits');
- else {const pending=pendingMemoryExplanation(state);if(pending)events([{type:'dialogue',id:`memory-light-${pending}`,speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'}]);}
+ else {const pending=pendingMemoryExplanation(state);if(pending){
+  const unread:JourneyEvent[]=unreadMemoryLines(state,pending).map(({speaker,text,index})=>({type:'dialogue',id:`memory-${pending}-${index}`,speaker,text}));
+  unread.push({type:'dialogue',id:`memory-light-${pending}`,speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'});events(unread);
+ }}
  showLine();saveNow();
 }
 function action(id:string,value?:string){
@@ -65,7 +68,10 @@ function action(id:string,value?:string){
  if(id==='pause'&&screen==='game'){saveNow();setScreen('pause');return;}
  if(id==='resume'&&screen==='pause'){setScreen('game');return;}
  if(id==='credits'){setScreen('credits');return;}
- if(id==='next'&&screen==='game'&&dialogue.length&&dialogueVisible){const line=dialogue.shift()!;if(line.id.startsWith('memory-light-')&&acknowledgeMemoryExplanation(state,line.id.slice('memory-light-'.length)))saveNow();audio.play('line');showLine();keys.clear();return;}
+ if(id==='next'&&screen==='game'&&dialogue.length&&dialogueVisible){const line=dialogue.shift()!;
+  const match=/^memory-(gate|water|first)-(\d+)$/.exec(line.id);
+  const changed=match?acknowledgeMemoryLine(state,match[1]!,Number(match[2])):line.id.startsWith('memory-light-')&&acknowledgeMemoryExplanation(state,line.id.slice('memory-light-'.length));
+  if(changed)saveNow();audio.play('line');showLine();keys.clear();return;}
  if(!available())return;
  if(id==='interact'){
   const memory=memoryAt(state,resonance);

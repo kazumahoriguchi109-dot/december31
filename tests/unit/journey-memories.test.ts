@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {createState,validateSave} from '../../src/journey/model';
-import {MEMORIES,memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation} from '../../src/journey/memories';
+import {MEMORIES,memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation,acknowledgeMemoryLine,unreadMemoryLines} from '../../src/journey/memories';
 
 describe('optional resonance memories',()=>{
  it('persists each optional trail once without changing puzzle progress',()=>{
@@ -13,7 +13,7 @@ describe('optional resonance memories',()=>{
  it('recovers an unread light explanation and stops recovering it after acknowledgement',()=>{
   const s=createState();s.phase='world';s.era=3;s.solved=[true,true,true,true,true,false];s.gateLatched=true;s.wallSeen=true;s.ringA=1;s.ringB=2;s.p1=1;s.p2Drain=false;s.p2Stopper=false;
   expect(pendingMemoryExplanation(s)).toBeNull();expect(acknowledgeMemoryExplanation(s,'gate')).toBe(false);
-  expect(lightMemory(s,'gate')).toBe(true);let restored=validateSave(s)!;expect(pendingMemoryExplanation(restored)).toBe('gate');
+  expect(lightMemory(s,'gate')).toBe(true);expect(acknowledgeMemoryLine(s,'gate',0)).toBe(true);let restored=validateSave(s)!;expect(pendingMemoryExplanation(restored)).toBe('gate');expect(unreadMemoryLines(restored,'gate').map(x=>x.index)).toEqual([1,2]);
   expect(acknowledgeMemoryExplanation(restored,'gate')).toBe(true);expect(acknowledgeMemoryExplanation(restored,'gate')).toBe(false);
   restored=validateSave(restored)!;expect(pendingMemoryExplanation(restored)).toBeNull();expect(memoryLit(restored,'gate')).toBe(true);
  });

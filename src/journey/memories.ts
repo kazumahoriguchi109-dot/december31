@@ -26,3 +26,14 @@ export function acknowledgeMemoryExplanation(s:JourneyState,id:string):boolean {
  if(!MEMORIES.some(m=>m.id===id)||!memoryLit(s,id)||s.seen.includes(`memory-explained-${id}`))return false;
  s.seen.push(`memory-explained-${id}`);return true;
 }
+
+/** Remember which individual conversation lines the player actually dismissed. */
+export function acknowledgeMemoryLine(s:JourneyState,id:string,index:number):boolean {
+ const memory=MEMORIES.find(m=>m.id===id);
+ if(!memory||!memoryLit(s,id)||!Number.isInteger(index)||index<0||index>=memory.lines.length)return false;
+ const key=`memory-line-${id}-${index}`;if(s.seen.includes(key))return false;s.seen.push(key);return true;
+}
+export function unreadMemoryLines(s:JourneyState,id:string) {
+ const memory=MEMORIES.find(m=>m.id===id);if(!memory||!memoryLit(s,id))return [];
+ return memory.lines.map(([speaker,text],index)=>({speaker,text,index})).filter(line=>!s.seen.includes(`memory-line-${id}-${line.index}`));
+}
