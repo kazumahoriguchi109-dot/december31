@@ -1,15 +1,14 @@
-import { MAP, distance, heightAt, type Actor, type ContextAction, type InputFrame, type JourneyEvent, type JourneyState, type Point } from './contract';
+import { MAP, distance, heightAt, inControlArea, type Actor, type ContextAction, type InputFrame, type JourneyEvent, type JourneyState, type Point } from './contract';
 
 const RADIUS = .28, INTERACT = 1.65, PLATE = .9;
-const transient = new WeakMap<JourneyState, { path:Point[]; blocked:string; initialized:boolean }>();
-const runtime = (s:JourneyState) => { let r=transient.get(s); if(!r){r={path:[],blocked:'',initialized:false};transient.set(s,r);} return r; };
+const transient = new WeakMap<JourneyState, { path:Point[]; blocked:string; initialized:boolean;rejoining:boolean }>();
+const runtime = (s:JourneyState) => { let r=transient.get(s); if(!r){r={path:[],blocked:'',initialized:false,rejoining:false};transient.set(s,r);} return r; };
 const notice=(id:string,text:string):JourneyEvent=>({type:'notice',id,text});
 const line=(id:string,text:string,speaker:'主人公'|'トト'='トト'):JourneyEvent=>({type:'dialogue',id,text,speaker});
 const sound=(id:string):JourneyEvent=>({type:'sound',id});
 const once=(s:JourneyState,id:string,events:JourneyEvent[])=>{if(s.seen.includes(id))return [];s.seen.push(id);return events;};
 const platePoint=(plate:JourneyState['toto']['plate']):Point|null=>plate==='gate'?MAP.gatePlate:plate==='front'?MAP.frontPlate:plate==='back'?MAP.backPlate:null;
 const onPlate=(actor:Point,plate:Point)=>distance(actor,plate)<=PLATE;
-const atMillControl=(player:Point,control:Point)=>player.x>=control.x-.1&&player.z>=control.z-.15&&distance(player,control)<=.8;
 
 export function createState():JourneyState {
  return {version:3,phase:'room',player:{x:0,z:1.3,facing:Math.PI},toto:{x:1,z:1.1,facing:Math.PI,waiting:false,plate:null},era:0,quarter:0,mode:'walk',p1:0,p2Drain:true,p2Stopper:true,gateLatched:false,wallSeen:false,ringA:0,ringB:1,solved:[false,false,false,false,false,false],portalOpen:false,seen:[],steps:0};
@@ -107,6 +106,13 @@ function advanceToPlate(s:JourneyState,dt:number):void {
  if(distance(s.toto,goal)<.000001){s.toto.waiting=true;r.path=[];s.toto.facing=Math.atan2(s.player.x-s.toto.x,s.player.z-s.toto.z);}
 }
 
+export function millCompanionStaging(s:JourneyState):{target:Point;ready:boolean;directPathClear:boolean}|null {
+ if(s.phase!=='world'||(!inControlArea(s.player,'drain')&&!inControlArea(s.player,'stopper')))return null;
+ const target={x:s.player.x+1.15,z:s.player.z};
+ if([MAP.drainControl,MAP.stopperControl].some(c=>distance(target,{x:c.x-.85,z:c.z-.6})<1))target.z+=1.5;
+ return {target,ready:distance(s.toto,target)<.08,directPathClear:clearSegment(s,s.toto,target)};
+}
+
 function advanceFriend(s:JourneyState,dt:number):void {
  if(s.toto.waiting)return;
  if(movingToPlate(s)){advanceToPlate(s,dt);return;}
@@ -116,10 +122,9 @@ function advanceFriend(s:JourneyState,dt:number):void {
  while(r.path.length>1 && distance(s.toto,r.path[0]!)<.16)r.path.shift();
  // At the first control, stand beside the player so both silhouettes stay
  // outside the plinth and its pattern remains visible in the fixed early view.
- const millControl=atMillControl(s.player,MAP.drainControl)?MAP.drain:atMillControl(s.player,MAP.stopperControl)?MAP.stopper:null;
- if(s.phase==='world' && (millControl || (s.era<2 && distance(s.player,MAP.tileControl)<=1.1))){
-  const beside={x:s.player.x+1.15,z:s.player.z};
-  if(millControl&&[MAP.drainControl,MAP.stopperControl].some(c=>distance(beside,{x:c.x-.85,z:c.z-.6})<1))beside.z+=1.5;
+ const millControl=inControlArea(s.player,'drain')?MAP.drain:inControlArea(s.player,'stopper')?MAP.stopper:null;
+ if(s.phase==='world' && (millControl || (s.era<2 && inControlArea(s.player,'tile')))){
+  const beside=millCompanionStaging(s)?.target??{x:s.player.x+1.15,z:s.player.z};
   if(distance(s.toto,s.player)<2 && clearSegment(s,s.toto,beside)){
    const d=distance(s.toto,beside),travel=Math.min(d,3*dt);
    if(d>.02)moveActor(s,s.toto,(beside.x-s.toto.x)/d*travel,(beside.z-s.toto.z)/d*travel,true);
@@ -147,6 +152,17 @@ function advanceFriend(s:JourneyState,dt:number):void {
  const d=distance(s.toto,target);if(d<.02)return;
  const travel=Math.min(d,4.9*dt,finalApproach?Math.max(0,separation-1.05):Infinity),n=Math.max(1,Math.ceil(travel/.1));
  for(let i=0;i<n;i++)moveActor(s,s.toto,(target.x-s.toto.x)/Math.max(distance(s.toto,target),.0001)*travel/n,(target.z-s.toto.z)/Math.max(distance(s.toto,target),.0001)*travel/n,true);
+}
+
+/** Advance only the companion during dialogue/actions; puzzle transitions wait for step(). */
+export function stepCompanion(s:JourneyState,dt:number):JourneyEvent[] {
+ if(s.phase==='ending'||s.mode!=='walk')return [];
+ const wasMoving=movingToPlate(s);
+ advanceFriend(s,Math.max(0,Math.min(.1,Number.isFinite(dt)?dt:0)));
+ if(wasMoving&&s.toto.waiting)return [notice('partner-arrived','トトは足形の上で待っている。')];
+ const r=runtime(s);
+ if(r.rejoining&&s.toto.plate===null&&distance(s.player,s.toto)<=1.1){r.rejoining=false;return [notice('partner-rejoined','トトと合流した。')];}
+ return [];
 }
 
 function consequences(s:JourneyState):JourneyEvent[] {
@@ -186,7 +202,7 @@ export function step(s:JourneyState,input:InputFrame,dt:number):JourneyEvent[] {
   ev.push(...(blocked==='tile'||blocked==='mill'?once(s,`${blocked}-control-hint`,events):events));
  }
  r.blocked=blocked;
- advanceFriend(s,seconds);
+ ev.push(...stepCompanion(s,seconds));
  if(s.phase==='world'){
   if(s.solved[1]&&!s.solved[2]&&distance(s.player,MAP.gatePlate)<4)ev.push(...once(s,'gate-intro',[line('gate-intro','足元の印がある。近づいてみよう。')]));
   if(s.solved[2]&&!s.solved[3]&&distance(s.player,MAP.wall)<4)ev.push(...once(s,'wall-intro',[line('wall-intro','ここ、前から見えていた白い模様だ。','主人公')]));
@@ -216,8 +232,8 @@ export function context(s:JourneyState):ContextAction|null {
  }
  if(s.solved[2])options.push(action('wall',s.wallSeen?'白い段を調べる':s.quarter%2?'白い段を調べる':'白い模様を調べる',s.wallSeen?'上まで続いている':'見る向きによって形が違う',MAP.wall));
  if(s.solved[3]){
-  options.push(action('lever-a','左のレバーを動かす',`板A：${['手前','中央','奥'][s.ringA]}`,MAP.leverA,!s.solved[4]));
-  options.push(action('lever-b','右のレバーを動かす',`板B：${['手前','中央','奥'][s.ringB]}`,MAP.leverB,!s.solved[4]));
+  options.push(action('lever-a','レバーAを動かす',`板A：${['手前','中央','奥'][s.ringA]}`,MAP.leverA,!s.solved[4]));
+  options.push(action('lever-b','レバーBを動かす',`板B：${['手前','中央','奥'][s.ringB]}`,MAP.leverB,!s.solved[4]));
   options.push(action('observe','輪をのぞく','位置を変えたら、ここで確かめる',MAP.observe));
  }
  if(s.era===3){
@@ -227,7 +243,7 @@ export function context(s:JourneyState):ContextAction|null {
   }
   options.push(action('portal',s.portalOpen?'一緒に帰る':'光る枠を調べる',s.portalOpen?(s.toto.plate!==null?'Tでトトを呼ぼう':distance(s.player,s.toto)>1.8?'トトが来るのを待とう':'二人で部屋へ戻る'):'入口に二つの光が残っている',MAP.portal,!s.portalOpen||(s.toto.plate===null&&distance(s.player,s.toto)<=1.8)));
  }
- return options.filter(a=>a.id==='drain'||a.id==='stopper'?atMillControl(s.player,a.point):a.id==='tile'?s.player.x>=MAP.tileControl.x&&distance(s.player,a.point)<=1.1:distance(s.player,a.point)<=INTERACT).sort((a,b)=>distance(s.player,a.point)-distance(s.player,b.point))[0]??null;
+ return options.filter(a=>a.id==='drain'||a.id==='stopper'||a.id==='tile'?inControlArea(s.player,a.id):distance(s.player,a.point)<=INTERACT).sort((a,b)=>distance(s.player,a.point)-distance(s.player,b.point))[0]??null;
 }
 
 export function interact(s:JourneyState):JourneyEvent[] {
@@ -276,14 +292,14 @@ export function partner(s:JourneyState):JourneyEvent[] {
   if(s.toto.plate==='gate'&&s.player.z< -35)route.push({x:0,z:-33},{x:0,z:-37});
   if((s.toto.plate==='front'&&s.player.z>4)||(s.toto.plate==='back'&&s.player.z<4))route.push({x:2.3,z:s.toto.z},{x:2.3,z:s.player.z});
   route.push({x:s.player.x,z:s.player.z});runtime(s).path=route;runtime(s).initialized=true;
-  s.toto.waiting=false;s.toto.plate=null;return [sound('press'),notice('partner-call','トトがこちらへ歩いてくる。')];
+  s.toto.waiting=false;s.toto.plate=null;runtime(s).rejoining=true;return [sound('press'),notice('partner-call','トトがこちらへ歩いてくる。')];
  }
  const choices:JourneyState['toto']['plate'][]=[];
  if(s.solved[1]&&!s.gateLatched)choices.push('gate');
  if(s.era===3&&!s.portalOpen)choices.push('front','back');
  const target=choices.map(plate=>({plate,point:platePoint(plate)!})).filter(v=>distance(v.point,s.player)<=INTERACT).sort((a,b)=>distance(a.point,s.player)-distance(b.point,s.player))[0];
  if(!target)return [notice('partner-no-place','足形の近くで、待ってもらおう。')];
- s.toto.waiting=false;s.toto.plate=target.plate;runtime(s).path=recoverTrail(s,target.point);runtime(s).initialized=true;
+ s.toto.waiting=false;s.toto.plate=target.plate;runtime(s).rejoining=false;runtime(s).path=recoverTrail(s,target.point);runtime(s).initialized=true;
  return [sound('press'),notice('partner-walk-to-plate','トトが足形まで歩いていく。')];
 }
 

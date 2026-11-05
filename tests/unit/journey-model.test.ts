@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAP, distance, heightAt, type JourneyState, type Point } from '../../src/journey/contract';
-import { createState, step, context, interact, partner, rotate, gateOpen, validateSave, movingToPlate } from '../../src/journey/model';
+import { createState, step, context, interact, partner, rotate, gateOpen, validateSave, movingToPlate, stepCompanion, millCompanionStaging } from '../../src/journey/model';
 
 const wait=(s:JourneyState,n=180)=>{for(let i=0;i<n;i++)step(s,{x:0,z:0,run:false},1/60);};
 function walk(s:JourneyState,to:Point){
@@ -100,6 +100,41 @@ describe('evolution direct-control model',()=>{
   const loaded=validateSave(s)!;wait(loaded);expect(loaded.toto.x).toBeCloseTo(s.toto.x,1);expect(loaded.toto.z).toBeCloseTo(s.toto.z,1);
   }
  });
+ it('advances only Toto during a mill conversation and reaches the safe staging point',()=>{
+  const s=begin();solveTile(s);walk(s,{x:0,z:-13});walk(s,{x:-2.7,z:-13.7});
+  const before=structuredClone(s),stage=millCompanionStaging(s);expect(stage).not.toBeNull();
+  for(let i=0;i<180;i++){const previous={...s.toto};stepCompanion(s,1/60);expect(distance(previous,s.toto)).toBeLessThanOrEqual(.082);expect(validateSave(s)).not.toBeNull();}
+  expect(millCompanionStaging(s)?.ready).toBe(true);expect(s.player).toEqual(before.player);
+  expect({...s,toto:before.toto}).toEqual(before);
+ });
+ it('settles at P02 immediately after E from multiple approaches and both device orders',()=>{
+  for(const offset of [{x:.3,z:.3},{x:.79,z:0},{x:-.09,z:.3},{x:.3,z:-.14}])for(const approach of [{x:0,z:-13},{x:-8,z:-13},{x:-5,z:-11}])for(const order of [['drain','stopper'],['stopper','drain']] as const){
+   const s=begin();solveTile(s);walk(s,{x:0,z:-12});walk(s,approach);
+   for(const id of order){
+    walk(s,{x:s.player.x,z:-13});const c=id==='drain'?MAP.drainControl:MAP.stopperControl;
+    const destination={x:c.x+offset.x,z:c.z+offset.z};walk(s,destination);
+    for(let i=0;i<100;i++){const dx=destination.x-s.player.x,dz=destination.z-s.player.z,d=Math.hypot(dx,dz);if(d<.00001)break;step(s,{x:dx/d,z:dz/d,run:true},Math.min(.01,d/4.8));}
+    expect(context(s)?.id).toBe(id);
+    interact(s);const player={...s.player},stage=millCompanionStaging(s)!;
+    const probe=structuredClone(s);Object.assign(probe.toto,stage.target);expect(validateSave(probe)).not.toBeNull();
+    for(let i=0;i<60;i++){const previous={...s.toto};stepCompanion(s,1/60);expect(distance(previous,s.toto)).toBeLessThanOrEqual(.082);expect(validateSave(s)).not.toBeNull();}
+    expect(s.player).toEqual(player);
+    expect(millCompanionStaging(s)?.ready,JSON.stringify({offset,approach,order,id,player,toto:s.toto,stage:millCompanionStaging(s)})).toBe(true);
+   }
+   expect(s.solved[1]).toBe(true);
+  }
+ });
+ it('reports arrival once through the companion helper and again only after a new instruction',()=>{
+  const s=toGate();partner(s);walk(s,{x:-1,z:-31.5});
+  const notices=[];for(let i=0;i<180;i++)notices.push(...stepCompanion(s,1/60));
+  // Arrival can happen while walking away; a subsequent helper must not repeat it.
+  expect(notices.filter(e=>e.id==='partner-arrived').length).toBeLessThanOrEqual(1);
+  expect(s.toto.waiting).toBe(true);expect(stepCompanion(s,1/60)).toEqual([]);
+  partner(s);const rejoin=[];for(let i=0;i<180;i++)rejoin.push(...stepCompanion(s,1/60));
+  expect(rejoin.filter(e=>e.id==='partner-rejoined')).toHaveLength(1);
+  walk(s,{x:-1.5,z:-31.5});partner(s);const returning=[];for(let i=0;i<180;i++)returning.push(...stepCompanion(s,1/60));
+  expect(returning.filter(e=>e.id==='partner-arrived')).toHaveLength(1);
+ });
  it('waits before an occupied footprint and finishes walking after the player leaves',()=>{
   const s=toGate();partner(s);wait(s);
   expect(movingToPlate(s)).toBe(true);expect(s.toto.waiting).toBe(false);
@@ -146,7 +181,7 @@ describe('evolution direct-control model',()=>{
  });
  it('completes all six through walked routes, physical plates and observation, with valid saves',()=>{
   const s=toWall();expect(validateSave(s)).not.toBeNull();rotate(s);interact(s);walk(s,MAP.wallTop);expect(s.solved[3]).toBe(true);
-  walk(s,MAP.leverA);interact(s);walk(s,MAP.leverB);interact(s);
+  walk(s,MAP.leverA);expect(context(s)?.label).toBe('レバーAを動かす');interact(s);walk(s,MAP.leverB);expect(context(s)?.label).toBe('レバーBを動かす');interact(s);
   expect([s.ringA,s.ringB]).toEqual([1,2]);expect(s.solved[4]).toBe(false);
   walk(s,MAP.observe);interact(s);expect(s.solved[4]).toBe(true);expect(s.mode).toBe('observe');expect(s.era).toBe(3);expect(validateSave(s)).not.toBeNull();
   interact(s);walk(s,MAP.wallTop);walk(s,{x:8,z:-42});walk(s,{x:0,z:-37});walk(s,{x:0,z:-33});walk(s,{x:0,z:-26});walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:3,z:-8});walk(s,{x:3,z:-4});walk(s,MAP.spawn);walk(s,MAP.frontPlate);

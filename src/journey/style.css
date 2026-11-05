@@ -192,3 +192,14 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
 #journey-partner-state {grid-column:2;font-size:.6875rem;line-height:1.5;font-weight:400;color:#d5dcca;text-align:left;}
 #journey-partner[data-partner-state="moving"],#journey-partner[data-partner-state="blocked"] {border-style:dashed;border-color:#bdc8ac;}
 #journey-partner[data-partner-state="waiting"] #journey-partner-state {color:#efd1a0;}
+
+/* Observing is about the complete ring, including its lowest joint. Keep only the exit at the edge. */
+.journey-app[data-mode="observe"] .journey-bottom {left:auto;right:max(24px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));transform:none;align-items:flex-end;width:auto;max-width:calc(100% - 48px);gap:0;}
+.journey-app[data-mode="observe"] .journey-abilities,
+.journey-app[data-mode="observe"] .journey-context>p,
+.journey-app[data-mode="observe"] .journey-space {display:none;}
+.journey-app[data-mode="observe"] .journey-interact {min-width:0;min-height:48px;padding:8px 14px;gap:10px;}
+@media (max-height:620px),(max-width:600px) {
+ .journey-app[data-mode="observe"] .journey-bottom {right:max(12px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));max-width:calc(100% - 24px);}
+}
+.journey-app[data-mode="observe"] .journey-objective {max-width:min(30vw,25rem);}

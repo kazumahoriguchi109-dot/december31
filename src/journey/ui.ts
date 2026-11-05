@@ -87,7 +87,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    }
    const solved=state.solved.map(Boolean).join();if(lastSolved!==solved){lastSolved=solved;marks.forEach((m,i)=>m.classList.toggle('is-solved',!!state.solved[i]));progress.setAttribute('aria-label',`仕掛け ${state.solved.filter(Boolean).length} / 6`);}
    show(contextBox,!!context||observed);interact.disabled=!observed&&context?.enabled===false;
-   text(contextLabel,observed?'観測をやめる':context?.label??'調べる');text(contextHint,observed?'断片の重なりを、ここから見る。':context?.hint??'');
+   text(contextLabel,observed?'観測をやめる':context?.label??'調べる');text(contextHint,observed?'':context?.hint??'');
    show(partner,state.era>=1&&!observed&&state.phase==='world');show(rotate,state.era>=2&&!observed&&state.phase==='world');show(resonance,state.era>=3&&!observed&&state.phase==='world');
    const moving=state.toto.plate!==null&&!state.toto.waiting;
    const platePoint=state.toto.plate==='gate'?MAP.gatePlate:state.toto.plate==='front'?MAP.frontPlate:state.toto.plate==='back'?MAP.backPlate:null;

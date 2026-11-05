@@ -20,6 +20,16 @@ export const MAP = {
  castle:{x:3,z:-62}, portal:{x:0,z:4}, frontPlate:{x:0,z:2.5}, backPlate:{x:0,z:5.5},
 } as const;
 export const distance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.z-b.z);
+/** Shared permitted standing areas; renderer draws these same clipped circles. */
+export const CONTROL_AREAS={
+ tile:{center:MAP.tileControl,radius:1.1,minX:MAP.tileControl.x,minZ:-Infinity},
+ drain:{center:MAP.drainControl,radius:.8,minX:MAP.drainControl.x-.1,minZ:MAP.drainControl.z-.15},
+ stopper:{center:MAP.stopperControl,radius:.8,minX:MAP.stopperControl.x-.1,minZ:MAP.stopperControl.z-.15},
+} as const;
+export type ControlId=keyof typeof CONTROL_AREAS;
+export function inControlArea(player:Point,id:ControlId):boolean {
+ const area=CONTROL_AREAS[id];return player.x>=area.minX&&player.z>=area.minZ&&distance(player,area.center)<=area.radius;
+}
 /** Shared terrain height. The stair is broad and has no fall/jump requirement. */
 export function heightAt(p:Point):number {
  if(p.z<=-49)return 3;

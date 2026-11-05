@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import {MAP,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
+import {MAP,CONTROL_AREAS,inControlArea,heightAt,distance,type JourneyState,type JourneyRenderer,type RenderOptions} from './contract';
 import {poseJourneyActor} from './acting';
 import {pixelActor,createJourneyActor} from './actorArt';
-import {C,asset,box,cylinder,glyph,line,torus,fence,material,snowTexture,trail,snowBank,bankStones,waterTexture,lightPool} from './sceneArt';
+import {C,asset,box,cylinder,glyph,line,torus,fence,material,snowTexture,trail,snowBank,bankStones,waterTexture,lightPool,operatingArea} from './sceneArt';
 
 /** The renderer observes state; all travel, puzzle gates and saves belong to the model. */
 export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
@@ -11,6 +11,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const outdoor=new THREE.Group(),room=new THREE.Group(),trees:THREE.Group[]=[];scene.add(outdoor,room);
  const hemi=new THREE.HemisphereLight(0xd8e5df,0x6d7965,2.1),sun=new THREE.DirectionalLight(0xffe0ab,2.3);sun.position.set(-10,20,10);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.1,far:65});sun.shadow.bias=-.001;sun.shadow.normalBias=.03;scene.add(hemi,sun,sun.target);
  const camera=new THREE.OrthographicCamera(-16,16,10,-10,.1,150),optical=new THREE.PerspectiveCamera(56,1,.03,70);
+ camera.layers.enable(1); // Optical plates are also visible as physical apparatus in the walkable world.
  const player=createJourneyActor('player'),toto=createJourneyActor('toto');for(const actor of[player,toto]){actor.scale.setScalar(1.05);actor.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=o.receiveShadow=true;}});scene.add(actor);}
  const pixels=[pixelActor('player'),pixelActor('toto')];pixels.forEach(p=>scene.add(p.sprite));
  const shadows=[player,toto].map(g=>{const m=new THREE.Mesh(new THREE.CircleGeometry(.33,16),new THREE.MeshBasicMaterial({color:0x273a36,transparent:true,opacity:.24,depthWrite:false}));m.rotation.x=-Math.PI/2;scene.add(m);return m;});
@@ -58,7 +59,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  for(let i=0;i<3;i++){const a=i*Math.PI*2/3;line(crank,new THREE.Vector3(),new THREE.Vector3(Math.cos(a)*.28,Math.sin(a)*.28,0),.025,C.wood);}
  const grip=cylinder(crank,.055,.17,.28,0,.065,C.wood,8);grip.rotation.x=Math.PI/2;
  // A shallow worn foot board locates the hands at the crank, without adding another floating marker.
- box(outdoor,.7,.025,.85,MAP.tileControl.x+.35,.035,MAP.tileControl.z,0xa6a68e);
+ const controlPads=Object.fromEntries(Object.entries(CONTROL_AREAS).map(([id,area])=>[id,operatingArea(outdoor,area)]));
  for(const z of[-5.76,-5.34])box(outdoor,.11,.012,.24,MAP.tileControl.x+.35,.054,z,0x7f9386).rotation.y=Math.PI/2;
  const p1Gate=new THREE.Group();outdoor.add(p1Gate);fence(p1Gate,-12,12,-10);const p1Opening=box(p1Gate,4,1.3,.25,0,.65,-10,C.wood);
  // Waterworks: visible stream, sluice, stopped wheel, and a genuine bridge over the collision water band.
@@ -83,7 +84,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const drainHandle=new THREE.Group(),stopHandle=new THREE.Group();
  for(const [control,g,mark]of[[MAP.drainControl,drainHandle,'≈'],[MAP.stopperControl,stopHandle,'⊣']]as const){
   const x=control.x-.85,z=control.z-.6;g.position.set(x,.65,z);g.rotation.x=-Math.PI/3;outdoor.add(g);box(outdoor,.72,.12,.72,x,.06,z,C.stone);cylinder(outdoor,.085,.55,x,.345,z,C.wood,10);torus(g,.24,.04,0,0,0,C.gold);line(g,new THREE.Vector3(-.23,0,0),new THREE.Vector3(.23,0,0),.028,C.wood);line(g,new THREE.Vector3(0,-.23,0),new THREE.Vector3(0,.23,0),.028,C.wood);const grip=cylinder(g,.045,.14,.22,0,.06,C.wood,8);grip.rotation.x=Math.PI/2;
-  box(outdoor,.7,.025,.65,control.x+.25,.035,control.z+.25,0xa6a68e);glyph(outdoor,mark,x,1.1,z,'#f0ddb1',.48);
+  glyph(outdoor,mark,x,1.1,z,'#f0ddb1',.48);
  }
  // The rods visibly connect each distant handwheel to its own mechanism without crossing the walk path.
  line(outdoor,new THREE.Vector3(-6.85,.25,-14.6),new THREE.Vector3(-6.85,.25,-17.8),.04,C.gold);line(outdoor,new THREE.Vector3(-6.85,.25,-17.8),new THREE.Vector3(MAP.drain.x,.25,MAP.drain.z),.04,C.gold);
@@ -98,7 +99,16 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const arc=(r:number,start:number,end:number,color:number)=>{const pts=[];for(let i=0;i<=56;i++){const a=start+(end-start)*i/56;pts.push(new THREE.Vector3(Math.cos(a)*r*.35,Math.sin(a)*r*.35,0));}const curve=new THREE.CatmullRomCurve3(pts);const m=new THREE.Mesh(new THREE.TubeGeometry(curve,56,r*.00875,6,false),new THREE.MeshBasicMaterial({color}));apparatus.add(m);return m;};
  optical.layers.set(1);
  const fixed=arc(2.8,0,Math.PI,C.paper),armA=arc(2,Math.PI,Math.PI*1.5,C.gold),armB=arc(2.4,Math.PI*1.5,Math.PI*2,0x79c7d0);fixed.position.z=-7*.35;apparatus.traverse(o=>o.layers.set(1));
- for(const [point,label,color]of[[MAP.leverA,'A',C.gold],[MAP.leverB,'B',0x79c7d0]]as const){cylinder(outdoor,.35,.65,point.x,3.325,point.z,C.navy);box(outdoor,.12,.6,.12,point.x,3.75,point.z,color).rotation.z=-.3;glyph(outdoor,label,point.x,4.4,point.z,'#f0ddb1',.65);}
+ const leverHandles:THREE.Group[]=[],ringCarriages:THREE.Group[]=[];
+ for(const [x,endX,color]of [[2.2,2.3,C.gold],[3.8,3.84,0x79c7d0]]as const){const g=new THREE.Group();outdoor.add(g);ringCarriages.push(g);box(g,.26,.12,.25,x,3.22,0,C.navy);line(g,new THREE.Vector3(x,3.25,0),new THREE.Vector3(x,4.6,0),.035,color);line(g,new THREE.Vector3(x,4.6,0),new THREE.Vector3(endX,4.6,0),.035,color);}
+ for(const [point,label,color]of[[MAP.leverA,'A',C.gold],[MAP.leverB,'B',0x79c7d0]]as const){
+  box(outdoor,.95,.16,.95,point.x,3.08,point.z,C.stone);cylinder(outdoor,.32,.55,point.x,3.4,point.z,C.navy);torus(outdoor,.2,.045,point.x,3.69,point.z,color).rotation.y=Math.PI/2;
+  const handle=new THREE.Group();handle.position.set(point.x,3.7,point.z);outdoor.add(handle);leverHandles.push(handle);box(handle,.095,.66,.095,0,.31,0,color);box(handle,.47,.13,.15,0,.67,0,C.wood);for(const x of[-.25,.25])cylinder(handle,.09,.16,x,.67,0,color,10).rotation.z=Math.PI/2;
+  const railX=label==='A'?2.2:3.8;line(outdoor,new THREE.Vector3(point.x,3.2,point.z),new THREE.Vector3(railX,3.2,point.z),.035,color);line(outdoor,new THREE.Vector3(railX,3.2,point.z),new THREE.Vector3(railX,3.2,-57.6),.035,color);for(const z of[-56.4,-57.5])box(outdoor,.16,.15,.22,railX,3.12,z,C.stone);
+  // The letter remains attached to its apparatus when Q changes the camera orientation.
+  const badge=glyph(outdoor,label,point.x,4.65,point.z,'#f0ddb1',.52);badge.userData['journeyMarker']=false;
+ }
+
  cylinder(outdoor,.65,.06,MAP.observe.x,3.05,MAP.observe.z,C.navy);glyph(outdoor,'◉',MAP.observe.x,3.7,MAP.observe.z,'#f0ddb1',.65);
  // Castle is the apparent destination, behind the optical ring rather than in its line of sight.
  const castle=asset(outdoor,'castle',3,3,-64,1.1);
@@ -113,7 +123,12 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  // Snow is GPU points, no CPU pixel readback; reduced motion keeps the scene still.
  const snowPositions=new Float32Array(180*3);for(let i=0;i<180;i++){snowPositions[i*3]=(Math.sin(i*17.13)*.5+.5)*26-13;snowPositions[i*3+1]=1+(i%19)*.5;snowPositions[i*3+2]=(Math.sin(i*7.73)*.5+.5)*26-13;}const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(snowPositions,3));const snow=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:0xece6d4,size:.07,transparent:true,opacity:.7}));scene.add(snow);
  let width=1,height=1,lastEra=-1,lastRoom=false,lastQuality='',time=0,walkP=0,walkT=0,lastP={x:0,z:0},lastT={x:0,z:0},started=false;const presentationFacing=[0,0];
- function resize(){const rect=canvas.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);lastEra=-1;camera.left=-8*width/height;camera.right=8*width/height;camera.top=8;camera.bottom=-8;camera.updateProjectionMatrix();optical.aspect=width/height;optical.updateProjectionMatrix();}
+ function resize(){const rect=canvas.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);lastEra=-1;camera.left=-8*width/height;camera.right=8*width/height;camera.top=8;camera.bottom=-8;camera.updateProjectionMatrix();optical.aspect=width/height;
+  // Fit the largest possible unsolved arc (r/depth=.6), leaving UI-safe space above/below.
+  // Common FOV and principal-point shift preserve all overlap relationships and the A1/B2 solution.
+  const radiusPx=Math.max(24,Math.min(height*.28,width*.42,(height-140)/2));
+  optical.fov=THREE.MathUtils.radToDeg(2*Math.atan(.6*height/(2*radiusPx)));
+  optical.setViewOffset(width,height,0,height*.05,width,height);optical.updateProjectionMatrix();}
  resize();
  return {resize,dispose(){renderer.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points){o.geometry.dispose();}});},render(s:JourneyState,dt:number,options:RenderOptions){
   time+=Math.max(0,Math.min(.1,dt));const inRoom=s.phase!=='world';outdoor.visible=!inRoom;room.visible=inRoom;scene.fog=inRoom?null:new THREE.Fog(s.era===3?0x688693:0x8ba1a5,30,85);scene.background=new THREE.Color(inRoom?0x292e32:s.era===3?0x688693:0x8ba1a5);
@@ -133,12 +148,14 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
    poseJourneyActor(g,{kind,speaking:options.speaker===kind,expression:options.speaker===kind?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,waiting:i===1&&s.toto.waiting,walk:moving<.001?0:Math.sin(i?walkT:walkP),time,reducedMotion:options.reducedMotion});shadows[i]!.position.set(a.x,(inRoom?0:heightAt(a))+.015,a.z);
   });
   lastP={...s.player};lastT={...s.toto};started=true;
+  for(const id of ['tile','drain','stopper']as const){const active=!inRoom&&inControlArea(s.player,id);controlPads[id]!.border.material.color.set(active?0xe9d599:0x50635c);controlPads[id]!.pad.material.color.set(active?0xc4bc91:0xa3ad9b);}
+  leverHandles[0]!.rotation.x=(s.ringA-1)*.42;leverHandles[1]!.rotation.x=(s.ringB-1)*.42;
   tile.rotation.y=-s.p1*Math.PI/2;crank.rotation.z=-s.p1*Math.PI/2;p1Gate.visible=!s.solved[0];bridge.visible=!!s.solved[1];spill.visible=s.p2Drain;sluice.position.y=s.p2Drain?.7:.35;drainHandle.rotation.z=s.p2Drain?0:Math.PI/2;stopHandle.rotation.z=s.p2Stopper?0:Math.PI/2;pin.rotation.z=s.p2Stopper?0:Math.PI/2;if(s.solved[1]&&!options.reducedMotion)wheel.rotation.z=time*.55;
   const occupied=distance(s.player,MAP.gatePlate)<=.9||distance(s.toto,MAP.gatePlate)<=.9,openGate=s.gateLatched||occupied;
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
   const flatWall=!s.wallSeen&&(s.era<2||s.quarter%2===0);wallPattern.visible=flatWall;stair.visible=!flatWall;
-  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;castle.visible=s.mode!=='observe';portalFill.visible=!s.portalOpen;resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);
+  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=!s.portalOpen;resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(s.era===3?C.gold:C.stone);
   if(camera.zoom!==(inRoom?1.4:1)){camera.zoom=inRoom?1.4:1;camera.updateProjectionMatrix();}
   const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
   // On the return trip a steeper reading angle keeps the table beyond the actors' silhouettes, even after Q.
