@@ -203,3 +203,8 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
  .journey-app[data-mode="observe"] .journey-bottom {right:max(12px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));max-width:calc(100% - 24px);}
 }
 .journey-app[data-mode="observe"] .journey-objective {max-width:min(30vw,25rem);}
+/* Mismatch notices stay readable without crossing the ring's top connection. */
+.journey-app[data-mode="observe"] .journey-toast {top:auto;bottom:max(18px,env(safe-area-inset-bottom));left:max(24px,env(safe-area-inset-left));transform:none;width:max-content;max-width:min(40vw,26rem);margin:0;padding:8px 12px;text-align:left;}
+@media (max-height:620px),(max-width:600px) {
+ .journey-app[data-mode="observe"] .journey-toast {bottom:max(10px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));max-width:42vw;padding:7px 10px;}
+}
