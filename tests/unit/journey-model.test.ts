@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAP, distance, heightAt, type JourneyState, type Point } from '../../src/journey/contract';
-import { createState, step, context, interact, partner, rotate, gateOpen, validateSave } from '../../src/journey/model';
+import { createState, step, context, interact, partner, rotate, gateOpen, validateSave, movingToPlate } from '../../src/journey/model';
 
 const wait=(s:JourneyState,n=180)=>{for(let i=0;i<n;i++)step(s,{x:0,z:0,run:false},1/60);};
 function walk(s:JourneyState,to:Point){
@@ -12,9 +12,9 @@ function walk(s:JourneyState,to:Point){
  throw new Error(`Cannot walk from ${s.player.x},${s.player.z} to ${to.x},${to.z}`);
 }
 function begin(){const s=createState();walk(s,MAP.console);interact(s);return s;}
-function solveTile(s:JourneyState){walk(s,{x:2.6,z:-3});walk(s,MAP.tileControl);interact(s);walk(s,{x:2.6,z:-8.5});}
+function solveTile(s:JourneyState){walk(s,{x:2.6,z:-3});walk(s,{x:3,z:-5.2});interact(s);walk(s,{x:2.6,z:-8.5});}
 function toGate(){
- const s=begin();solveTile(s);walk(s,MAP.drainControl);interact(s);walk(s,MAP.stopperControl);interact(s);walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:0,z:-26});walk(s,MAP.gatePlate);return s;
+ const s=begin();solveTile(s);walk(s,{x:0,z:-13});walk(s,{x:MAP.drainControl.x+.3,z:-13.7});interact(s);walk(s,{x:MAP.stopperControl.x+.3,z:-13.7});interact(s);walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:0,z:-26});walk(s,MAP.gatePlate);return s;
 }
 function toWall(){
  const s=toGate();partner(s);walk(s,{x:0,z:-33});walk(s,{x:0,z:-37});walk(s,MAP.latch);interact(s);partner(s);wait(s,360);expect(s.solved[2]).toBe(true);walk(s,{x:8,z:-42});return s;
@@ -47,7 +47,7 @@ describe('evolution direct-control model',()=>{
   expect(step(s,{x:0,z:-1,run:false},1/60).some(e=>e.id==='blocked-tile')).toBe(false);
   expect(s.player.z).toBeGreaterThanOrEqual(-4.2);
   expect(context(s)?.id).not.toBe('tile');expect(interact(s).some(e=>e.type==='evolution')).toBe(false);
-  walk(s,{x:2.6,z:-3});walk(s,MAP.tileControl);
+  walk(s,{x:2.6,z:-3});walk(s,{x:3,z:-5.2});
   expect(context(s)?.id).toBe('tile');expect(context(s)?.point).toEqual(MAP.tileControl);
   wait(s);expect(s.toto.x-s.player.x).toBeCloseTo(1.15,1);expect(Math.abs(s.toto.z-s.player.z)).toBeLessThan(.03);
   expect(validateSave(s)).not.toBeNull();
@@ -68,24 +68,63 @@ describe('evolution direct-control model',()=>{
   const s=begin();solveTile(s);walk(s,{x:5,z:-21});
   for(let i=0;i<100;i++)step(s,{x:0,z:-1,run:true},.1);
   expect(s.player.z).toBeGreaterThan(-21.71);
-  walk(s,MAP.drainControl);interact(s);walk(s,MAP.stopperControl);interact(s);
+  walk(s,{x:0,z:-13});walk(s,{x:MAP.drainControl.x+.3,z:-13.7});interact(s);walk(s,{x:MAP.stopperControl.x+.3,z:-13.7});interact(s);
   for(let i=0;i<80;i++)step(s,{x:0,z:-1,run:true},.1);
   expect(s.player.z).toBeGreaterThan(-21.71);
  });
  it('operates the mill from visible front controls and keeps both actors outside machinery',()=>{
   const s=begin();solveTile(s);
   for(const [point,id] of [[MAP.drainControl,'drain'],[MAP.stopperControl,'stopper']] as const){
-   walk(s,point);wait(s);expect(context(s)?.id).toBe(id);
+   walk(s,{x:point.x+.3,z:point.z+.3});wait(s);expect(context(s)?.id).toBe(id);
    expect(s.toto.x-s.player.x).toBeCloseTo(1.15,1);expect(Math.abs(s.toto.z-s.player.z)).toBeLessThan(.03);
    expect(validateSave(s)).not.toBeNull();interact(s);
   }
-  expect(s.solved[1]).toBe(true);
+  expect(s.solved[1]).toBe(true);walk(s,{x:-2,z:-16});walk(s,{x:-4,z:-16});
   for(let i=0;i<120;i++)step(s,{x:0,z:-1,run:true},1/60);
   expect(s.player.z).toBeGreaterThanOrEqual(-16.5);expect(context(s)?.id).not.toBe('stopper');
-  for(const point of [MAP.drain,MAP.stopper,MAP.mill,{x:-7,z:-20},{x:-7,z:-16},{x:MAP.drainControl.x-.55,z:MAP.drainControl.z-.55},{x:MAP.stopperControl.x-.55,z:MAP.stopperControl.z-.55}]){
+  for(const point of [MAP.drain,MAP.stopper,MAP.mill,{x:-7,z:-20},{x:-7,z:-16},{x:MAP.drainControl.x-.85,z:MAP.drainControl.z-.6},{x:MAP.stopperControl.x-.85,z:MAP.stopperControl.z-.6}]){
    const invalid=structuredClone(s);Object.assign(invalid.player,point);expect(validateSave(invalid)).toBeNull();
   }
   const loaded=validateSave(s)!;wait(loaded);expect(validateSave(loaded)).not.toBeNull();
+ });
+ it('keeps Toto clear of the adjacent handle at the drain control eastern edge',()=>{
+  for(const approach of [{x:0,z:-13},{x:-8,z:-13},{x:-5.21,z:-12}]){
+  const s=begin();solveTile(s);walk(s,{x:0,z:-12});walk(s,approach);walk(s,{x:-5.21,z:-14});
+  for(let i=0;i<100;i++){const dx=-5.21-s.player.x,dz=-14-s.player.z,d=Math.hypot(dx,dz);if(d<.00001)break;step(s,{x:dx/d,z:dz/d,run:true},Math.min(.01,d/4.8));}
+  for(let i=0;i<300;i++){const before={...s.toto};step(s,{x:0,z:0,run:false},1/60);expect(distance(before,s.toto)).toBeLessThanOrEqual(.082);expect(validateSave(s)).not.toBeNull();}
+  expect(context(s)?.id).toBe('drain');
+  const handle={x:MAP.stopperControl.x-.85,z:MAP.stopperControl.z-.6};
+  expect(distance(s.toto,handle)).toBeGreaterThanOrEqual(1);
+  expect(s.toto.x).toBeCloseTo(s.player.x+1.15,1);expect(s.toto.z).toBeCloseTo(s.player.z+1,1);
+  expect(validateSave(s)).not.toBeNull();
+  const loaded=validateSave(s)!;wait(loaded);expect(loaded.toto.x).toBeCloseTo(s.toto.x,1);expect(loaded.toto.z).toBeCloseTo(s.toto.z,1);
+  }
+ });
+ it('waits before an occupied footprint and finishes walking after the player leaves',()=>{
+  const s=toGate();partner(s);wait(s);
+  expect(movingToPlate(s)).toBe(true);expect(s.toto.waiting).toBe(false);
+  expect(distance(s.toto,s.player)).toBeGreaterThanOrEqual(.849);
+  expect(validateSave(s)).not.toBeNull();
+  walk(s,{x:-1,z:-31.5});wait(s);
+  expect(s.toto.waiting).toBe(true);expect(distance(s.toto,MAP.gatePlate)).toBeLessThan(.00001);
+ });
+ it('walks to the actual plate centre, resumes midway and cancels without teleporting',()=>{
+  let s=toGate();walk(s,{x:-3,z:-28});wait(s);walk(s,{x:-3,z:-30});wait(s);
+  expect(gateOpen(s)).toBe(false);
+  const before={...s.toto},player={...s.player};partner(s);
+  expect(s.toto.x).toBe(before.x);expect(s.toto.z).toBe(before.z);expect(s.player).toEqual(player);
+  expect(movingToPlate(s)).toBe(true);expect(s.toto.waiting).toBe(false);expect(gateOpen(s)).toBe(false);
+  for(let i=0;i<12;i++){
+   const previous={...s.toto};step(s,{x:0,z:0,run:false},1/60);
+   expect(distance(previous,s.toto)).toBeLessThanOrEqual(.050001);
+   expect(gateOpen(s)).toBe(distance(s.player,MAP.gatePlate)<=.9||distance(s.toto,MAP.gatePlate)<=.9);
+  }
+  const loaded=validateSave(s);expect(loaded).not.toBeNull();s=loaded!;expect(movingToPlate(s)).toBe(true);
+  const midway={...s.toto};partner(s);expect(movingToPlate(s)).toBe(false);expect(s.toto.plate).toBeNull();
+  expect(s.toto.x).toBe(midway.x);expect(s.toto.z).toBe(midway.z);
+  partner(s);wait(s);expect(s.toto.waiting).toBe(true);expect(distance(s.toto,MAP.gatePlate)).toBeLessThan(.00001);
+  expect(gateOpen(s)).toBe(true);expect(validateSave(s)).not.toBeNull();
+  const invalid=structuredClone(s);invalid.toto.x+=.3;expect(validateSave(invalid)).toBeNull();
  });
  it('refuses a far-side call before the latch without moving Toto or closing the gate',()=>{
   const s=toGate();partner(s);walk(s,{x:0,z:-33});walk(s,{x:0,z:-37});
@@ -110,7 +149,7 @@ describe('evolution direct-control model',()=>{
   walk(s,MAP.leverA);interact(s);walk(s,MAP.leverB);interact(s);
   expect([s.ringA,s.ringB]).toEqual([1,2]);expect(s.solved[4]).toBe(false);
   walk(s,MAP.observe);interact(s);expect(s.solved[4]).toBe(true);expect(s.mode).toBe('observe');expect(s.era).toBe(3);expect(validateSave(s)).not.toBeNull();
-  interact(s);walk(s,MAP.wallTop);walk(s,{x:8,z:-42});walk(s,{x:0,z:-37});walk(s,{x:0,z:-33});walk(s,{x:0,z:-26});walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:2,z:-8});walk(s,{x:2,z:-4});walk(s,MAP.spawn);walk(s,MAP.frontPlate);
+  interact(s);walk(s,MAP.wallTop);walk(s,{x:8,z:-42});walk(s,{x:0,z:-37});walk(s,{x:0,z:-33});walk(s,{x:0,z:-26});walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:3,z:-8});walk(s,{x:3,z:-4});walk(s,MAP.spawn);walk(s,MAP.frontPlate);
   partner(s);expect(s.toto.plate).toBe('front');walk(s,{x:3,z:2.5});walk(s,{x:3,z:5.5});walk(s,MAP.backPlate);
   expect(s.portalOpen).toBe(true);expect(s.solved.every(Boolean)).toBe(true);expect(validateSave(s)).not.toBeNull();
   const wrong=interact(s);expect(s.phase).toBe('world');expect(wrong[0]?.type).toBe('notice');
@@ -136,6 +175,7 @@ describe('evolution direct-control model',()=>{
  });
  it('rejects old, non-finite, skipped-progress and impossible geometry saves',()=>{
   expect(validateSave({version:1,player:{anchor:'room'}})).toBeNull();
+  expect(validateSave({...createState(),version:2})).toBeNull();
   const s=createState();expect(validateSave(s)).toEqual(s);const copy=validateSave(s)!;copy.player.x=2;expect(s.player.x).toBe(0);
   s.player.x=NaN;expect(validateSave(s)).toBeNull();
   const f=begin();f.solved[4]=true;f.era=3;expect(validateSave(f)).toBeNull();

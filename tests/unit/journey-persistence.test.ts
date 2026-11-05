@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createState } from '../../src/journey/model';
 import { clearJourney, loadJourney, loadPreferences, saveJourney, savePreferences } from '../../src/journey/persistence';
 
-const key = 'dec31-evolution-v2:journey';
+const key = 'dec31-evolution-v3:journey';
 let records: Map<string, string>;
 let storage: {getItem:ReturnType<typeof vi.fn>;setItem:ReturnType<typeof vi.fn>;removeItem:ReturnType<typeof vi.fn>};
 beforeEach(() => {
@@ -35,7 +35,7 @@ describe('isolated evolution persistence',()=>{
     expect(saveJourney({...createState(), era:99} as any)).toBe(false);
     expect(records.get(key)).toBe(saved);
     records.set(key,'{truncated'); expect(loadJourney()).toBeNull();
-    records.set(key,JSON.stringify({version:2})); expect(loadJourney()).toBeNull();
+    records.set(key,JSON.stringify({version:3})); expect(loadJourney()).toBeNull();
   });
   it('keeps preferences when clearing the journey, and preserves other namespaces',()=>{
     expect(savePreferences({volume:0,reducedMotion:true})).toBe(true);
@@ -45,6 +45,15 @@ describe('isolated evolution persistence',()=>{
     expect(loadPreferences()).toEqual({volume:0,reducedMotion:true});
     expect(records.get('december31')).toBe('legacy data must survive');
     expect(storage.removeItem).toHaveBeenCalledExactlyOnceWith(key);
+  });
+  it('never reads, migrates or deletes cycle001–003 v2 saves and preferences',()=>{
+    const oldKey='dec31-evolution-v2:journey',oldPrefs='dec31-evolution-v2:preferences';
+    const old=JSON.stringify({...createState(),version:2}),prefs=JSON.stringify({volume:0,reducedMotion:true});
+    records.set(oldKey,old);records.set(oldPrefs,prefs);
+    expect(loadJourney()).toBeNull();expect(loadPreferences()).toEqual({volume:.65,reducedMotion:false});
+    saveJourney(createState());savePreferences({volume:.5,reducedMotion:false});clearJourney();
+    expect(records.get(oldKey)).toBe(old);expect(records.get(oldPrefs)).toBe(prefs);
+    expect(storage.getItem.mock.calls.every(([k])=>k.startsWith('dec31-evolution-v3:'))).toBe(true);
   });
   it('returns failure on quota denial without claiming to save; blocked reads use safe defaults',()=>{
     storage.setItem.mockImplementation(()=>{throw new Error('QuotaExceededError');});
@@ -61,7 +70,7 @@ describe('isolated evolution persistence',()=>{
     expect(savePreferences({volume:1.1,reducedMotion:false})).toBe(false);
     expect(savePreferences({volume:.2,reducedMotion:true,extra:'ignored'} as any)).toBe(true);
     expect(loadPreferences()).toEqual({volume:.2,reducedMotion:true});
-    records.set('dec31-evolution-v2:preferences',JSON.stringify({volume:-1,reducedMotion:false}));
+    records.set('dec31-evolution-v3:preferences',JSON.stringify({volume:-1,reducedMotion:false}));
     expect(loadPreferences()).toEqual({volume:.65,reducedMotion:false});
   });
 });

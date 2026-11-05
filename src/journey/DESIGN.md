@@ -26,3 +26,10 @@ Physical device actions use a transient750ms gesture, committing the model once 
 P02 uses foreground controls `drainControl=(-6,-14)` and `stopperControl=(-3,-14)`, linked visibly to the original mechanisms. Interaction radius is.8m and the approach stays south of z=-14.5. The mill, channel and handle supports have occupied footprints. The marked approach crosses at z=-13 and branches toward the controls. P02 solution conditions are unchanged. Nearby floating markers retreat to keep faces/gestures visible.
 
 Conversation typography and portraits are larger; paper and wardrobe colors identify the speaker. Reduced height and text enlargement were checked, but this does not replace real-device browser zoom or first-time human playtesting. Exact finger/handle contact, spoken audio and human listening quality are not claimed.
+
+## Cycle 004 — reveal, discovery and companion movement
+The first world uses a grayscale CSS filter on the game canvas; the room and UI retain color. E1 restores color over700ms (immediately for reduced motion). The underlying game mechanics also evolve: running and partner instructions become available at E1. On evolution the compact upper notification appears while the world is visible for1400ms (300ms reduced motion), then queued dialogue is shown. Inputs cannot skip an unseen line.
+
+Toto walks toward the requested footprint. Physical occupancy determines whether a gate opens; `waiting` becomes true only at the footprint centre. If the player occupies the centre, Toto waits short of it and the UI asks for space. A second T cancels the request; a save while walking retains the destination and reconstructs a safe path. Version3 has separate localStorage keys and deliberately neither reads nor migrates prior version2 saves/settings.
+
+P01/P02 handles and allowed approach regions are offset to reduce sprite overlap. Objectives describe destinations rather than giving the device solution. Contextual interaction labels remain available near objects. These changes do not establish human first-time usability or listening quality.

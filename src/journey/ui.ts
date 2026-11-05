@@ -1,4 +1,5 @@
 import type { ContextAction, JourneyState, Expression } from './contract';
+import { MAP, distance } from './contract';
 import { portrait, type DialogueEmotion } from '../ui/portraits';
 import keyart from '../ui/assets/winter-keyart.jpg';
 import './style.css';
@@ -17,10 +18,10 @@ export interface JourneyUI {
 }
 const ERA_NAMES = ['雪の道', '彩りの道', '奥行きの道', 'ふたりの道'];
 const EVOLUTIONS = [
- {title: '世界へ、一歩。', text: 'ふたりで、この道の先へ。', keys: 'WASD / 矢印キーで歩く'},
- {title: '色と流れが、見えてきた。', text: 'ひとりではできないことも、いっしょなら。', keys: 'Shift 走る　 /　 T トトに声をかける'},
- {title: '向こう側にも、かたちがある。', text: '見る向きを変えると、違うものが見える。', keys: 'Q 見回す'},
- {title: 'ふたりの跡が、響きあう。', text: '帰り道に残った、ふたつの光。', keys: 'R 共鳴を感じる'},
+ {title:'世界へ、一歩', keys:'WASD / 矢印 歩く'},
+ {title:'走る・合図ができる', keys:'Shift 走る · T 合図'},
+ {title:'横からも見られる', keys:'Q 見回す'},
+ {title:'ふたりの跡が見える', keys:'R 共鳴'},
 ];
 // Prefer the authored performance from the controller; older callers retain a conservative text fallback.
 const EXPRESSION: Record<Expression, DialogueEmotion> = {neutral:'neutral',curious:'question',surprised:'surprise',relieved:'relief'};
@@ -42,15 +43,15 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   <div id="journey-game-ui" class="journey-game-ui" hidden>
    <header class="journey-hud">
     <div class="journey-objective"><span class="journey-eyebrow" id="journey-era">雪の道</span><p id="journey-objective"></p><div class="journey-progress" aria-label="仕掛けの進み具合">${Array.from({length:6},(_,i)=>`<i data-puzzle="${i}" aria-hidden="true"></i>`).join('')}</div></div>
-    <div class="journey-hud-end"><span id="journey-save"></span><button class="journey-icon-button" data-action="pause" aria-label="ひと休み。Escでも開きます">Ⅱ<span>ひと休み</span></button></div>
+    <div class="journey-hud-end"><div class="journey-status-row"><span id="journey-save"></span><button class="journey-icon-button" data-action="pause" aria-label="ひと休み。Escでも開きます">Ⅱ<span>ひと休み</span></button></div><div id="journey-evolution" class="journey-evolution" role="status" aria-live="polite" aria-atomic="true" hidden><h2 id="journey-evolution-title"></h2><p id="journey-evolution-keys"></p></div></div>
    </header>
    <p id="journey-walk-help" class="journey-walk-help"><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> 歩く</p>
    <div class="journey-bottom" id="journey-bottom">
     <div class="journey-context" id="journey-context" hidden><p id="journey-context-hint"></p><button class="journey-button journey-interact" data-action="interact" id="journey-interact"><kbd>E</kbd><span id="journey-context-label">調べる</span><span class="journey-space">/ Space</span></button></div>
-    <nav class="journey-abilities" aria-label="できること"><button data-action="partner" id="journey-partner" hidden><kbd>T</kbd><span>トトに声をかける</span></button><button data-action="rotate" id="journey-rotate" hidden><kbd>Q</kbd><span>見回す</span></button><button data-action="resonance" id="journey-resonance" hidden><kbd>R</kbd><span>共鳴</span></button></nav>
+    <nav class="journey-abilities" aria-label="できること"><button data-action="partner" id="journey-partner" hidden><kbd>T</kbd><span id="journey-partner-label">トトに声をかける</span><small id="journey-partner-state" role="status" hidden></small></button><button data-action="rotate" id="journey-rotate" hidden><kbd>Q</kbd><span>見回す</span></button><button data-action="resonance" id="journey-resonance" hidden><kbd>R</kbd><span>共鳴</span></button></nav>
    </div>
    <section id="journey-dialogue" class="journey-dialogue" aria-labelledby="journey-speaker" hidden><div class="journey-portrait" id="journey-portrait" aria-hidden="true"></div><div class="journey-dialogue-copy"><h2 id="journey-speaker"></h2><p id="journey-line" role="status" aria-live="polite" aria-atomic="true"></p></div><button class="journey-button journey-next" data-action="next"><span>つづきを聞く</span><kbd aria-hidden="true">E</kbd></button></section>
-   <div id="journey-evolution" class="journey-evolution" hidden><span class="journey-evolution-mark" aria-hidden="true">◯ ◎</span><h2 id="journey-evolution-title"></h2><p id="journey-evolution-text"></p><p id="journey-evolution-keys"></p></div>
+
    <p id="journey-toast" class="journey-toast" role="status" aria-live="polite" hidden></p>
   </div>
   <section id="journey-title" class="journey-screen journey-title" aria-labelledby="journey-title-heading">
@@ -68,7 +69,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
  const objectiveNode=get('journey-objective'), eraNode=get('journey-era'), progress=root.querySelector<HTMLElement>('.journey-progress')!, marks=[...root.querySelectorAll<HTMLElement>('[data-puzzle]')];
  const toast=get('journey-toast'), evolution=get('journey-evolution');
  let screen:Screen='title', talking=false, dialogueKey='', observed=false, toastTimer:ReturnType<typeof setTimeout>|undefined;
- let lastEra=-1, lastSolved='', lastPhase='', lastWait:boolean|null=null;
+ let lastEra=-1, lastSolved='', lastPhase='', lastPartnerStatus='';
  root.addEventListener('click',event=>{const button=(event.target as Element).closest<HTMLButtonElement>('[data-action]');if(button&&!button.disabled){onAction(button.dataset['action']!);}});
  get<HTMLInputElement>('journey-volume').addEventListener('input',event=>{const value=(event.target as HTMLInputElement).value;text(get('journey-volume-output'),`${Math.round(Number(value)*100)}%`);onAction('volume',value);});
  get<HTMLInputElement>('journey-motion').addEventListener('change',event=>onAction('motion',String((event.target as HTMLInputElement).checked)));
@@ -88,7 +89,11 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    show(contextBox,!!context||observed);interact.disabled=!observed&&context?.enabled===false;
    text(contextLabel,observed?'観測をやめる':context?.label??'調べる');text(contextHint,observed?'断片の重なりを、ここから見る。':context?.hint??'');
    show(partner,state.era>=1&&!observed&&state.phase==='world');show(rotate,state.era>=2&&!observed&&state.phase==='world');show(resonance,state.era>=3&&!observed&&state.phase==='world');
-   if(lastWait!==state.toto.waiting){lastWait=state.toto.waiting;text(partner.querySelector('span')!,state.toto.waiting?'トトを呼ぶ':'トトに声をかける');partner.classList.toggle('is-waiting',state.toto.waiting);}
+   const moving=state.toto.plate!==null&&!state.toto.waiting;
+   const platePoint=state.toto.plate==='gate'?MAP.gatePlate:state.toto.plate==='front'?MAP.frontPlate:state.toto.plate==='back'?MAP.backPlate:null;
+   const occupied=moving&&platePoint!==null&&distance(state.player,platePoint)<.65&&distance(state.toto,platePoint)<1.2;
+   const partnerStatus=occupied?'blocked':moving?'moving':state.toto.waiting?'waiting':'following';
+   if(lastPartnerStatus!==`${partnerStatus}:${state.toto.plate}`){lastPartnerStatus=`${partnerStatus}:${state.toto.plate}`;text(get('journey-partner-label'),moving?'トトを呼び戻す':state.toto.waiting?'トトを呼ぶ':'トトに声をかける');const note=get('journey-partner-state');text(note,occupied?'印を少し空けよう':moving?'印へ向かっている':state.toto.waiting?(state.toto.plate?'印で待っている':'ここで待っている'):'');show(note,moving||state.toto.waiting);partner.dataset['partnerState']=partnerStatus;partner.classList.toggle('is-waiting',state.toto.waiting);}
    syncExploration();
   },
   setScreen(next){if(next===screen)return;screen=next;app.dataset['screen']=next;show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();const focus=next==='game'?canvas:next==='pause'?get<HTMLButtonElement>('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):next==='title'?get<HTMLButtonElement>('journey-continue').hidden?get('journey-new'):get('journey-continue'):get('journey-credits').querySelector('button');(focus as HTMLElement|null)?.focus({preventScroll:true});},
@@ -98,7 +103,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    else dialogueKey='';syncExploration();
   },
   setToast(value){clearTimeout(toastTimer);text(toast,value);show(toast,!!value);if(value)toastTimer=setTimeout(()=>show(toast,false),4500);},
-  setEvolution(era){show(evolution,era!==null);if(era!==null){const entry=EVOLUTIONS[Math.max(0,Math.min(3,era))]!;text(get('journey-evolution-title'),entry.title);text(get('journey-evolution-text'),entry.text);text(get('journey-evolution-keys'),entry.keys);evolution.dataset['era']=String(era);}},
+  setEvolution(era){show(evolution,era!==null);if(era===null){text(get('journey-evolution-title'),'');text(get('journey-evolution-keys'),'');delete evolution.dataset['era'];return;}const entry=EVOLUTIONS[Math.max(0,Math.min(3,era))]!;text(get('journey-evolution-title'),entry.title);text(get('journey-evolution-keys'),entry.keys);evolution.dataset['era']=String(era);},
   setContinue(has){show(get('journey-continue'),has);get('journey-new').classList.toggle('journey-primary',!has);},
   setSettings(settings){get<HTMLInputElement>('journey-volume').value=String(settings.volume);text(get('journey-volume-output'),`${Math.round(settings.volume*100)}%`);get<HTMLInputElement>('journey-motion').checked=settings.reducedMotion;app.dataset['reducedMotion']=String(settings.reducedMotion);},
   setSaveStatus(value){text(get('journey-save'),value);},

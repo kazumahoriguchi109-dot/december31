@@ -4,7 +4,7 @@ export type Phase = 'room'|'world'|'ending';
 export interface Point {x:number;z:number}
 export interface Actor extends Point {facing:number}
 export interface JourneyState {
- version:2; phase:Phase; player:Actor; toto:Actor & {waiting:boolean;plate:'gate'|'front'|'back'|null};
+ version:3; phase:Phase; player:Actor; toto:Actor & {/** True only after reaching the reserved plate centre. */ waiting:boolean;/** Non-null while walking to or waiting on this plate. */ plate:'gate'|'front'|'back'|null};
  era:Era; quarter:0|1|2|3; mode:'walk'|'observe';
  p1:number; p2Drain:boolean; p2Stopper:boolean; gateLatched:boolean; wallSeen:boolean;
  ringA:0|1|2; ringB:0|1|2; solved:boolean[]; portalOpen:boolean;
