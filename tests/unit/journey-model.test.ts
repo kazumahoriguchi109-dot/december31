@@ -40,6 +40,15 @@ describe('evolution direct-control model',()=>{
   expect(distance(restored.toto,raw.toto)).toBeLessThan(.04);
   wait(restored);expect(distance(restored.player,restored.toto)).toBeGreaterThanOrEqual(.94);
  });
+ it('links the last-day calendar to an optional star on the path before and after color',()=>{
+  let s=createState();walk(s,MAP.calendar);expect(context(s)?.id).toBe('calendar');
+  expect(interact(s).some(e=>e.id==='discovery-calendar')).toBe(true);
+  walk(s,MAP.console);expect(context(s)?.id).toBe('begin');interact(s);walk(s,MAP.starPost);
+  expect(context(s)?.id).toBe('star-post');expect(interact(s).some(e=>e.id==='discovery-star-before')).toBe(true);
+  solveTile(s);walk(s,MAP.starPost);expect(interact(s).some(e=>e.id==='discovery-star-color')).toBe(true);
+  s=validateSave(s)!;expect(s.seen).toContain('discovery-calendar');expect(s.seen).toContain('discovery-star-before');expect(s.seen).toContain('discovery-star-color');
+  expect(s.solved[0]).toBe(true);expect(s.solved.slice(1)).toEqual([false,false,false,false,false]);
+ });
  it('blocks the entire first tile and permits operation only from its east control',()=>{
   const s=begin();let notices=0;
   for(let i=0;i<150;i++)notices+=step(s,{x:0,z:-1,run:false},1/60).filter(e=>e.id==='blocked-tile').length;

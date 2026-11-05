@@ -300,8 +300,12 @@ export function context(s:JourneyState):ContextAction|null {
  if(s.phase==='ending')return null;
  const action=(id:string,label:string,hint:string,point:Point,enabled=true):ContextAction=>({id,label,hint,point,enabled});
  if(s.mode==='observe')return action('leave-observe','観測台から離れる','Eで戻る',MAP.observe);
- if(s.phase==='room')return distance(s.player,MAP.console)<=INTERACT?action('begin','いっしょに始める','二人のいつものゲーム',MAP.console):null;
+ if(s.phase==='room'){
+  if(distance(s.player,MAP.console)<=INTERACT)return action('begin','いっしょに始める','二人のいつものゲーム',MAP.console);
+  return distance(s.player,MAP.calendar)<=1.3?action('calendar','カレンダーを見る','ふたりで描いた星のしるし',MAP.calendar):null;
+ }
  const options:ContextAction[]=[];
+ options.push(action('star-post','星の札を調べる',s.solved[0]?'色の戻った札':'見覚えのある形',MAP.starPost));
  options.push(action('footprints','ふたりの足跡を見る','雪の上に、違う大きさの足跡',{x:-6,z:-5}));
  if(s.solved[0])options.push(action('pond','凍った池をのぞく','氷の下に、細い光が見える',{x:7,z:-18}));
  if(s.solved[2])options.push(action('post','標柱を調べる','いつから、こんな形だったんだろう',{x:-6,z:-40}));
@@ -335,6 +339,8 @@ export function interact(s:JourneyState):JourneyEvent[] {
  if(!a.enabled)return [notice('context-unavailable',a.hint)];
  const ev:JourneyEvent[]=[];
  switch(a.id){
+  case 'calendar':return once(s,'discovery-calendar',[line('discovery-calendar','今日は12月31日。年が変わるまで、まだいっしょに遊べるね。'),line('calendar-star','この星、さっきふたりで描いたんだよ。','主人公')]).concat(notice('calendar-note','カレンダーの最後の日に、星が描いてある。'));
+  case 'star-post':return s.solved[0]?once(s,'discovery-star-color',[line('discovery-star-color','あっ、あの星に色がついてる。部屋で描いたのと同じ色だ。','主人公'),line('star-color-toto','さっきは形だけだったのに。ここも変わったんだね。')]).concat(notice('star-color-note','星の札は、金色に輝いている。')):once(s,'discovery-star-before',[line('discovery-star-before','この星、部屋のカレンダーで見た形に似てる。','主人公'),line('star-before-toto','色は分からないけど、ちゃんとここにあるね。')]).concat(notice('star-before-note','雪道の札に、小さな星が描かれている。'));
   case 'footprints':return once(s,'discovery-footprints',[line('discovery-footprints','ぼくらの足跡、少しずつ形が違う。ここまで本当に歩いてきたんだ。','主人公')]).concat(notice('footprints-memory','二人の足跡が、雪の上に並んでいる。'));
   case 'pond':return once(s,'discovery-pond',[line('discovery-pond','氷の下にも、光が動いてる。止まって見えたけど、ちゃんと流れてたんだね。')]).concat(notice('pond-memory','氷の下で、光がゆっくり流れている。'));
   case 'post':return once(s,'discovery-post',[line('discovery-post','さっきまで、一本の線みたいだったのに。横があったんだ。','主人公')]).concat(notice('post-memory','見る向きで、標柱の形が変わって見える。'));

@@ -14,7 +14,7 @@ export interface InputFrame {x:number;z:number;run:boolean}
 export interface JourneyEvent {type:'dialogue'|'evolution'|'sound'|'notice'|'ending';id:string;text?:string;speaker?:'主人公'|'トト';era?:Era}
 export interface ContextAction {id:string;label:string;hint:string;point:Point;enabled:boolean}
 export const MAP = {
- spawn:{x:0,z:0}, console:{x:0,z:-2.5}, tile:{x:0,z:-6}, tileControl:{x:2.6,z:-5.5}, mill:{x:-5,z:-18}, drain:{x:-7,z:-18}, stopper:{x:-3.6,z:-18.7}, drainControl:{x:-6,z:-14}, stopperControl:{x:-3,z:-14},
+ spawn:{x:0,z:0}, console:{x:0,z:-2.5}, calendar:{x:-2,z:-2.35}, starPost:{x:-5.2,z:-1.7}, tile:{x:0,z:-6}, tileControl:{x:2.6,z:-5.5}, mill:{x:-5,z:-18}, drain:{x:-7,z:-18}, stopper:{x:-3.6,z:-18.7}, drainControl:{x:-6,z:-14}, stopperControl:{x:-3,z:-14},
  gatePlate:{x:-3,z:-31.5}, gate:{x:0,z:-35}, latch:{x:2,z:-38},
  wall:{x:8,z:-43}, wallTop:{x:8,z:-50.5}, observe:{x:3,z:-54}, leverA:{x:0,z:-56}, leverB:{x:6,z:-56}, ring:{x:3,z:-58},
  castle:{x:3,z:-62}, portal:{x:0,z:4}, frontPlate:{x:0,z:2.5}, backPlate:{x:0,z:5.5},

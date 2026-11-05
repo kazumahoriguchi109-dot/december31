@@ -42,6 +42,15 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  for(let i=0;i<7;i++){const z=-3.5-i*.45;for(const x of[-6.16,-5.84]){const f=box(outdoor,.14,.018,.27,x,.04,z,0x839b93);f.rotation.y=.25;}}glyph(outdoor,'∴',-6,.7,-5,'#d1dfd5',.5);
  const pond=new THREE.Mesh(new THREE.CircleGeometry(2.15,24),material(0x8bb7c1));pond.rotation.x=-Math.PI/2;pond.position.set(7,.035,-18);pond.scale.y=.68;outdoor.add(pond);for(let i=0;i<5;i++)box(outdoor,.7,.01,.035,6.1+i*.42,.05,-18+(i%2)*.32,0xc2d7d7);glyph(outdoor,'◇',7,.65,-18,'#d1dfd5',.5);
  box(outdoor,.42,1.25,.42,-6,.625,-40,C.stone);box(outdoor,.6,.15,.58,-6,1.3,-40,C.snow);box(outdoor,.26,.35,.025,-6,.9,-39.78,C.navy);glyph(outdoor,'▥',-6,1.7,-40,'#d1dfd5',.5);
+ // A paper star echoes the children's calendar. It stands clear of the route and puzzle pads.
+ const starPost=new THREE.Group();starPost.position.set(MAP.starPost.x,0,MAP.starPost.z);outdoor.add(starPost);
+ box(starPost,.18,1.9,.18,0,.95,0,C.wood);box(starPost,.85,.38,.12,0,1.8,0,C.navy);
+ const starBefore=glyph(starPost,'✦',.95,2.35,.09,'#d8ddd5',.85),starAfter=glyph(starPost,'✦',.95,2.35,.09,'#efc66e',.85);
+ line(starPost,new THREE.Vector3(0,1.95,0),new THREE.Vector3(.95,2.2,0),.035,C.wood);
+ // Use custom visibility so era-specific colors cannot be enabled simultaneously.
+ starBefore.userData['journeyMarker']=false;starAfter.userData['journeyMarker']=false;
+
+ for(const side of[-1,1]){box(starPost,.13,.12,.55,side*.3,.08,.32,0xb6c3bd);}
  // Lamps and sparse winter plants frame a route while leaving the movement corridor open.
  for(const [x,z]of[[-3,-3],[4,-13],[3,-27],[-5,-38],[10.7,-48],[7,-60]]as const)asset(outdoor,'lantern',x,heightAt({x,z}),z,.8);
  for(let i=0;i<50;i++){const x=(i%2?-1:1)*(8.6+Math.sin(i*9.1)*1.5),z=6-i*1.42;if(z<-43&&z>-49)continue;const y=heightAt({x,z});for(let j=0;j<3;j++){const tuft=box(outdoor,.07,.16+j*.045,.07,x+j*.12,y+.08,z,0x708f7a);tuft.rotation.z=(j-1)*.2;}}
@@ -132,7 +141,16 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  // Warm home, same real coordinates for arrival and ending.
  box(room,8,.4,7,0,-.2,-.5,0x896849);for(let x=-3.8;x<4;x+=.6)box(room,.025,.01,7,x,.006,-.5,0x6c513b);box(room,8,3,.2,0,1.5,-4,0xc2b59c);box(room,.2,3,7,-4,1.5,-.5,0xb7b09a);box(room,.2,3,7,4,1.5,-.5,0xb7b09a);
  asset(room,'woven_rug',0,.02,.4,1.3);box(room,2,.7,.9,MAP.console.x,.35,MAP.console.z,C.wood);box(room,1.45,.95,.12,0,1.2,-2.85,C.navy);const screen=box(room,1.25,.72,.025,0,1.2,-2.77,0x73a6ab);glyph(room,'▶',0,1.9,-2.5,'#f0ddb1',.55);asset(room,'bookshelf',-3,0,-3.2,1);asset(room,'armchair',3.4,0,1.9,1);asset(room,'table_lamp',2.4,.7,-2.5,1);
- const focusObjects:Record<string,THREE.Object3D[]>={tile:[crank],drain:[drainHandle],stopper:[stopHandle],latch:[latch,latchLever],'lever-a':[leverHandles[0]!],'lever-b':[leverHandles[1]!],observe:[observerBase],portal:[portal],begin:[screen]};
+ // December's last calendar page and two cups make the room a lived-in place.
+ const calendar=new THREE.Group();calendar.position.set(-1.45,1.75,-3.68);room.add(calendar);calendar.scale.setScalar(.78);
+ const page=document.createElement('canvas');page.width=page.height=128;const pen=page.getContext('2d')!;
+ pen.fillStyle='#f1e6cb';pen.fillRect(8,5,112,118);pen.fillStyle='#a85849';pen.fillRect(8,5,112,22);
+ pen.fillStyle='#332f2c';pen.textAlign='center';pen.textBaseline='middle';pen.font='bold 66px sans-serif';pen.fillText('31',56,69);
+ pen.fillStyle='#b67724';pen.font='bold 34px sans-serif';pen.fillText('✦',98,101);
+ const pageTexture=new THREE.CanvasTexture(page);pageTexture.colorSpace=THREE.SRGBColorSpace;
+ const calendarPage=new THREE.Sprite(new THREE.SpriteMaterial({map:pageTexture}));calendarPage.scale.set(1.7,1.7,1);calendar.add(calendarPage);
+ for(const x of[-.35,.35]){const cup=cylinder(room,.11,.18,x,.79,-2.42,0xe6d3aa,10);cup.castShadow=true;}
+ const focusObjects:Record<string,THREE.Object3D[]>={calendar:[calendar], 'star-post':[starPost],tile:[crank],drain:[drainHandle],stopper:[stopHandle],latch:[latch,latchLever],'lever-a':[leverHandles[0]!],'lever-b':[leverHandles[1]!],observe:[observerBase],portal:[portal],begin:[screen]};
  const focusTint=new THREE.Color(0xe8c77b);
  const windowFrame=box(room,2,1.8,.08,3,1.7,-3.84,C.wood);box(room,1.7,1.5,.04,3,1.7,-3.78,0x8baab3);box(room,.08,1.6,.04,3,1.7,-3.73,C.paper);box(room,1.8,.08,.04,3,1.7,-3.73,C.paper);
  const indoorLight=new THREE.PointLight(0xffc77d,14,12,2);indoorLight.position.set(2.4,2.2,-2.5);room.add(indoorLight);
@@ -176,7 +194,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
   const flatWall=!s.wallSeen&&(s.era<2||s.quarter%2===0);wallPattern.visible=flatWall;stair.visible=!flatWall;
-  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=portalSeal.visible=!s.portalOpen;for(const piece of portal.children.slice(0,3)){if(piece instanceof THREE.Mesh&&piece.material instanceof THREE.MeshStandardMaterial){piece.material.color.set(s.portalOpen?C.paper:C.gold);piece.material.emissiveIntensity=Math.max(piece.material.emissiveIntensity,s.portalOpen?.2:0);}}resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.frontPlate)||isOnPlate(s.toto,MAP.frontPlate)?C.paper:s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.backPlate)||isOnPlate(s.toto,MAP.backPlate)?C.paper:s.era===3?C.gold:C.stone);
+  armA.position.z=-(4+s.ringA)*.35;armB.position.z=-(4+s.ringB)*.35;ringCarriages[0]!.position.z=-55+armA.position.z;ringCarriages[1]!.position.z=-55+armB.position.z;castle.visible=s.mode!=='observe';portalFill.visible=portalSeal.visible=!s.portalOpen;for(const piece of portal.children.slice(0,3)){if(piece instanceof THREE.Mesh&&piece.material instanceof THREE.MeshStandardMaterial){piece.material.color.set(s.portalOpen?C.paper:C.gold);piece.material.emissiveIntensity=Math.max(piece.material.emissiveIntensity,s.portalOpen?.2:0);}}const starPoint={x:MAP.starPost.x+.95,z:MAP.starPost.z};const starClear=distance(s.player,starPoint)>=2&&distance(s.toto,starPoint)>=.9;starBefore.visible=!s.solved[0]&&starClear;starAfter.visible=!!s.solved[0]&&starClear;resonance.visible=s.era===3&&!!options.resonance;front.visible=back.visible=true;(front.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.frontPlate)||isOnPlate(s.toto,MAP.frontPlate)?C.paper:s.era===3?C.gold:C.stone);(back.material as THREE.MeshStandardMaterial).color.set(isOnPlate(s.player,MAP.backPlate)||isOnPlate(s.toto,MAP.backPlate)?C.paper:s.era===3?C.gold:C.stone);
   if(camera.zoom!==(inRoom?1.4:1)){camera.zoom=inRoom?1.4:1;camera.updateProjectionMatrix();}
   const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
   // On the return trip a steeper reading angle keeps the table beyond the actors' silhouettes, even after Q.
