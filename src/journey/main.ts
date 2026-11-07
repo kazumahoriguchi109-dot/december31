@@ -50,6 +50,8 @@ function interactionBusy(){return !!pendingInteraction||!!(actionCue&&actionCue.
 function available(){return screen==='game'&&!dialogue.length&&!interactionBusy()&&performance.now()>=transitionUntil&&performance.now()>=millRevealUntil;}
 function begin(fresh:boolean){
  const existing=loadJourney();
+ // Recheck at activation: another tab may have removed or invalidated the save.
+ if(!fresh&&!existing){ui.setContinue(false);setScreen('title');return;}
  if(fresh&&existing&&!window.confirm('今の冒険の記録を上書きして、新しく始めますか？'))return;
  state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;millRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
  if(fresh)events(step(state,{x:0,z:0,run:false},0));

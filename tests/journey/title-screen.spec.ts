@@ -90,3 +90,40 @@ test('title is usable when browser storage is unavailable',async({page})=>{
  await page.locator('#journey-title-volume').fill('0');await page.locator('#journey-title-motion').check();
  await page.locator('#journey-title-settings-close').click();await expect(page.locator('#journey-new')).toBeVisible();expect(errors).toEqual([]);
 });
+
+
+test('empty continue is visibly inactive and ignores pointer and keyboard activation',async({page})=>{
+ await page.goto('./');
+ const button=page.locator('#journey-continue');
+ await expect(button).toBeDisabled();await expect(button).toHaveCSS('opacity','0.45');
+ await expect(page.locator('#journey-continue-note')).toBeVisible();
+ const box=await button.boundingBox();expect(box).not.toBeNull();
+ await page.mouse.click(box!.x+box!.width/2,box!.y+box!.height/2);
+ await button.dispatchEvent('click');
+ await button.dispatchEvent('keydown',{key:'Enter',code:'Enter'});
+ await button.dispatchEvent('keydown',{key:' ',code:'Space'});
+ await page.locator('#journey-title h1').click();
+ await page.keyboard.press('Enter');await page.keyboard.press('Space');
+ await expect(page.locator('.journey-app')).toHaveAttribute('data-screen','title');
+ expect(await saved(page)).toBeNull();
+ await page.locator('#journey-new').focus();await page.keyboard.press('Tab');
+ await expect(button).not.toBeFocused();
+ // WebKit follows macOS Tab preferences; arrow navigation explicitly visits buttons.
+ await page.locator('#journey-new').focus();await page.keyboard.press('ArrowDown');
+ await expect(page.locator('#journey-title-settings-button')).toBeFocused();
+ await page.keyboard.press('ArrowUp');await expect(page.locator('#journey-new')).toBeFocused();
+});
+
+for(const invalid of [null,'invalid-json','{}'])test(`continue revalidates a stale save (${invalid}) without starting a new game`,async({page})=>{
+ await page.goto('./');await page.locator('#journey-new').click();
+ await expect(page.locator('#journey-dialogue')).toBeVisible();
+ await page.keyboard.press('Escape');await page.locator('#journey-pause [data-action="title"]').click();
+ const button=page.locator('#journey-continue');await expect(button).toBeEnabled();
+ // Isolated test context only: emulate another tab removing or damaging the record.
+ await page.evaluate(({key,value})=>{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);},{key:saveKey,value:invalid});
+ await button.click();
+ await expect(page.locator('.journey-app')).toHaveAttribute('data-screen','title');
+ await expect(button).toBeDisabled();await expect(page.locator('#journey-new')).toBeFocused();
+ await expect(page.locator('#journey-continue-note')).toBeVisible();
+ expect(await saved(page)).toBe(invalid);
+});
