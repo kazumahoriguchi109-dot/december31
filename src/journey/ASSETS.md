@@ -1,6 +1,6 @@
 # Evolution prototype assets
 
-This branch is an independent local prototype. It is not published.
+The evolution journey is now the public game entry point. Earlier cycle notes below describe its asset history.
 
 - `sceneArt.ts`: original procedural geometry, snow texture, and pixel actor frames written for this project. No Evoland artwork, characters, sounds, maps, or text was imported.
 - `renderer.ts`: original environment layout and puzzle presentation. Uses the project's existing `render/winterAssets.ts` procedural models.

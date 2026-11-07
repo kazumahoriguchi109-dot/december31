@@ -52,3 +52,5 @@ Node は `.node-version` を参照。GitHub Pages へは `main` への push で 
 これは素材の部分的な実装です。コンセプト画像の全背景・表情・アニメーションの完全再現ではありません。素材の由来と制限は [assets/art/SOURCES.md](assets/art/SOURCES.md) を参照。
 
 新しいUIのブラウザテストは、開発サーバーを起動して `LIVE_URL=http://127.0.0.1:5173/ npx playwright test -c playwright.journey.config.ts`。通常入力で全編を確認するスクリプトは `tools/play-journey.mjs` です。既存の旧操作版テストと混同しないでください。
+
+検証：単体171件、型検査・build、content/bundle検査、配布物上のUIテスト6件（Chromium/WebKit/Firefox）が通過。Chromiumでは通常のキー・ボタン入力で新規開始から全6謎、途中の保存・再読込、帰還、クレジットまで通過しました。全編スクリプトはゲーム自身の保存値を読み取り専用で位置確認に使い、状態の書換えやセーブの植込みはしていません。人の初見評価や実機Safariの確認とは別です。
