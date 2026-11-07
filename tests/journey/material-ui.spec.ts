@@ -3,7 +3,10 @@ test('material title, opening, pause, settings and resume use normal UI',async({
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('./');await page.locator('#journey-new').waitFor();
  await page.locator('.journey-title-art').evaluate((i:HTMLImageElement)=>i.decode());
- expect(await page.locator('.journey-title-friends img').evaluateAll(images=>images.length===2&&images.every(i=>(i as HTMLImageElement).naturalWidth===1024))).toBe(true);
+ expect(await page.locator('.journey-title-art').evaluate((i:HTMLImageElement)=>i.naturalWidth>1000&&i.naturalHeight>700)).toBe(true);
+ await expect(page.getByRole('button',{name:'冒険をする',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'続きから',exact:true})).toBeDisabled();
+ await expect(page.getByRole('button',{name:'設定',exact:true})).toBeVisible();
  await page.locator('#journey-new').click();await expect(page.locator('#journey-dialogue')).toBeVisible();
  await expect(page.locator('.journey-material-portrait')).toBeVisible();
  await page.keyboard.press('Escape');await expect(page.locator('#journey-pause')).toBeVisible();

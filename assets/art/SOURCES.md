@@ -16,3 +16,11 @@ The generation brief required the same faces, hair, gold hairclip, terracotta/cr
 The scenery pass uses original code-native geometry/textures inspired by the owner's winter concept palette. Navigable positions and optical puzzle geometry are preserved.
 
 The raw images add about 8.1 MiB before HTTP compression, including the approximately 2 MiB expression atlas. They retain the original pixels; responsive image variants remain future work. Do not describe this integration as a pixel-perfect recreation of all 30 concept sheets.
+
+## Interactive title-screen redesign
+
+`backgrounds/title-winter-v1.png` is an original generated winter key visual created with the built-in image tool for this title-screen request. The two friends, snowy path and warm lamps frame a quiet center reserved for live title text and menu controls. It is 1672 × 941 pixels, copied unchanged from the generated output; its exact hash is in `approved-local-images.json`.
+
+The supplied classic-RPG screenshot is used only to understand the centered logo and vertically stacked menu layout. None of its logo, characters, imagery or text is included in the game assets. The date title is rendered as the game's own live HTML/CSS design. The former winter title image and full-body cutouts remain preserved in the repository but are no longer imported by this title. Dialogue and gameplay assets remain those of the published base 7718690; the separate unpublished snow/character candidate is not part of this change.
+
+Current title/dialogue raster imports total approximately 3.84 MiB before HTTP compression (the new title image plus the retained v2 dialogue atlas). Earlier images remain as source history, not current title downloads.

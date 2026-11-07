@@ -300,3 +300,59 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
 .journey-app[data-phase="world"][data-era="3"] .journey-progress i.is-solved {background:#ac762b;border-color:#8c5e20;}
 .journey-app[data-phase="world"][data-era="3"] .journey-dialogue h2 {background:#344b5a;border-color:#caa15f;}
 .journey-app[data-phase="world"] .journey-game-ui :focus-visible {outline:3px solid #172b44;outline-offset:3px;box-shadow:0 0 0 6px #fff6e2;}
+
+/* Title: a quiet date in the winter sky. Its controls stay separate from the game HUD. */
+.journey-title {background:#090f1e;isolation:isolate;}
+.journey-title-art {position:fixed;object-position:center;opacity:1;pointer-events:none;}
+.journey-title-shade {position:fixed;pointer-events:none;background:radial-gradient(ellipse at 50% 34%,#070e1b44,transparent 68%),linear-gradient(180deg,#060d1a22,transparent 65%,#060d1a44);}
+.journey-title-copy {z-index:2;width:100%;min-height:0;align-items:center;justify-content:flex-start;padding:clamp(35px,9svh,100px) 24px 100px;text-align:center;}
+.journey-title-emblem {display:flex;align-items:center;justify-content:center;gap:14px;color:#e0c691;font-size:22px;line-height:1;margin-bottom:18px;}
+.journey-title-emblem>span {width:40px;height:1px;background:linear-gradient(90deg,transparent,#c8b28799);}
+.journey-title-emblem>span:last-child {transform:rotate(180deg);}
+.journey-title h1 {display:flex;align-items:baseline;justify-content:center;gap:.035em;font-family:"Baskerville","Times New Roman","Hiragino Mincho ProN","Yu Mincho",serif;font-size:clamp(4rem,8vw,7rem);font-weight:400;line-height:1.1;letter-spacing:-.04em;white-space:nowrap;margin:0;color:#fff6df;text-shadow:0 2px 18px #051127,0 0 55px #c8dbe71f;}
+.journey-date-number {font-variant-numeric:lining-nums;}
+.journey-date-unit {font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:.38em;font-weight:500;letter-spacing:0;margin-left:.12em;margin-right:.25em;}
+.journey-date-unit:last-child {margin-right:0;}
+.journey-title-rule {position:relative;height:1px;width:clamp(190px,26vw,350px);margin:22px 0 30px;background:linear-gradient(90deg,transparent,#b8c8d080 25%,#b8c8d080 75%,transparent);}
+.journey-title-rule>span {position:absolute;left:50%;top:-3px;width:7px;height:7px;transform:translateX(-50%) rotate(45deg);background:#d4b77e;box-shadow:0 0 0 5px #132139;}
+.journey-title-menu {display:flex;flex-direction:column;align-items:center;gap:3px;width:min(280px,100%);}
+.journey-title-option {position:relative;display:block;width:100%;min-height:46px;padding:8px 30px;border:1px solid transparent;border-radius:2px;background:transparent;color:#f7efdd;font-family:"Hiragino Mincho ProN","Yu Mincho",serif!important;font-size:1.125rem!important;line-height:1.5;letter-spacing:.16em;text-align:center;text-shadow:0 2px 8px #061329,0 0 16px #061329;transition:color .15s,background-color .15s;}
+.journey-title-option::before {content:'';position:absolute;left:28px;top:50%;width:5px;height:5px;transform:translateY(-50%) rotate(45deg);background:#e7c58a;opacity:0;}
+.journey-title-option:focus::before,.journey-title-option:hover:not(:disabled)::before {opacity:1;}
+.journey-title-option:focus,.journey-title-option:hover:not(:disabled) {color:#ffe4ae;background:linear-gradient(90deg,transparent,#aec4dd0d,transparent);}
+.journey-title-menu .journey-title-option:focus-visible {outline:1px solid #e4c692;outline-offset:1px;box-shadow:0 0 0 3px #0d1b32b3;}
+.journey-title-menu .journey-title-option:disabled {opacity:1;color:#a6b0c0;text-shadow:0 2px 8px #061329;}
+.journey-continue-row {width:100%;}
+#journey-continue-note {margin:-3px 0 5px;font-size:.6875rem;line-height:1.5;color:#b8c3d3;letter-spacing:.02em;text-shadow:0 2px 8px #061329;}
+.journey-title-help {position:fixed;z-index:2;bottom:max(16px,env(safe-area-inset-bottom));left:16px;right:16px;margin:0;text-align:center;color:#ccd5de;font-size:.6875rem;line-height:1.5;letter-spacing:.07em;text-shadow:0 1px 8px #071325;pointer-events:none;}
+.journey-title-help>span {margin:0 14px;color:#cbb68e;}
+.journey-settings-dialog {width:min(440px,calc(100% - 32px));max-height:calc(100svh - 32px);padding:28px;overflow:auto;overscroll-behavior:contain;}
+.journey-settings-dialog:not([open]) {display:none;}
+.journey-settings-dialog::backdrop {background:#050d1bd9;backdrop-filter:blur(5px);}
+.journey-settings-dialog h2 {font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:1.5rem;font-weight:500;letter-spacing:.12em;margin:0 0 20px;}
+.journey-settings-dialog .journey-button {width:100%;justify-content:center;}
+.journey-settings-dialog :focus-visible {outline:3px solid #294f76;outline-offset:3px;box-shadow:0 0 0 6px #fff4d9;}
+@media (max-width:600px) {
+ .journey-title-copy {padding-top:clamp(48px,12svh,105px);}
+ .journey-title h1 {font-size:clamp(3.4rem,14vw,5rem);}
+ .journey-title-rule {margin:24px 0 30px;}
+ .journey-title-art {object-position:50% center;}
+}
+@media (max-height:500px) {
+ .journey-title-copy {padding-top:18px;padding-bottom:55px;}
+ .journey-title-emblem {font-size:16px;margin-bottom:6px;}
+ .journey-title h1 {font-size:clamp(2.8rem,10svh,4rem);}
+ .journey-title-rule {margin:10px 0 8px;}
+ .journey-title-menu {gap:0;}
+ .journey-title-option {min-height:40px;padding-top:5px;padding-bottom:5px;font-size:1rem!important;}
+ #journey-continue-note {font-size:.625rem;margin-bottom:2px;}
+ .journey-title-help {bottom:8px;font-size:.625rem;}
+ .journey-settings-dialog {padding:18px 24px;}
+ .journey-settings-dialog h2 {margin-bottom:12px;}
+}
+@media (max-height:500px) {
+ .journey-title-copy {padding-top:12px;}
+ .journey-title-emblem {font-size:14px;margin-bottom:4px;}
+ .journey-title h1 {font-size:clamp(2.4rem,10svh,3rem);}
+}
+@media (max-height:300px) {.journey-title-help {display:none;}}

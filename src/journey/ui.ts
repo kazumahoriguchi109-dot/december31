@@ -2,9 +2,7 @@ import type { ContextAction, JourneyState, Expression } from './contract';
 import { MAP, distance } from './contract';
 import type { DialogueEmotion } from '../ui/portraits';
 import { materialPortrait } from './materialPortrait';
-import keyart from '../../assets/art/backgrounds/snow-path.png';
-import playerArtwork from '../../assets/art/characters/player-neutral-v1.png';
-import totoArtwork from '../../assets/art/characters/toto-neutral-v1.png';
+import keyart from '../../assets/art/backgrounds/title-winter-v1.png';
 import './style.css';
 
 type Screen = 'title' | 'game' | 'pause' | 'credits';
@@ -58,9 +56,24 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    <p id="journey-toast" class="journey-toast" role="status" aria-live="polite" hidden></p>
   </div>
   <section id="journey-title" class="journey-screen journey-title" aria-labelledby="journey-title-heading">
-   <img class="journey-title-art" src="${keyart}" width="1536" height="1024" fetchpriority="high" alt=""/><div class="journey-title-shade"></div><div class="journey-title-friends" aria-hidden="true"><img src="${totoArtwork}" width="1024" height="1536" alt=""/><img src="${playerArtwork}" width="1024" height="1536" alt=""/></div>
-   <div class="journey-title-copy"><p class="journey-eyebrow">冬休みの、ふたりの冒険</p><h1 id="journey-title-heading">12月31日</h1><p class="journey-title-intro">いつもの部屋から、知らない世界へ。<br/>歩いて、見つけて、ふたりで帰ろう。</p><div class="journey-menu"><button class="journey-button journey-primary" data-action="continue" id="journey-continue" hidden>つづきから <span>→</span></button><button class="journey-button" data-action="new" id="journey-new">はじめから <span>→</span></button><button class="journey-text-button" data-action="credits">つくった人たち</button></div><p class="journey-title-note">急がなくて、だいじょうぶ。<br/>キーボードで歩き、気になったものを調べる冒険です。</p></div>
+   <img class="journey-title-art" src="${keyart}" width="1672" height="941" fetchpriority="high" alt=""/><div class="journey-title-shade" aria-hidden="true"></div>
+   <div class="journey-title-copy">
+    <div class="journey-title-emblem" aria-hidden="true"><span></span>✧<span></span></div>
+    <h1 id="journey-title-heading" aria-label="12月31日"><span class="journey-date-number">12</span><span class="journey-date-unit">月</span><span class="journey-date-number">31</span><span class="journey-date-unit">日</span></h1>
+    <div class="journey-title-rule" aria-hidden="true"><span></span></div>
+    <nav class="journey-title-menu" aria-label="タイトルメニュー">
+     <button class="journey-title-option" data-action="new" id="journey-new">冒険をする</button>
+     <div class="journey-continue-row"><button class="journey-title-option" data-action="continue" id="journey-continue" disabled aria-describedby="journey-continue-note">続きから</button><p id="journey-continue-note">まだ冒険の記録がありません</p></div>
+     <button class="journey-title-option" id="journey-title-settings-button" aria-haspopup="dialog" aria-controls="journey-title-settings">設定</button>
+    </nav>
+   </div>
+   <p class="journey-title-help">↑ ↓ 選ぶ<span>·</span>Enter 決定</p>
   </section>
+  <dialog id="journey-title-settings" class="journey-settings-dialog journey-paper" aria-labelledby="journey-settings-heading">
+   <h2 id="journey-settings-heading">設定</h2>
+   <fieldset class="journey-settings"><legend>心地よく遊ぶために</legend><label for="journey-title-volume">音の大きさ <output id="journey-title-volume-output">70%</output></label><input id="journey-title-volume" type="range" min="0" max="1" step="0.05" value="0.7"/><label class="journey-check"><input id="journey-title-motion" type="checkbox"/>動きをひかえめにする</label></fieldset>
+   <button class="journey-button" id="journey-title-settings-close" autofocus>戻る</button>
+  </dialog>
   <section id="journey-pause" class="journey-screen journey-pause" aria-labelledby="journey-pause-heading" hidden><div class="journey-paper"><p class="journey-eyebrow">冒険は、ここで待っている</p><h1 id="journey-pause-heading">ひと休み</h1><div class="journey-menu"><button class="journey-button journey-primary" data-action="resume">冒険へ戻る <span>→</span></button></div><fieldset class="journey-settings"><legend>心地よく遊ぶために</legend><label for="journey-volume">音の大きさ <output id="journey-volume-output">70%</output></label><input id="journey-volume" type="range" min="0" max="1" step="0.05" value="0.7"/><label class="journey-check"><input id="journey-motion" type="checkbox"/>動きをひかえめにする</label></fieldset><div class="journey-control-guide"><p><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> 歩く</p><p><kbd>E</kbd> / <kbd>Space</kbd> 近くを調べる</p><p id="journey-pause-extra"></p><p><kbd>Esc</kbd> ひと休み / 戻る</p></div><button class="journey-text-button" data-action="title">タイトルへ</button></div></section>
   <section id="journey-credits" class="journey-screen journey-credits" aria-labelledby="journey-credits-heading" hidden><div class="journey-paper"><p class="journey-eyebrow">また、いっしょに。</p><h1 id="journey-credits-heading">12月31日</h1><p class="journey-credit-lead">ふたりの冒険を、遊んでくれてありがとう。</p><dl><dt>企画・制作</dt><dd>Kazuma Horiguchi</dd><dt>制作支援</dt><dd>Claude Code / Codex</dd><dt>描画</dt><dd>Three.js</dd></dl><p class="journey-credit-note">冬の風景とふたりの物語。<br/>それぞれの素材の利用条件は、プロジェクトのライセンス記録に保存しています。</p><button class="journey-button journey-primary" data-action="title">タイトルへ <span>→</span></button></div></section>
  </div>`;
@@ -74,8 +87,37 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
  let screen:Screen='title', talking=false, dialogueKey='', observed=false, toastTimer:ReturnType<typeof setTimeout>|undefined;
  let lastEra=-1, lastSolved='', lastPhase='', lastPartnerStatus='';
  root.addEventListener('click',event=>{const button=(event.target as Element).closest<HTMLButtonElement>('[data-action]');if(button&&!button.disabled){onAction(button.dataset['action']!);}});
- get<HTMLInputElement>('journey-volume').addEventListener('input',event=>{const value=(event.target as HTMLInputElement).value;text(get('journey-volume-output'),`${Math.round(Number(value)*100)}%`);onAction('volume',value);});
- get<HTMLInputElement>('journey-motion').addEventListener('change',event=>onAction('motion',String((event.target as HTMLInputElement).checked)));
+ const settingsDialog=get<HTMLDialogElement>('journey-title-settings'), settingsButton=get<HTMLButtonElement>('journey-title-settings-button');
+ const titleMenu=root.querySelector<HTMLElement>('.journey-title-menu')!;
+ const focusTitle=()=>{(get<HTMLButtonElement>('journey-continue').disabled?get('journey-new'):get('journey-continue')).focus({preventScroll:true});};
+ settingsButton.addEventListener('click',()=>{if(screen==='title'&&!settingsDialog.open)settingsDialog.showModal();});
+ get('journey-title-settings-close').addEventListener('click',()=>settingsDialog.close());
+ settingsDialog.addEventListener('close',()=>{if(screen==='title')settingsButton.focus({preventScroll:true});});
+ titleMenu.addEventListener('keydown',event=>{
+  if(event.altKey||event.ctrlKey||event.metaKey||!['ArrowUp','ArrowDown'].includes(event.key))return;
+  const buttons=[...titleMenu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+  const current=buttons.indexOf(document.activeElement as HTMLButtonElement);
+  event.preventDefault();buttons[(current+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();
+ });
+ function syncSettings(settings:{volume:number;reducedMotion:boolean}){
+  for(const prefix of ['journey','journey-title']){
+   get<HTMLInputElement>(`${prefix}-volume`).value=String(settings.volume);
+   text(get(`${prefix}-volume-output`),`${Math.round(settings.volume*100)}%`);
+   get<HTMLInputElement>(`${prefix}-motion`).checked=settings.reducedMotion;
+  }
+  app.dataset['reducedMotion']=String(settings.reducedMotion);
+ }
+ for(const prefix of ['journey','journey-title']){
+  get<HTMLInputElement>(`${prefix}-volume`).addEventListener('input',event=>{
+   const value=(event.target as HTMLInputElement).value;
+   syncSettings({volume:Number(value),reducedMotion:get<HTMLInputElement>(`${prefix}-motion`).checked});onAction('volume',value);
+  });
+  get<HTMLInputElement>(`${prefix}-motion`).addEventListener('change',event=>{
+   const checked=(event.target as HTMLInputElement).checked;
+   syncSettings({volume:Number(get<HTMLInputElement>(`${prefix}-volume`).value),reducedMotion:checked});onAction('motion',String(checked));
+  });
+ }
+ canvas.tabIndex=-1;canvas.inert=true;
  function syncExploration(){app.dataset['talking']=String(talking);show(bottom,screen==='game'&&!talking);show(walkHelp,screen==='game'&&!talking&&!observed);show(dialogue,screen==='game'&&talking);}
  return {
   canvas,
@@ -99,7 +141,13 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    if(lastPartnerStatus!==`${partnerStatus}:${state.toto.plate}`){lastPartnerStatus=`${partnerStatus}:${state.toto.plate}`;text(get('journey-partner-label'),moving?'トトを呼び戻す':state.toto.waiting?'トトを呼ぶ':'トトに声をかける');const note=get('journey-partner-state');text(note,occupied?'印を少し空けよう':moving?'印へ向かっている':state.toto.waiting?(state.toto.plate?'印で待っている':'ここで待っている'):'');show(note,moving||state.toto.waiting);partner.dataset['partnerState']=partnerStatus;partner.classList.toggle('is-waiting',state.toto.waiting);}
    syncExploration();
   },
-  setScreen(next){if(next===screen)return;screen=next;app.dataset['screen']=next;show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();const focus=next==='game'?canvas:next==='pause'?get<HTMLButtonElement>('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):next==='title'?get<HTMLButtonElement>('journey-continue').hidden?get('journey-new'):get('journey-continue'):get('journey-credits').querySelector('button');(focus as HTMLElement|null)?.focus({preventScroll:true});},
+  setScreen(next){
+   if(settingsDialog.open&&next!=='title')settingsDialog.close();
+   screen=next;app.dataset['screen']=next;canvas.tabIndex=next==='game'?0:-1;canvas.inert=next!=='game';
+   show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();
+   if(next==='title'){focusTitle();return;}
+   const focus=next==='game'?canvas:next==='pause'?get('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):get('journey-credits').querySelector('button');focus?.focus({preventScroll:true});
+  },
   setDialogue(line){
    talking=!!line;
    if(line){const key=`${line.speaker}\n${line.text}\n${line.expression??''}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion=emotionFor(line);get('journey-portrait').innerHTML=materialPortrait(line.speaker,emotion); dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';dialogue.dataset['emotion']=emotion;}}
@@ -107,8 +155,13 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   },
   setToast(value){clearTimeout(toastTimer);text(toast,value);show(toast,!!value);if(value)toastTimer=setTimeout(()=>show(toast,false),4500);},
   setEvolution(era){show(evolution,era!==null);if(era===null){text(get('journey-evolution-title'),'');text(get('journey-evolution-keys'),'');delete evolution.dataset['era'];return;}const entry=EVOLUTIONS[Math.max(0,Math.min(3,era))]!;text(get('journey-evolution-title'),entry.title);text(get('journey-evolution-keys'),entry.keys);evolution.dataset['era']=String(era);},
-  setContinue(has){show(get('journey-continue'),has);get('journey-new').classList.toggle('journey-primary',!has);},
-  setSettings(settings){get<HTMLInputElement>('journey-volume').value=String(settings.volume);text(get('journey-volume-output'),`${Math.round(settings.volume*100)}%`);get<HTMLInputElement>('journey-motion').checked=settings.reducedMotion;app.dataset['reducedMotion']=String(settings.reducedMotion);},
+  setContinue(has){
+   const button=get<HTMLButtonElement>('journey-continue');button.disabled=!has;
+   show(get('journey-continue-note'),!has);
+   if(has)button.removeAttribute('aria-describedby');else button.setAttribute('aria-describedby','journey-continue-note');
+   if(!has&&document.activeElement===button)get('journey-new').focus({preventScroll:true});
+  },
+  setSettings:syncSettings,
   setSaveStatus(value){text(get('journey-save'),value);},
  };
 }
