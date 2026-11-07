@@ -1,0 +1,8 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Local UI fixture</title></head><body><main id="fixture"></main><script type="module">
+import { createUI } from '/src/journey/ui.ts';
+import { createState } from '/src/journey/model.ts';
+const params=new URLSearchParams(location.search),root=document.querySelector('#fixture');
+const ui=createUI(root,()=>{}),state=createState();state.phase='world';state.era=Number(params.get('era')||0);
+ui.render(state,null,'冬の道を、ふたりでたどろう');ui.setScreen('game');
+ui.setDialogue({speaker:params.get('speaker')||'主人公',expression:params.get('expression')||'neutral',text:'あの向こうには、何があるんだろう。ふたりで、もう少し歩いてみよう。'});
+</script></body></html>

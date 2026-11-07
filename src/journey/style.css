@@ -270,10 +270,33 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
  .journey-title-art {opacity:1;}
 }
 @media (max-height:620px) {.journey-portrait {height:95px;}.journey-title-friends {width:min(45vw,580px);right:1%;}}
-/* Neutral art is adopted directly; expressive SVG portraits remain until matching variants exist. */
+/* Legacy SVG layout remains compatible; the current dialogue uses the painted atlas. */
 .journey-portrait:has(svg) {height:auto;overflow:visible;padding:4px 4px 0;}
 .journey-dialogue {border:2px solid #29415f;border-left:4px solid var(--speaker-accent);}
 .journey-dialogue::before,.journey-dialogue::after {content:'';position:absolute;top:5px;width:5px;height:5px;background:#d9ac5b;pointer-events:none;}
 .journey-dialogue::before {left:5px;box-shadow:7px 0 #d9ac5b,0 7px #d9ac5b;}
 .journey-dialogue::after {right:5px;box-shadow:-7px 0 #d9ac5b,0 7px #d9ac5b;}
 .journey-dialogue h2 {position:relative;top:-5px;box-shadow:0 2px 0 #b9a47d55;}
+
+/* Cycle 012: the same painted faces in every expression, cropped by the atlas cell.
+   A square viewport keeps head size and baseline stable across emotion changes. */
+.journey-portrait {height:auto;aspect-ratio:1;align-self:center;border-radius:12px 12px 5px 5px;background:radial-gradient(ellipse at 50% 65%,#ead9b9,#f8f0e0 80%);}
+.journey-material-portrait {width:400%;height:200%;max-width:none;left:0;top:0;object-fit:fill;}
+
+/* The kit's four visual languages are explicitly mapped to the existing four eras.
+   Only world controls evolve; title, settings and the home stay consistently readable. */
+.journey-app[data-phase="world"][data-era="0"] .journey-game-ui {filter:grayscale(1);}
+.journey-app[data-phase="world"] :is(.journey-objective,.journey-dialogue,.journey-interact) {background-color:#f5efe3;background-image:radial-gradient(ellipse at 15% 8%,#fffaf1b3,transparent 75%),repeating-linear-gradient(0deg,#8b735b04 0 1px,transparent 1px 4px);}
+.journey-app[data-phase="world"][data-era="0"] :is(.journey-objective,.journey-dialogue,.journey-interact) {background:#fbf8ef;border:2px solid #272b30;border-radius:0;box-shadow:3px 3px 0 #272b30;}
+.journey-app[data-phase="world"][data-era="0"] .journey-dialogue h2 {border:1px solid #272b30;border-radius:0;background:#272b30;box-shadow:none;}
+.journey-app[data-phase="world"][data-era="0"] .journey-dialogue::before,.journey-app[data-phase="world"][data-era="0"] .journey-dialogue::after {display:none;}
+.journey-app[data-phase="world"][data-era="0"] :is(.journey-abilities button,.journey-walk-help,.journey-icon-button,.journey-next) {border-radius:0;border-color:#272b30;}
+.journey-app[data-phase="world"][data-era="1"] :is(.journey-objective,.journey-dialogue,.journey-interact) {border:2px solid #29415f;border-radius:2px;box-shadow:2px 2px 0 #29415f44,inset 0 0 0 2px #fffaf1;}
+.journey-app[data-phase="world"][data-era="1"] .journey-dialogue h2 {background:#29415f;border-color:#d9ac5b;border-radius:2px;}
+.journey-app[data-phase="world"][data-era="2"] :is(.journey-objective,.journey-dialogue,.journey-interact) {border:1px solid #c7bba4;border-bottom:3px solid #b6aa94;border-radius:12px;box-shadow:0 7px 13px #15283e33,inset 0 1px 0 #fffdf5;}
+.journey-app[data-phase="world"][data-era="2"] .journey-dialogue::before,.journey-app[data-phase="world"][data-era="2"] .journey-dialogue::after {display:none;}
+.journey-app[data-phase="world"][data-era="2"] .journey-dialogue h2 {border-radius:8px;background:#364b62;border-color:#c7bba4;}
+.journey-app[data-phase="world"][data-era="3"] :is(.journey-objective,.journey-dialogue,.journey-interact) {border:1px solid #bd8c42;border-bottom:3px solid #a97c39;border-radius:12px;box-shadow:0 7px 16px #1a24433d,inset 0 0 0 3px #fff6e6,0 0 14px #efc68124;}
+.journey-app[data-phase="world"][data-era="3"] .journey-progress i.is-solved {background:#ac762b;border-color:#8c5e20;}
+.journey-app[data-phase="world"][data-era="3"] .journey-dialogue h2 {background:#344b5a;border-color:#caa15f;}
+.journey-app[data-phase="world"] .journey-game-ui :focus-visible {outline:3px solid #172b44;outline-offset:3px;box-shadow:0 0 0 6px #fff6e2;}

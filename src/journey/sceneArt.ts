@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { winterAsset, type WinterAsset } from '../render/winterAssets';
-export const C={snow:0xe1e5d9,paper:0xf1dfb3,pine:0x355b50,navy:0x263e4c,wood:0x78513a,gold:0xd9ad65,water:0x427f99,red:0xb45e4b,stone:0x8c9f9c};
+export const C={snow:0xdce2f4,paper:0xf1dfb3,pine:0x355b50,navy:0x263e4c,wood:0x78513a,gold:0xd9ad65,water:0x427f99,red:0xb45e4b,stone:0x8c9f9c};
 export const material=(color:number)=>new THREE.MeshStandardMaterial({color,roughness:.93,metalness:0,flatShading:true});
 export function box(parent:THREE.Object3D,w:number,h:number,d:number,x:number,y:number,z:number,color:number){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;parent.add(m);return m;}
 export function cylinder(parent:THREE.Object3D,r:number,h:number,x:number,y:number,z:number,color:number,n=12){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,n),material(color));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;parent.add(m);return m;}
@@ -13,7 +13,7 @@ export function line(parent:THREE.Object3D,a:THREE.Vector3,b:THREE.Vector3,r:num
 export function torus(parent:THREE.Object3D,r:number,t:number,x:number,y:number,z:number,color:number){const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,6,48),material(color));m.position.set(x,y,z);parent.add(m);return m;}
 export function fence(parent:THREE.Object3D,x1:number,x2:number,z:number,y=0){
  for(let x=x1;x<=x2+.1;x+=1.9){box(parent,.16,1.05,.16,x,y+.525,z,C.wood);box(parent,.26,.08,.26,x,y+1.09,z,C.snow);}
- box(parent,x2-x1,.13,.12,(x1+x2)/2,y+.7,z,C.wood);box(parent,x2-x1,.11,.12,(x1+x2)/2,y+.3,z,C.wood);
+ box(parent,x2-x1,.13,.12,(x1+x2)/2,y+.7,z,C.wood);box(parent,x2-x1,.075,.22,(x1+x2)/2,y+.79,z,C.snow);box(parent,x2-x1,.11,.12,(x1+x2)/2,y+.3,z,C.wood);
 }
 
 /** Hand-pixelled storybook actors: separate E0/E1 artwork, not a downsampled mesh. Bottom centre is the exact foot contact. */
@@ -34,18 +34,51 @@ export function pixelActor(kind:'player'|'toto'){
  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:textures[0]![0]![0],alphaTest:.5}));sprite.center.set(.5,0);sprite.scale.set(1.15,1.725,1);
  return{sprite,update(era:number,facing:number,walk:number){let dir=Math.round(facing/(Math.PI/2));dir=((dir%4)+4)%4;(sprite.material as THREE.SpriteMaterial).map=textures[era]![dir]![Math.sin(walk)>0?1:0]!;}};
 }
-export function snowTexture(){const cv=document.createElement('canvas');cv.width=cv.height=128;const c=cv.getContext('2d')!;c.fillStyle='#e1e5d9';c.fillRect(0,0,128,128);let seed=31;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);for(let i=0;i<210;i++){c.fillStyle=i%4?'#d4ddd1':'#edf0e4';const x=rand()*128,y=rand()*128;c.fillRect(x,y,2+rand()*5,1+rand()*2);}const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(6,14);t.magFilter=THREE.NearestFilter;return t;}
+/** Broad, seamless drifts rather than high-frequency confetti. Deterministic on reload. */
+export function snowTexture(){
+ const cv=document.createElement('canvas');cv.width=cv.height=256;const c=cv.getContext('2d')!;
+ c.fillStyle='#c7cde6';c.fillRect(0,0,256,256);let seed=31;const rand=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+ for(let i=0;i<38;i++){const x=rand()*256,y=rand()*256,r=20+rand()*55;for(const dx of[-256,0,256])for(const dy of[-256,0,256]){
+  const g=c.createRadialGradient(x+dx,y+dy,0,x+dx,y+dy,r);g.addColorStop(0,i%3?'rgba(240,237,250,.24)':'rgba(110,128,181,.13)');g.addColorStop(1,'rgba(190,202,230,0)');c.fillStyle=g;c.fillRect(x+dx-r,y+dy-r,r*2,r*2);
+ }}
+ const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,5);return t;
+}
+
+/** Shared low-poly bough geometry. Each tree uses only three draw calls, and remains
+ * one occlusion group. All scenery stays outside the existing walkable boundary. */
+const boughGeometry=new THREE.IcosahedronGeometry(1,1),twigGeometry=new THREE.CylinderGeometry(.65,1,1,6);
+const boughSnow=material(0xd8dff4),boughNeedles=material(0x3f5369),boughBark=material(0x66565e);
+export function winterTree(parent:THREE.Object3D,x:number,y:number,z:number,index:number){
+ const group=new THREE.Group();group.name='winter-boundary-tree';group.position.set(x,y,z);group.rotation.y=index*2.39996;
+ const slender=index%3===0, bare=index%7===3, height=bare?4.7:4.5;
+ group.scale.set(1,.9+(Math.sin(index*4.7)+1)*.12,1);
+ const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0);
+ const trunk=new THREE.InstancedMesh(twigGeometry,boughBark,bare?15:1);
+ const branch=(i:number,a:THREE.Vector3,b:THREE.Vector3,r:number)=>{const delta=b.clone().sub(a);dummy.position.copy(a).add(b).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(up,delta.clone().normalize());dummy.scale.set(r,delta.length(),r);dummy.updateMatrix();trunk.setMatrixAt(i,dummy.matrix);};
+ branch(0,new THREE.Vector3(),new THREE.Vector3(.12,height,0),.15);
+ const count=bare?7:25,needles=bare?null:new THREE.InstancedMesh(boughGeometry,boughNeedles,count),caps=new THREE.InstancedMesh(boughGeometry,boughSnow,count);
+ for(let i=0;i<count;i++){
+  const tier=Math.floor(i/5),a=i*2.39996+index*.4,reach=bare?.65:(1-tier*.18)*(slender?.85:1.15),h=bare?1.8+i*.42:1+tier*.84;
+  const px=Math.cos(a)*reach*.65,pz=Math.sin(a)*reach*.65;
+  if(bare){const end=new THREE.Vector3(Math.cos(a)*1.3,h+.5,Math.sin(a)*1.3);branch(i*2+1,new THREE.Vector3(0,h-.4,0),end,.055);branch(i*2+2,end.clone().multiplyScalar(.8),new THREE.Vector3(end.x*1.1,h+1,end.z*1.1),.025);}
+  dummy.position.set(px,h+(bare?.2:0),pz);dummy.rotation.set(.08*Math.sin(i),a,.12*Math.cos(i));dummy.scale.set(bare?.46:reach*.8,bare?.12:.36, bare?.18:reach*.51);dummy.updateMatrix();
+  if(needles)needles.setMatrixAt(i,dummy.matrix);
+  dummy.position.y+=bare?0:.19;dummy.scale.multiply(new THREE.Vector3(1.03,.8,1.05));dummy.updateMatrix();caps.setMatrixAt(i,dummy.matrix);
+ }
+ for(const mesh of[trunk,caps,...(needles?[needles]:[])]){mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();group.add(mesh);}
+ parent.add(group);return group;
+}
 
 /** A shallow swept path: soft irregular edges, with no extra collision or height step. */
-export function trail(parent:THREE.Object3D,points:readonly (readonly [number,number])[],width:number,color=0xc7bb9c){
+export function trail(parent:THREE.Object3D,points:readonly (readonly [number,number])[],width:number,color=0xaeb9d5){
  const positions:number[]=[],indices:number[]=[];points.forEach(([x,z],i)=>{const before=points[Math.max(0,i-1)]!,after=points[Math.min(points.length-1,i+1)]!,dx=after[0]-before[0],dz=after[1]-before[1],l=Math.hypot(dx,dz)||1,half=width*(.5+Math.sin(i*2.3)*.035);positions.push(x-dz/l*half,.033,z+dx/l*half,x+dz/l*half,.033,z-dx/l*half);if(i){const n=i*2;indices.push(n-2,n-1,n,n-1,n+1,n);}});
  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setIndex(indices);geo.computeVertexNormals();const mat=material(color);mat.side=THREE.DoubleSide;const mesh=new THREE.Mesh(geo,mat);mesh.receiveShadow=true;parent.add(mesh);return mesh;
 }
-export function snowBank(parent:THREE.Object3D,x:number,z:number,rx:number,rz:number){const m=new THREE.Mesh(new THREE.CircleGeometry(1,12),material(0xebeee3));m.rotation.x=-Math.PI/2;m.position.set(x,.046,z);m.scale.set(rx,rz,1);m.receiveShadow=true;parent.add(m);return m;}
+export function snowBank(parent:THREE.Object3D,x:number,z:number,rx:number,rz:number){const m=new THREE.Mesh(new THREE.CircleGeometry(1,12),material(0xdde3f3));m.rotation.x=-Math.PI/2;m.position.set(x,.046,z);m.scale.set(rx,rz,1);m.receiveShadow=true;parent.add(m);return m;}
 
 /** Low-cost bank stones with settled snow; instance geometry does not change the walkable terrain. */
 export function bankStones(parent:THREE.Object3D,points:readonly (readonly [number,number])[]){
- const geo=new THREE.IcosahedronGeometry(1,0),stone=new THREE.InstancedMesh(geo,material(0x81938e),points.length),snow=new THREE.InstancedMesh(geo,material(0xe5e9df),points.length),dummy=new THREE.Object3D();
+ const geo=new THREE.IcosahedronGeometry(1,0),stone=new THREE.InstancedMesh(geo,material(0x7e829b),points.length),snow=new THREE.InstancedMesh(geo,material(0xdce2f4),points.length),dummy=new THREE.Object3D();
  points.forEach(([x,z],i)=>{dummy.position.set(x,.095,z);dummy.scale.set(.32+(i%3)*.055,.17,.23);dummy.rotation.set(0,i*.7,.04*Math.sin(i));dummy.updateMatrix();stone.setMatrixAt(i,dummy.matrix);dummy.position.y=.225;dummy.scale.y=.055;dummy.scale.x*=.86;dummy.scale.z*=.86;dummy.updateMatrix();snow.setMatrixAt(i,dummy.matrix);});stone.castShadow=stone.receiveShadow=true;snow.receiveShadow=true;parent.add(stone,snow);return{stone,snow};
 }
 export function waterTexture(){const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d')!;ctx.fillStyle='#4c8597';ctx.fillRect(0,0,128,128);for(let row=0;row<12;row++){const y=row*11;ctx.fillStyle=row%3?'#6198a6':'#8bb8be';for(let x=(row%3)*12;x<128;x+=43)ctx.fillRect(x,y,18+(row%4)*3,1);}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(7,1);t.magFilter=THREE.NearestFilter;return t;}

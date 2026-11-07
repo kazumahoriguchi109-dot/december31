@@ -3,12 +3,16 @@
 These three images were supplied in the owner's generated December 31 material kit and selected for this update. They are not Evoland artwork. The original files are copied unchanged and their exact SHA-256 hashes are recorded in `approved-local-images.json`.
 
 - `backgrounds/snow-path.png`: winter-path concept, used as decorative title artwork only. It is not a navigable map or a puzzle surface.
-- `characters/player-neutral-v1.png`: generated protagonist cutout, used on the title and for neutral dialogue.
-- `characters/toto-neutral-v1.png`: generated Toto cutout, used on the title and for neutral dialogue.
+- `characters/player-neutral-v1.png`: generated protagonist cutout, used on the title.
+- `characters/toto-neutral-v1.png`: generated Toto cutout, used on the title.
 - `ui/icons/pause.svg`: code-native icon from the same kit, retained for reference; the current interface uses text for pause.
 
 The owner requested incorporating the prepared materials and updating this game. The supplied kit does not identify a precise image-generation model or historical terms version, and this file does not assert exclusive copyright or guarantee non-infringement. No third-party image pack was downloaded for this update.
 
-The matching question/surprise/relief image variants are not available. Existing expression-aware SVG portraits remain in those cases; the live characters keep their existing animated expressions and gestures. Existing 2D/3D environments are retained because replacing them with the concept boards would change the navigable world and puzzle geometry.
+Cycle 012 adds `characters/dialogue-expressions-v2.png`, a 4-column × 2-row transparent atlas generated with the built-in image tool on 2026-11-07 from the two owner-provided neutral cutouts and the character design sheet. Top row is the protagonist, bottom row is Toto; columns are neutral, curious/questioning, surprised, relieved. All dialogue expressions now use this same painted atlas. The image is copied unchanged; the UI selects the correct cell with a CSS viewport. This is a new generated derivative, not an exact original painting or a claim of pixel-perfect identity. The live 2D/3D actors retain their separate expressions and gestures.
 
-The raw images add about 6.1 MiB before HTTP compression. They retain the original pixels; responsive image variants remain future work. Do not describe this integration as a pixel-perfect recreation of all 30 concept sheets.
+The generation brief required the same faces, hair, gold hairclip, terracotta/cream coat, olive coat and red scarf, eight equal chest-up crops, correctly distinguished emotions, matching scale, no text, no cell borders, and transparent silhouettes. The exact output hash is recorded in `approved-local-images.json`. No external artist asset or character was imported.
+
+The scenery pass uses original code-native geometry/textures inspired by the owner's winter concept palette. Navigable positions and optical puzzle geometry are preserved.
+
+The raw images add about 8.1 MiB before HTTP compression, including the approximately 2 MiB expression atlas. They retain the original pixels; responsive image variants remain future work. Do not describe this integration as a pixel-perfect recreation of all 30 concept sheets.

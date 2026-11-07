@@ -1,6 +1,7 @@
 import type { ContextAction, JourneyState, Expression } from './contract';
 import { MAP, distance } from './contract';
-import { portrait, type DialogueEmotion } from '../ui/portraits';
+import type { DialogueEmotion } from '../ui/portraits';
+import { materialPortrait } from './materialPortrait';
 import keyart from '../../assets/art/backgrounds/snow-path.png';
 import playerArtwork from '../../assets/art/characters/player-neutral-v1.png';
 import totoArtwork from '../../assets/art/characters/toto-neutral-v1.png';
@@ -82,7 +83,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    text(objectiveNode,objective);
    observed=state.mode==='observe';app.dataset['mode']=state.mode;
    if(lastEra!==state.era||lastPhase!==state.phase){
-    lastEra=state.era;lastPhase=state.phase;app.dataset['era']=String(state.era);
+    lastEra=state.era;lastPhase=state.phase;app.dataset['era']=String(state.era);app.dataset['phase']=state.phase;
     text(eraNode,state.phase==='room'||state.phase==='ending'?'いつもの部屋':ERA_NAMES[state.era]!);
     text(walkHelp, state.era>=1?'WASD / ↑↓←→ 歩く　 ·　 Shift 走る':'WASD / ↑↓←→ 歩く');
     text(get('journey-pause-extra'),[state.era>=1?'Shift 走る / T トトに声をかける':'',state.era>=2?'Q 見回す':'',state.era>=3?'R 共鳴':''].filter(Boolean).join('　 ·　 '));
@@ -101,7 +102,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   setScreen(next){if(next===screen)return;screen=next;app.dataset['screen']=next;show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();const focus=next==='game'?canvas:next==='pause'?get<HTMLButtonElement>('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):next==='title'?get<HTMLButtonElement>('journey-continue').hidden?get('journey-new'):get('journey-continue'):get('journey-credits').querySelector('button');(focus as HTMLElement|null)?.focus({preventScroll:true});},
   setDialogue(line){
    talking=!!line;
-   if(line){const key=`${line.speaker}\n${line.text}\n${line.expression??''}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion=emotionFor(line);get('journey-portrait').innerHTML=emotion==='neutral'?`<img class="journey-material-portrait" src="${line.speaker==='トト'?totoArtwork:playerArtwork}" width="1024" height="1536" alt=""/>`:portrait(line.speaker,emotion); dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';dialogue.dataset['emotion']=emotion;}}
+   if(line){const key=`${line.speaker}\n${line.text}\n${line.expression??''}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion=emotionFor(line);get('journey-portrait').innerHTML=materialPortrait(line.speaker,emotion); dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';dialogue.dataset['emotion']=emotion;}}
    else dialogueKey='';syncExploration();
   },
   setToast(value){clearTimeout(toastTimer);text(toast,value);show(toast,!!value);if(value)toastTimer=setTimeout(()=>show(toast,false),4500);},

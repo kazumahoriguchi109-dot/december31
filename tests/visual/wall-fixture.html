@@ -1,0 +1,9 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>Test-only wall occlusion fixture</title><style>html,body{margin:0;width:100%;height:100%}canvas{width:100%;height:100%;display:block}</style></head><body><canvas></canvas><script type="module">
+import {createRenderer} from '/src/journey/renderer.ts';
+import {createState} from '/src/journey/model.ts';
+import {wallProxyOpacity} from '/src/journey/wallPresentation.ts';
+const params=new URLSearchParams(location.search),s=createState();s.phase='world';s.era=2;s.quarter=Number(params.get('quarter')||0);s.player.x=8;s.player.z=-42;s.toto.x=8.8;s.toto.z=-41.5;
+const before=JSON.stringify(s),renderer=createRenderer(document.querySelector('canvas'));
+renderer.render(s,0,{quality:params.get('quality')||'normal',reducedMotion:true});
+document.body.dataset.stateUnchanged=String(before===JSON.stringify(s));document.body.dataset.opacity=String(wallProxyOpacity(s));document.body.dataset.wallSeen=String(s.wallSeen);document.body.dataset.ready='true';
+</script></body></html>

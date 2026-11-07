@@ -1,0 +1,5 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Local portrait atlas fixture</title></head><body><main id="gallery"></main><script type="module">
+import {materialPortrait} from '/src/journey/materialPortrait.ts';import '/src/journey/style.css';
+const el=document.querySelector('#gallery');
+el.innerHTML=['主人公','トト'].flatMap(speaker=>['neutral','question','surprise','relief'].map(emotion=>`<section><div class="journey-portrait">${materialPortrait(speaker,emotion)}</div><p>${speaker} / ${emotion}</p></section>`)).join('');
+</script><style>body{background:#f4edde;color:#19263a}#gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:32px}section{min-width:0}.journey-portrait{width:100%;border-radius:18px}p{text-align:center;font-size:15px;margin:6px 0}</style></body></html>
