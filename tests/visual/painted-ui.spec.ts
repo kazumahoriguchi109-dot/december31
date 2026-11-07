@@ -8,7 +8,7 @@ test('painted atlas keeps eight expressive faces within aligned cells',async({pa
  expect(await page.locator('.journey-portrait').evaluateAll(nodes=>nodes.every(n=>Math.abs(n.clientWidth-n.clientHeight)<2))).toBe(true);
  await page.screenshot({path:`${out}/portrait-gallery.png`,fullPage:true});
 });
-test('four world eras retain dialogue geometry and accessible focus',async({page})=>{
+test('four world eras use the approved navy dialogue and accessible focus',async({page})=>{
  await mkdir(out,{recursive:true});const appearances:string[]=[];
  for(let era=0;era<4;era++){
   await page.goto(`tests/visual/ui-fixture.html?era=${era}&expression=curious&speaker=トト`);
@@ -19,7 +19,9 @@ test('four world eras retain dialogue geometry and accessible focus',async({page
   appearances.push(await page.locator('#journey-dialogue').evaluate(n=>{const c=getComputedStyle(n);return[c.borderRadius,c.borderColor,c.boxShadow].join('|')}));
   await page.screenshot({path:`${out}/era-${era}.png`});
  }
- expect(new Set(appearances).size).toBe(4);
+ // The approved dialogue redesign replaces the former per-era paper frames.
+ expect(new Set(appearances).size).toBe(1);
+ await expect(page.locator('#journey-dialogue')).toHaveCSS('color','rgb(255, 240, 210)');
 });
 test('portrait and next action remain visible in narrow viewports',async({page})=>{
  for(const size of[{width:390,height:844},{width:667,height:375}]){

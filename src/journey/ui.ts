@@ -43,13 +43,16 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   <div class="journey-vignette" aria-hidden="true"></div>
   <div id="journey-game-ui" class="journey-game-ui" hidden>
    <header class="journey-hud">
-    <div class="journey-objective"><span class="journey-eyebrow" id="journey-era">雪の道</span><p id="journey-objective"></p><div class="journey-progress" aria-label="仕掛けの進み具合">${Array.from({length:6},(_,i)=>`<i data-puzzle="${i}" aria-hidden="true"></i>`).join('')}</div></div>
-    <div class="journey-hud-end"><div class="journey-status-row"><span id="journey-save"></span><button class="journey-icon-button" data-action="pause" aria-label="ひと休み。Escでも開きます">Ⅱ<span>ひと休み</span></button></div><div id="journey-evolution" class="journey-evolution" role="status" aria-live="polite" aria-atomic="true" hidden><h2 id="journey-evolution-title"></h2><p id="journey-evolution-keys"></p></div></div>
+    <div class="journey-objective"><span class="journey-eyebrow journey-location" id="journey-era">雪の道</span><p id="journey-objective"></p><div class="journey-progress" aria-label="仕掛けの進み具合">${Array.from({length:6},(_,i)=>`<i data-puzzle="${i}" aria-hidden="true"></i>`).join('')}</div></div>
+    <div class="journey-hud-end"><div class="journey-status-row"><span id="journey-save"></span><button class="journey-icon-button" data-action="pause" aria-label="ひと休み。Escでも開きます"><span class="journey-pause-glyph" aria-hidden="true">Ⅱ</span></button></div><div id="journey-evolution" class="journey-evolution" role="status" aria-live="polite" aria-atomic="true" hidden><h2 id="journey-evolution-title"></h2><p id="journey-evolution-keys"></p></div></div>
    </header>
-   <p id="journey-walk-help" class="journey-walk-help"><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> 歩く</p>
    <div class="journey-bottom" id="journey-bottom">
-    <div class="journey-context" id="journey-context" hidden><p id="journey-context-hint"></p><button class="journey-button journey-interact" data-action="interact" id="journey-interact"><kbd>E</kbd><span id="journey-context-label">調べる</span><span class="journey-space">/ Space</span></button></div>
+    <p id="journey-context-hint" class="journey-context-hint"></p>
+    <div class="journey-control-dock">
+    <p id="journey-walk-help" class="journey-walk-help"><kbd>WASD</kbd><span class="journey-arrow-help"> / ↑↓←→</span> 移動<span id="journey-run-help" hidden> · Shift 走る</span></p>
+    <div class="journey-context" id="journey-context" hidden><button class="journey-button journey-interact" data-action="interact" id="journey-interact"><kbd>E</kbd><span id="journey-context-label">調べる</span><span class="journey-space">/ Space</span></button></div>
     <nav class="journey-abilities" aria-label="できること"><button data-action="partner" id="journey-partner" hidden><kbd>T</kbd><span id="journey-partner-label">トトに声をかける</span><small id="journey-partner-state" role="status" hidden></small></button><button data-action="rotate" id="journey-rotate" hidden><kbd>Q</kbd><span>見回す</span></button><button data-action="resonance" id="journey-resonance" hidden><kbd>R</kbd><span>共鳴</span></button></nav>
+    </div>
    </div>
    <section id="journey-dialogue" class="journey-dialogue" aria-labelledby="journey-speaker" hidden><div class="journey-portrait" id="journey-portrait" aria-hidden="true"></div><div class="journey-dialogue-copy"><h2 id="journey-speaker"></h2><p id="journey-line" role="status" aria-live="polite" aria-atomic="true"></p></div><button class="journey-button journey-next" data-action="next"><span>つづきを聞く</span><kbd aria-hidden="true">E</kbd></button></section>
 
@@ -127,11 +130,13 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    if(lastEra!==state.era||lastPhase!==state.phase){
     lastEra=state.era;lastPhase=state.phase;app.dataset['era']=String(state.era);app.dataset['phase']=state.phase;
     text(eraNode,state.phase==='room'||state.phase==='ending'?'いつもの部屋':ERA_NAMES[state.era]!);
-    text(walkHelp, state.era>=1?'WASD / ↑↓←→ 歩く　 ·　 Shift 走る':'WASD / ↑↓←→ 歩く');
+    show(get('journey-run-help'),state.era>=1&&state.phase==='world');
+    show(progress,state.phase==='world');
     text(get('journey-pause-extra'),[state.era>=1?'Shift 走る / T トトに声をかける':'',state.era>=2?'Q 見回す':'',state.era>=3?'R 共鳴':''].filter(Boolean).join('　 ·　 '));
    }
    const solved=state.solved.map(Boolean).join();if(lastSolved!==solved){lastSolved=solved;marks.forEach((m,i)=>m.classList.toggle('is-solved',!!state.solved[i]));progress.setAttribute('aria-label',`仕掛け ${state.solved.filter(Boolean).length} / 6`);}
-   show(contextBox,!!context||observed);interact.disabled=!observed&&context?.enabled===false;
+   show(contextBox,!!context||observed||state.phase==='room'||state.phase==='ending');interact.disabled=!observed&&(!context||context.enabled===false);
+   interact.title=!context&&!observed?'気になるものに近づくと調べられます':'';
    text(contextLabel,observed?'観測をやめる':context?.label??'調べる');text(contextHint,observed?'':context?.hint??'');
    show(partner,state.era>=1&&!observed&&state.phase==='world');show(rotate,state.era>=2&&!observed&&state.phase==='world');show(resonance,state.era>=3&&!observed&&state.phase==='world');
    const moving=state.toto.plate!==null&&!state.toto.waiting;

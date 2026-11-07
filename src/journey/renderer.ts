@@ -1,3 +1,6 @@
+import {ROOM_X_SCALE} from './roomPresentation';
+import {createRoomArt} from './roomArt';
+import {roomCameraFrame} from './roomCamera';
 import {MEMORIES,memoryLit} from './memories';
 import {millVisual} from './millVisual';
 import {wallProxyOpacity} from './wallPresentation';
@@ -171,22 +174,10 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  for(let i=0;i<16;i++){const a=i*Math.PI/8,b=a+Math.PI/16;line(travellingRing,new THREE.Vector3(Math.cos(a)*1.02,.1,Math.sin(a)*1.02),new THREE.Vector3(Math.cos(b)*1.02,.1,Math.sin(b)*1.02),.035,C.paper);}
  const arrivalHoop=torus(arrivedRing,1.02,.045,0,.1,0,C.paper);arrivalHoop.rotation.x=-Math.PI/2;
  for(const x of[-.16,.16]){box(travellingRing,.13,.025,.29,x,.095,.63,C.paper);box(arrivedRing,.13,.025,.29,x,.095,.63,C.paper);}
- // Warm home, same real coordinates for arrival and ending.
- box(room,8,.4,7,0,-.2,-.5,0x896849);for(let x=-3.8;x<4;x+=.6)box(room,.025,.01,7,x,.006,-.5,0x6c513b);box(room,8,3,.2,0,1.5,-4,0xc2b59c);box(room,.2,3,7,-4,1.5,-.5,0xb7b09a);box(room,.2,3,7,4,1.5,-.5,0xb7b09a);
- asset(room,'woven_rug',0,.02,.4,1.3);box(room,2,.7,.9,MAP.console.x,.35,MAP.console.z,C.wood);box(room,1.45,.95,.12,0,1.2,-2.85,C.navy);const screen=box(room,1.25,.72,.025,0,1.2,-2.77,0x73a6ab);glyph(room,'▶',0,1.9,-2.5,'#f0ddb1',.55);asset(room,'bookshelf',-3,0,-3.2,1);asset(room,'armchair',3.4,0,1.9,1);asset(room,'table_lamp',2.4,.7,-2.5,1);
- // December's last calendar page and two cups make the room a lived-in place.
- const calendar=new THREE.Group();calendar.position.set(-1.45,1.75,-3.68);room.add(calendar);calendar.scale.setScalar(.78);
- const page=document.createElement('canvas');page.width=page.height=128;const pen=page.getContext('2d')!;
- pen.fillStyle='#f1e6cb';pen.fillRect(8,5,112,118);pen.fillStyle='#a85849';pen.fillRect(8,5,112,22);
- pen.fillStyle='#332f2c';pen.textAlign='center';pen.textBaseline='middle';pen.font='bold 66px sans-serif';pen.fillText('31',56,69);
- pen.fillStyle='#b67724';pen.font='bold 34px sans-serif';pen.fillText('✦',98,101);
- const pageTexture=new THREE.CanvasTexture(page);pageTexture.colorSpace=THREE.SRGBColorSpace;
- const calendarPage=new THREE.Sprite(new THREE.SpriteMaterial({map:pageTexture}));calendarPage.scale.set(1.7,1.7,1);calendar.add(calendarPage);
- for(const x of[-.35,.35]){const cup=cylinder(room,.11,.18,x,.79,-2.42,0xe6d3aa,10);cup.castShadow=true;}
+ // Same logical coordinates and interaction targets; only room art changes.
+ const {screen,calendar}=createRoomArt(room);
  const focusObjects:Record<string,THREE.Object3D[]>={calendar:[calendar], 'star-post':[starPost],tile:[crank],drain:[drainHandle],stopper:[stopHandle],latch:[latch,latchLever],'lever-a':[leverHandles[0]!],'lever-b':[leverHandles[1]!],observe:[observerBase],portal:[portal],begin:[screen]};
  const focusTint=new THREE.Color(0xe8c77b);
- const windowFrame=box(room,2,1.8,.08,3,1.7,-3.84,C.wood);box(room,1.7,1.5,.04,3,1.7,-3.78,0x8baab3);box(room,.08,1.6,.04,3,1.7,-3.73,C.paper);box(room,1.8,.08,.04,3,1.7,-3.73,C.paper);
- const indoorLight=new THREE.PointLight(0xffc77d,14,12,2);indoorLight.position.set(2.4,2.2,-2.5);room.add(indoorLight);
  // Snow is GPU points, no CPU pixel readback; reduced motion keeps the scene still.
  const snowPositions=new Float32Array(180*3);for(let i=0;i<180;i++){snowPositions[i*3]=(Math.sin(i*17.13)*.5+.5)*26-13;snowPositions[i*3+1]=1+(i%19)*.5;snowPositions[i*3+2]=(Math.sin(i*7.73)*.5+.5)*26-13;}const snowGeo=new THREE.BufferGeometry();snowGeo.setAttribute('position',new THREE.BufferAttribute(snowPositions,3));const snow=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:0xece6d4,size:.07,transparent:true,opacity:.7}));scene.add(snow);
  let bridgeWasDown:boolean|null=null,bridgeStarted=0;
@@ -212,11 +203,11 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
    if(options.speaker&&distance(a,other)>.2)facing=Math.atan2(other.x-a.x,other.z-a.z);
    if(i===0&&options.action){const target=actionTargets[options.action.id]??other;facing=Math.atan2(target.x-a.x,target.z-a.z);}
    if(!started||options.reducedMotion)presentationFacing[i]=facing;else if(dt>0){const delta=Math.atan2(Math.sin(facing-presentationFacing[i]!),Math.cos(facing-presentationFacing[i]!));presentationFacing[i]!+=delta*Math.min(1,dt*10);}
-   g.position.set(a.x,(inRoom?0:heightAt(a))+.52*1.05,a.z);g.rotation.y=presentationFacing[i]!+Math.PI;
-   poseJourneyActor(g,{kind,speaking:options.speaker===kind,expression:options.speaker===kind?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,waiting:i===1&&s.toto.waiting,walk:moving<.001?0:Math.sin(i?walkT:walkP),time,reducedMotion:options.reducedMotion});shadows[i]!.position.set(a.x,(inRoom?0:heightAt(a))+.015,a.z);
+   g.position.set(inRoom?a.x*ROOM_X_SCALE:a.x,(inRoom?0:heightAt(a))+.52*1.05,a.z);g.rotation.y=presentationFacing[i]!+Math.PI;
+   poseJourneyActor(g,{kind,speaking:options.speaker===kind,expression:options.speaker===kind?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,waiting:i===1&&s.toto.waiting,walk:moving<.001?0:Math.sin(i?walkT:walkP),time,reducedMotion:options.reducedMotion});shadows[i]!.position.set(inRoom?a.x*ROOM_X_SCALE:a.x,(inRoom?0:heightAt(a))+.015,a.z);
   });
   lastP={...s.player};lastT={...s.toto};started=true;
-  const focusPoint=options.focusActionPoint;focusRing.visible=!!options.focusActionId&&!!focusPoint&&s.mode!=='observe';if(focusPoint)focusRing.position.set(focusPoint.x,(inRoom?0:heightAt(focusPoint))+.075,focusPoint.z);
+  const focusPoint=options.focusActionPoint;focusRing.visible=!!options.focusActionId&&!!focusPoint&&s.mode!=='observe';if(focusPoint)focusRing.position.set(inRoom?focusPoint.x*ROOM_X_SCALE:focusPoint.x,(inRoom?0:heightAt(focusPoint))+.075,focusPoint.z);
   const destination=s.toto.plate==='gate'?MAP.gatePlate:s.toto.plate==='front'?MAP.frontPlate:s.toto.plate==='back'?MAP.backPlate:null;companionTarget.visible=!!destination;if(destination){companionTarget.position.set(destination.x,heightAt(destination),destination.z);const arrived=s.toto.waiting&&isOnPlate(s.toto,destination);arrivedRing.visible=arrived;travellingRing.visible=!arrived;}
   for(const id of ['tile','drain','stopper']as const){const active=!inRoom&&options.focusActionId===id;controlPads[id]!.border.material.color.set(active?0xe9d599:0x50635c);controlPads[id]!.pad.material.color.set(active?0xc4bc91:0xa3ad9b);}
   for(const [id,objects]of Object.entries(focusObjects))for(const obj of objects)obj.traverse(o=>{if(o instanceof THREE.Mesh&&o.material instanceof THREE.MeshStandardMaterial){o.material.emissive.copy(focusTint);o.material.emissiveIntensity=options.focusActionId===id?.24:0;}});
@@ -242,10 +233,11 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   // While working the first-era mill, frame the controls, wheel and bridge together.
   const millDistance=Math.min(distance(s.player,MAP.drainControl),distance(s.player,MAP.stopperControl));
   const millView=!inRoom&&s.era===1?Math.max(0,Math.min(1,(3.2-millDistance)/1.6)):0;
-  const zoom=inRoom?1.4:1-.12*millView;if(Math.abs(camera.zoom-zoom)>.0001){camera.zoom=zoom;camera.updateProjectionMatrix();}
-  const origin=new THREE.Vector3(s.player.x,(inRoom?0:heightAt(s.player))+.3,s.player.z-2*millView);const q=s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
+  const roomFrame=roomCameraFrame(width,height);
+  const zoom=inRoom?roomFrame.zoom:1-.12*millView;if(Math.abs(camera.zoom-zoom)>.0001){camera.zoom=zoom;camera.updateProjectionMatrix();}
+  const origin=inRoom?new THREE.Vector3(0,roomFrame.targetY,roomFrame.targetZ):new THREE.Vector3(s.player.x,heightAt(s.player)+.3,s.player.z-2*millView);const q=!inRoom&&s.era>=2?s.quarter*Math.PI/2:0;const tableView=!inRoom&&s.era>=2?Math.max(0,Math.min(1,(6-distance(s.player,MAP.tile))/3)):0;
   // On the return trip a steeper reading angle keeps the table beyond the actors' silhouettes, even after Q.
-  const y=inRoom?12:s.era===0?20:s.era===1?16:12+tableView*6;const d=inRoom?9:s.era===0?8:s.era===1?10:13-tableView*5;
+  const y=inRoom?roomFrame.rise:s.era===0?20:s.era===1?16:12+tableView*6;const d=inRoom?roomFrame.run:s.era===0?8:s.era===1?10:13-tableView*5;
   camera.position.copy(origin).add(new THREE.Vector3(Math.sin(q)*d,y,Math.cos(q)*d));camera.lookAt(origin);for(const tree of trees){const dx=tree.position.x-s.player.x,dz=tree.position.z-s.player.z,forward=dx*Math.sin(q)+dz*Math.cos(q),cross=dx*Math.cos(q)-dz*Math.sin(q);tree.visible=!(s.era>=2&&forward>0&&forward<10&&Math.abs(cross)<2.6);}
   sun.position.copy(origin).add(new THREE.Vector3(-10,20,10));sun.target.position.copy(origin);
   optical.position.set(3,4.6,-55);optical.lookAt(3,4.6,-60);const observe=!inRoom&&s.mode==='observe';player.visible=toto.visible=!observe&&(inRoom||s.era>=2);pixels.forEach((p,i)=>{const a=i?s.toto:s.player;p.sprite.visible=!inRoom&&!observe&&s.era<2;p.sprite.position.set(a.x,heightAt(a)+.025,a.z);if(s.era<2)p.update(s.era,presentationFacing[i]!,options.reducedMotion?0:(i?movingT:movingP)>.001?(i?walkT:walkP):0,{speaking:options.speaker===(i?'toto':'player'),expression:options.speaker===(i?'toto':'player')?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,reducedMotion:options.reducedMotion});});shadows.forEach(m=>m.visible=!observe);snow.visible=!inRoom&&s.era===3&&!observe;snow.position.set(s.player.x,0,s.player.z);if(!options.reducedMotion)snow.position.y=-(time*.25)%3;
