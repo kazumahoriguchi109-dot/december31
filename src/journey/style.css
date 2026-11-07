@@ -208,3 +208,72 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
 @media (max-height:620px),(max-width:600px) {
  .journey-app[data-mode="observe"] .journey-toast {bottom:max(10px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));max-width:42vw;padding:7px 10px;}
 }
+
+/* Adopted November material kit: snow paper, navy framing and winter-gold trim.
+   Gameplay, pointer geometry, save formats and responsive safe areas stay unchanged. */
+:root {--journey-paper:#f0eee5;--journey-ink:#19263a;--journey-amber:#d9ac5b;}
+.journey-app {background:#19263a;}
+.journey-app :focus-visible {outline:3px solid #fff1ca;outline-offset:4px;box-shadow:0 0 0 7px #254e76;}
+.journey-objective {color:#19263a;background:linear-gradient(115deg,#f7f3eafa,#eee7d9f5);border:1px solid #b9a47d;border-radius:4px 13px 4px 4px;box-shadow:0 4px 18px #0a1c303d,inset 0 0 0 3px #fff9ed55;}
+.journey-objective .journey-eyebrow {color:#6e502b;}
+.journey-progress i {border-color:#7c6848;}
+.journey-progress i.is-solved {background:#29415f;border-color:#29415f;}
+.journey-icon-button,.journey-abilities button {background:#1d3550ed;border-color:#b9ac8d;color:#fff5df;}
+.journey-icon-button:hover,.journey-abilities button:hover {background:#355679;border-color:#f5d28e;}
+.journey-button {background:#f0eee5;color:#19263a;border:1px solid #8e7857;border-bottom:3px solid #b5a17e;border-radius:5px;box-shadow:inset 0 1px #fffef7;}
+.journey-button:hover:not(:disabled) {background:#fff5dd;color:#19263a;border-color:#8c632c;}
+.journey-primary {background:#ecd3a1;color:#19263a;border-color:#9c753c;}
+.journey-primary:hover:not(:disabled) {background:#ffe4b4;color:#19263a;}
+.journey-button kbd {color:#19263a;border-color:#738092;}
+.journey-interact {background:#f7f0df;border-color:#b5a17e;}
+.journey-context>p,.journey-walk-help {background:#192f48ed;color:#fff4df;border-color:#a2a9b5;}
+.journey-dialogue {--speaker-accent:#854c39;color:#19263a;background:linear-gradient(115deg,#fbf7eefc,#eee7d9fc);border:1px solid #b7a17c;border-left:4px solid var(--speaker-accent);border-radius:8px;box-shadow:0 12px 40px #101d3455,inset 0 0 0 3px #fffdf588;}
+.journey-dialogue[data-speaker="toto"] {--speaker-accent:#385c4b;}
+.journey-dialogue h2,.journey-dialogue[data-speaker="toto"] h2 {color:#fff4df;background:var(--speaker-accent);border:1px solid #ba9b68;border-radius:6px 2px 6px 2px;padding:3px 14px;margin-bottom:8px;}
+.journey-dialogue h2::before {display:none;}
+.journey-portrait {height:136px;overflow:hidden;position:relative;padding:0;background:radial-gradient(ellipse at 50% 60%,#d4bf95,#eee6d4 80%);border:1px solid #aa9674;border-radius:42% 42% 5px 5px;}
+.journey-material-portrait {display:block;position:absolute;width:175%;max-width:none;height:auto;left:-37.5%;top:-6%;}
+.journey-next {background:#233f5c;color:#fff6e6;border-color:#c2a471;}
+.journey-next:hover:not(:disabled) {background:#355978;color:#fff6e6;}
+.journey-next kbd {color:#fff6e6;border-color:#d8c59f;}
+.journey-evolution {background:#192f48f5;border-color:#d9ac5b;}
+.journey-toast {background:#192f48f5;border-color:#c5b28e;color:#fff4df;}
+#journey-partner-state {color:#e2e6eb;}
+.journey-title {background:#19263a;}
+.journey-title-art {object-position:center;}
+.journey-title-shade {background:linear-gradient(90deg,#14243deb,#14243dc7 35%,#14243d30 75%),linear-gradient(0deg,#12213dd9,transparent 65%);}
+.journey-title-copy {z-index:2;}
+.journey-title h1 {color:#fff8e9;text-shadow:0 3px 22px #17243c;}
+.journey-title-intro,.journey-title-note {color:#f5ecda;}
+.journey-title .journey-eyebrow {color:#f5d89e;}
+.journey-title-friends {position:absolute;z-index:1;right:2%;bottom:4%;width:min(50vw,800px);display:flex;align-items:flex-end;justify-content:center;pointer-events:none;}
+.journey-title-friends img {width:65%;height:auto;margin:0 -10%;filter:drop-shadow(0 12px 13px #11203655);}
+.journey-title-friends img:first-child {transform:translateY(-3%);}
+.journey-title .journey-menu {max-width:100%;}
+.journey-title .journey-text-button {color:#fff1d8;border-color:#d3bc90;}
+.journey-pause,.journey-credits {background:#0e1b31c9;}
+.journey-paper {background:linear-gradient(145deg,#fcf7ed,#eee6d6);border:1px solid #c7b088;color:#19263a;border-radius:10px;box-shadow:0 24px 90px #101d4588,inset 0 0 0 4px #fffaf066;}
+.journey-paper .journey-eyebrow {color:#6b4c28;}
+.journey-paper .journey-text-button {color:#243e5a;border-color:#a79372;}
+.journey-settings {border-color:#bbaa8c;}
+.journey-settings legend,.journey-control-guide p,.journey-credits dt,.journey-credit-note {color:#465367;}
+.journey-paper kbd {color:#243e5a;border-color:#778396;}
+.journey-settings input[type="range"],.journey-check input {accent-color:#294f76;}
+.journey-app[data-era="0"] .journey-objective,.journey-app[data-era="0"] .journey-dialogue,.journey-app[data-era="0"] .journey-button {border-radius:0;}
+.journey-app[data-era="1"] .journey-objective {border-top:3px solid #29415f;}
+.journey-app[data-era="3"] .journey-dialogue {box-shadow:0 10px 35px #10223b55,inset 0 0 0 3px #fffaf066,0 0 20px #d9ac5b22;}
+@media (max-width:1000px) {.journey-portrait {height:119px;}.journey-title-friends {right:-5%;width:57vw;opacity:.8;}}
+@media (max-width:600px) {
+ .journey-portrait {height:96px;}
+ .journey-title-friends {right:-8%;bottom:0;width:88vw;opacity:.27;}
+ .journey-title-shade {background:linear-gradient(90deg,#14243ded,#14243da6);}
+ .journey-title-art {opacity:1;}
+}
+@media (max-height:620px) {.journey-portrait {height:95px;}.journey-title-friends {width:min(45vw,580px);right:1%;}}
+/* Neutral art is adopted directly; expressive SVG portraits remain until matching variants exist. */
+.journey-portrait:has(svg) {height:auto;overflow:visible;padding:4px 4px 0;}
+.journey-dialogue {border:2px solid #29415f;border-left:4px solid var(--speaker-accent);}
+.journey-dialogue::before,.journey-dialogue::after {content:'';position:absolute;top:5px;width:5px;height:5px;background:#d9ac5b;pointer-events:none;}
+.journey-dialogue::before {left:5px;box-shadow:7px 0 #d9ac5b,0 7px #d9ac5b;}
+.journey-dialogue::after {right:5px;box-shadow:-7px 0 #d9ac5b,0 7px #d9ac5b;}
+.journey-dialogue h2 {position:relative;top:-5px;box-shadow:0 2px 0 #b9a47d55;}

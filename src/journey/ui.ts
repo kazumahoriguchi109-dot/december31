@@ -1,7 +1,9 @@
 import type { ContextAction, JourneyState, Expression } from './contract';
 import { MAP, distance } from './contract';
 import { portrait, type DialogueEmotion } from '../ui/portraits';
-import keyart from '../ui/assets/winter-keyart.jpg';
+import keyart from '../../assets/art/backgrounds/snow-path.png';
+import playerArtwork from '../../assets/art/characters/player-neutral-v1.png';
+import totoArtwork from '../../assets/art/characters/toto-neutral-v1.png';
 import './style.css';
 
 type Screen = 'title' | 'game' | 'pause' | 'credits';
@@ -55,7 +57,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    <p id="journey-toast" class="journey-toast" role="status" aria-live="polite" hidden></p>
   </div>
   <section id="journey-title" class="journey-screen journey-title" aria-labelledby="journey-title-heading">
-   <img class="journey-title-art" src="${keyart}" alt=""/><div class="journey-title-shade"></div>
+   <img class="journey-title-art" src="${keyart}" width="1536" height="1024" fetchpriority="high" alt=""/><div class="journey-title-shade"></div><div class="journey-title-friends" aria-hidden="true"><img src="${totoArtwork}" width="1024" height="1536" alt=""/><img src="${playerArtwork}" width="1024" height="1536" alt=""/></div>
    <div class="journey-title-copy"><p class="journey-eyebrow">冬休みの、ふたりの冒険</p><h1 id="journey-title-heading">12月31日</h1><p class="journey-title-intro">いつもの部屋から、知らない世界へ。<br/>歩いて、見つけて、ふたりで帰ろう。</p><div class="journey-menu"><button class="journey-button journey-primary" data-action="continue" id="journey-continue" hidden>つづきから <span>→</span></button><button class="journey-button" data-action="new" id="journey-new">はじめから <span>→</span></button><button class="journey-text-button" data-action="credits">つくった人たち</button></div><p class="journey-title-note">急がなくて、だいじょうぶ。<br/>キーボードで歩き、気になったものを調べる冒険です。</p></div>
   </section>
   <section id="journey-pause" class="journey-screen journey-pause" aria-labelledby="journey-pause-heading" hidden><div class="journey-paper"><p class="journey-eyebrow">冒険は、ここで待っている</p><h1 id="journey-pause-heading">ひと休み</h1><div class="journey-menu"><button class="journey-button journey-primary" data-action="resume">冒険へ戻る <span>→</span></button></div><fieldset class="journey-settings"><legend>心地よく遊ぶために</legend><label for="journey-volume">音の大きさ <output id="journey-volume-output">70%</output></label><input id="journey-volume" type="range" min="0" max="1" step="0.05" value="0.7"/><label class="journey-check"><input id="journey-motion" type="checkbox"/>動きをひかえめにする</label></fieldset><div class="journey-control-guide"><p><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> 歩く</p><p><kbd>E</kbd> / <kbd>Space</kbd> 近くを調べる</p><p id="journey-pause-extra"></p><p><kbd>Esc</kbd> ひと休み / 戻る</p></div><button class="journey-text-button" data-action="title">タイトルへ</button></div></section>
@@ -99,7 +101,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   setScreen(next){if(next===screen)return;screen=next;app.dataset['screen']=next;show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();const focus=next==='game'?canvas:next==='pause'?get<HTMLButtonElement>('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):next==='title'?get<HTMLButtonElement>('journey-continue').hidden?get('journey-new'):get('journey-continue'):get('journey-credits').querySelector('button');(focus as HTMLElement|null)?.focus({preventScroll:true});},
   setDialogue(line){
    talking=!!line;
-   if(line){const key=`${line.speaker}\n${line.text}\n${line.expression??''}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion=emotionFor(line);get('journey-portrait').innerHTML=portrait(line.speaker,emotion);dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';dialogue.dataset['emotion']=emotion;}}
+   if(line){const key=`${line.speaker}\n${line.text}\n${line.expression??''}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion=emotionFor(line);get('journey-portrait').innerHTML=emotion==='neutral'?`<img class="journey-material-portrait" src="${line.speaker==='トト'?totoArtwork:playerArtwork}" width="1024" height="1536" alt=""/>`:portrait(line.speaker,emotion); dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';dialogue.dataset['emotion']=emotion;}}
    else dialogueKey='';syncExploration();
   },
   setToast(value){clearTimeout(toastTimer);text(toast,value);show(toast,!!value);if(value)toastTimer=setTimeout(()=>show(toast,false),4500);},
