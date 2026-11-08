@@ -61,7 +61,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    <p id="journey-toast" class="journey-toast" role="status" aria-live="polite" hidden></p>
   </div>
   <section id="journey-title" class="journey-screen journey-title" aria-labelledby="journey-title-heading">
-   <img class="journey-title-art" src="${keyart}" width="1672" height="941" fetchpriority="high" alt=""/><video id="journey-title-video" class="journey-title-video" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" disablepictureinpicture hidden></video><div class="journey-title-shade" aria-hidden="true"></div>
+   <img class="journey-title-art" src="${keyart}" width="1672" height="941" fetchpriority="high" alt=""/><video id="journey-title-video" class="journey-title-video" autoplay muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" disablepictureinpicture hidden></video><div class="journey-title-shade" aria-hidden="true"></div>
    <div class="journey-title-copy">
     <div class="journey-title-emblem" aria-hidden="true"><span></span>✧<span></span></div>
     <h1 id="journey-title-heading" aria-label="12月31日"><span class="journey-date-number">12</span><span class="journey-date-unit">月</span><span class="journey-date-number">31</span><span class="journey-date-unit">日</span></h1>
@@ -72,6 +72,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
      <button class="journey-title-option" id="journey-title-settings-button" aria-haspopup="dialog" aria-controls="journey-title-settings">設定</button>
     </nav>
    </div>
+   <div class="journey-title-video-control"><button id="journey-title-video-toggle" type="button" aria-controls="journey-title-video" aria-describedby="journey-title-video-status">背景動画を再生</button><span id="journey-title-video-status" role="status" aria-live="polite"></span></div>
    <p class="journey-title-help">↑ ↓ 選ぶ<span>·</span>Enter 決定</p>
   </section>
   <dialog id="journey-title-settings" class="journey-settings-dialog journey-paper" aria-labelledby="journey-settings-heading">
@@ -89,7 +90,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
  const partner=get('journey-partner'), rotate=get('journey-rotate'), resonance=get('journey-resonance');
  const objectiveNode=get('journey-objective'), eraNode=get('journey-era'), progress=root.querySelector<HTMLElement>('.journey-progress')!, marks=[...root.querySelectorAll<HTMLElement>('[data-puzzle]')];
  const toast=get('journey-toast'), evolution=get('journey-evolution');
- const titleVideo=createTitleVideo(get<HTMLVideoElement>('journey-title-video'),titleLoop);
+ const titleVideo=createTitleVideo(get<HTMLVideoElement>('journey-title-video'),titleLoop,get<HTMLButtonElement>('journey-title-video-toggle'),get('journey-title-video-status'));
  let screen:Screen='title', talking=false, dialogueKey='', observed=false, toastTimer:ReturnType<typeof setTimeout>|undefined;
  let lastEra=-1, lastSolved='', lastPhase='', lastPartnerStatus='';
  root.addEventListener('click',event=>{const button=(event.target as Element).closest<HTMLButtonElement>('[data-action]');if(button&&!button.disabled){onAction(button.dataset['action']!);}});
