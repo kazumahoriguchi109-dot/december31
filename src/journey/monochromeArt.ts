@@ -25,7 +25,7 @@ export function createMonochromeArt(){
   rect(-14,-3,28,5,'#bcbcbc');rect(-3,-12,7,13,ink);rect(-1,-11,2,10,shadow);
   for(const [w,yy]of [[21,-11],[17,-25],[12,-38]] as const){
    const p=[-w,yy,-w,yy-7,-w+5,yy-7,-w+5,yy-12,-w+10,yy-12,0,yy-24,w-10,yy-12,w-5,yy-12,w-5,yy-7,w,yy-7,w,yy,w-5,yy+3,6,yy+3,3,yy+6,-3,yy+6,-6,yy+3,-w+5,yy+3];
-   poly(p,ink);poly(p.map((v,i)=>i%2?v-3:v*.88),snow);
+   poly(p,ink);poly(p.map((v,i)=>i%2?(v-(yy-9))*.85+(yy-9):v*.88),snow);
    rect(-w+5,yy-3,7,3,light);rect(4,yy-2,5,4,light);rect(w-9,yy-7,4,4,'#dedede');
   }ctx.restore();
  }
