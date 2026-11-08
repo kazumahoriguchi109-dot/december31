@@ -1,4 +1,6 @@
 import {ROOM_X_SCALE} from './roomPresentation';
+import {BANK_STONE_POINTS,LANTERN_POINTS} from './collision';
+import {gateOpen} from './model';
 import {createRoomArt} from './roomArt';
 import {roomCameraFrame} from './roomCamera';
 import {MEMORIES,memoryLit} from './memories';
@@ -58,7 +60,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  for(const side of[-1,1]){box(starPost,.13,.12,.55,side*.3,.08,.32,0xb6c3bd);}
  // Lamps and sparse winter plants frame a route while leaving the movement corridor open.
  const lampPools:ReturnType<typeof lightPool>[]=[];
- for(const [x,z]of[[-3,-3],[4,-13],[3,-27],[-5,-38],[10.7,-48],[7,-60]]as const){asset(outdoor,'lantern',x,heightAt({x,z}),z,.8);const pool=lightPool(outdoor,x,z,1.75);pool.position.y+=heightAt({x,z});lampPools.push(pool);}
+ for(const [x,z]of LANTERN_POINTS){asset(outdoor,'lantern',x,heightAt({x,z}),z,.8);const pool=lightPool(outdoor,x,z,1.75);pool.position.y+=heightAt({x,z});lampPools.push(pool);}
  for(let i=0;i<50;i++){const x=(i%2?-1:1)*(8.6+Math.sin(i*9.1)*1.5),z=6-i*1.42;if(z<-43&&z>-49)continue;const y=heightAt({x,z});for(let j=0;j<3;j++){const tuft=box(outdoor,.07,.16+j*.045,.07,x+j*.12,y+.08,z,0x708f7a);tuft.rotation.z=(j-1)*.2;}}
  for(const x of[-12,12])for(let z=7;z>-65;z-=3){const y=heightAt({x,z});box(outdoor,.13,.75,.13,x,y+.375,z,C.wood);if(z-3>-49||z<=-49)line(outdoor,new THREE.Vector3(x,y+.55,z),new THREE.Vector3(x,y+.55,z-3),.035,C.wood);}
  // P01 is a raised stone mechanism. The east crank is reached from tileControl, never over the lines.
@@ -80,7 +82,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const p1Gate=new THREE.Group();outdoor.add(p1Gate);fence(p1Gate,-12,12,-10);const p1Opening=box(p1Gate,4,1.3,.25,0,.65,-10,C.wood);
  // Waterworks: visible stream, sluice, stopped wheel, and a genuine bridge over the collision water band.
  const river=box(outdoor,24,.12,2,0,-.035,-23,C.water),riverTexture=waterTexture();river.material.color.set(0xffffff);river.material.map=riverTexture;river.material.roughness=.48;
- const banks:[number,number][]=[];for(let x=-11.6;x<12;x+=.87){if(Math.abs(x)<2.4)continue;for(const z of[-21.86,-24.14])banks.push([x+.08*Math.sin(x*3),z]);}for(let i=0;i<7;i++)banks.push([-8.82,-18.7-i*.44]);bankStones(outdoor,banks);
+ bankStones(outdoor,BANK_STONE_POINTS);
  for(let x=-11;x<12;x+=2.4){if(Math.abs(x)<2.5)continue;snowBank(outdoor,x,-21.76,.7,.19);snowBank(outdoor,x+.4,-24.24,.65,.2);}
  trail(outdoor,[[.3,-13],[-1.4,-13],[-3,-13],[-4.5,-13],[-6,-13]],1.1,0xa3aec9);
  trail(outdoor,[[-2.75,-13],[-2.75,-13.75]],.75,0xa3aec9);
@@ -224,7 +226,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   sluice.position.y=mill.bypass?.7:.35;drainHandle.rotation.z=mill.bypass?0:Math.PI/2;stopHandle.rotation.z=mill.locked?0:Math.PI/2;pin.rotation.z=mill.locked?0:Math.PI/2;catchArm.rotation.z=mill.locked?0:Math.PI/2;
   if(!options.reducedMotion){const phase=(time*.65)%1;wheelGlints.forEach((glint,i)=>{glint.position.x=-6.88+((phase+i/3)%1)*1.65;});spillGlints.forEach((glint,i)=>{glint.position.z=-17.7+((phase+i/3)%1)*1.9;});}
   if(mill.turning&&!options.reducedMotion){wheel.rotation.z=time*.55;bridgePulley.rotation.z=time*.55;}
-  const occupied=isOnPlate(s.player,MAP.gatePlate)||isOnPlate(s.toto,MAP.gatePlate),openGate=s.gateLatched||occupied;
+  const occupied=isOnPlate(s.player,MAP.gatePlate)||isOnPlate(s.toto,MAP.gatePlate),openGate=gateOpen(s);
   // Fold the open leaf into its left post; a raised opaque panel hid the friends beyond the gate.
   gate.position.set(openGate?-2.18:0,openGate?.44:.8,-35);gate.scale.set(openGate?.05:1,openGate?.55:1,1);gatePlate.scale.y=occupied?.5:1;(latch.material as THREE.MeshStandardMaterial).color.set(s.gateLatched?C.gold:C.wood);
   const flatWall=!s.wallSeen&&(s.era<2||s.quarter%2===0);wallPattern.visible=flatWall;stair.visible=!flatWall;

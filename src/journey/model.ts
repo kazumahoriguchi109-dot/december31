@@ -1,8 +1,11 @@
 import { MAP, distance, heightAt, inControlArea, PLATE_RADIUS, isOnPlate, type Actor, type ContextAction, type InputFrame, type JourneyEvent, type JourneyState, type Point } from './contract';
 
+import { ACTOR_RADIUS, solidObstruction } from './collision';
+import { ROOM_X_SCALE } from './roomPresentation';
+
 const RADIUS = .28, INTERACT = 1.65, PLATE = PLATE_RADIUS;
-const transient = new WeakMap<JourneyState, { path:Point[]; blocked:string; initialized:boolean;rejoining:boolean;lastPlayer:Point|null;still:number;restTarget:Point|null;restHold:Point|null;restPath:Point[];restQuarter:number;viewStill:number;restCooldown:number }>();
-const runtime = (s:JourneyState) => { let r=transient.get(s); if(!r){r={path:[],blocked:'',initialized:false,rejoining:false,lastPlayer:null,still:0,restTarget:null,restHold:null,restPath:[],restQuarter:s.quarter,viewStill:0,restCooldown:0};transient.set(s,r);} return r; };
+const transient = new WeakMap<JourneyState, { path:Point[]; blocked:string; initialized:boolean;rejoining:boolean;lastPlayer:Point|null;still:number;restTarget:Point|null;restHold:Point|null;restPath:Point[];restQuarter:number;viewStill:number;restCooldown:number;repathAfter:number }>();
+const runtime = (s:JourneyState) => { let r=transient.get(s); if(!r){r={path:[],blocked:'',initialized:false,rejoining:false,lastPlayer:null,still:0,restTarget:null,restHold:null,restPath:[],restQuarter:s.quarter,viewStill:0,restCooldown:0,repathAfter:0};transient.set(s,r);} return r; };
 const notice=(id:string,text:string):JourneyEvent=>({type:'notice',id,text});
 const line=(id:string,text:string,speaker:'主人公'|'トト'='トト'):JourneyEvent=>({type:'dialogue',id,text,speaker});
 const sound=(id:string):JourneyEvent=>({type:'sound',id});
@@ -15,12 +18,14 @@ export function createState():JourneyState {
 }
 
 export function gateOpen(s:JourneyState):boolean {
- return s.gateLatched || onPlate(s.player,MAP.gatePlate) || onPlate(s.toto,MAP.gatePlate);
+ // A closing gate waits for bodies already in the doorway to clear it.
+ const inDoor=(p:Point)=>Math.abs(p.x)<=1.5&&Math.abs(p.z+35)<.6;
+ return s.gateLatched || onPlate(s.player,MAP.gatePlate) || onPlate(s.toto,MAP.gatePlate) || inDoor(s.player) || inDoor(s.toto);
 }
 
 /** Collision is evaluated in short substeps; a held direction never tunnels across a locked gate. */
-function obstruction(s:JourneyState,p:Point,from:Point,following=false):string {
- if(s.phase==='room')return Math.abs(p.x)>3.7 || p.z< -3.7 || p.z>2.7?'room':'';
+function legacyObstruction(s:JourneyState,p:Point,from:Point,following=false):string {
+ if(s.phase!=='world')return Math.abs(p.x)>3.7 || p.z< -3.7 || p.z>2.7?'room':'';
  if(p.x< -12+RADIUS || p.x>12-RADIUS || p.z< -65+RADIUS || p.z>8-RADIUS)return 'edge';
  if(s.era<3 && p.z>3.35)return 'rear';
  for(const control of [MAP.drainControl,MAP.stopperControl]){
@@ -39,10 +44,30 @@ function obstruction(s:JourneyState,p:Point,from:Point,following=false):string {
  if(!following && s.toto.plate==='gate' && (p.z> -25.2 || p.z< -40.5))return 'friend';
  return '';
 }
+/** Existing puzzle barriers and terrain remain distinct from physical furniture. */
+function obstruction(s:JourneyState,p:Point,from:Point,following=false):string {
+ const legacy=legacyObstruction(s,p,from,following);if(legacy)return legacy;
+ if(s.phase!=='world'){
+  if(Math.abs(p.x)>(5.51-ACTOR_RADIUS)/ROOM_X_SCALE||p.z< -3.81+ACTOR_RADIUS||p.z>3-ACTOR_RADIUS)return 'room';
+ }else{
+  if(Math.abs(p.x)>12-.065-ACTOR_RADIUS||p.z< -65+.13+ACTOR_RADIUS||p.z>8-.13-ACTOR_RADIUS)return 'edge';
+  if(!s.solved[0]&&Math.abs(p.z+10)<.59)return 'p01';
+  if(!s.portalOpen&&Math.abs(p.z-4)<.49&&Math.abs(p.x)<1.65)return 'frame';
+  if(s.solved[1]&&p.z< -21.64&&p.z> -24.36&&Math.abs(p.x)>1.79-ACTOR_RADIUS)return 'water';
+ }
+ return solidObstruction(s,p);
+}
+
 const blockCopy:Record<string,string>={mill:'装置の手前に、二つの操作ハンドルがある。',tile:'台の上には乗れない。右側のハンドルを回せそうだ。',p01:'線の先で、道が閉じている。',water:'流れが深い。このままでは渡れない。',gate:'門はまだ閉じている。',wall:'白い壁の形が気になる。',cliff:'段差が大きい。歩ける道を探そう。',rear:'枠の向こうは、まだ平らに見える。',frame:'枠の脇を回ってみよう。',friend:'トトと合流してから先へ進もう。'};
 
 function moveActor(s:JourneyState,actor:Actor,dx:number,dz:number,following=false):string {
  const from={x:actor.x,z:actor.z};let reason='';
+ const direct={x:from.x+dx,z:from.z+dz};
+ // Follow the same safe diagonal segment that navigation found. Splitting it
+ // first can wedge a body between two opposite corners even with a clear path.
+ if(dx&&dz&&!obstruction(s,direct,from,following)&&clearSegment(s,from,direct)){
+  actor.x=direct.x;actor.z=direct.z;actor.facing=Math.atan2(dx,dz);return '';
+ }
  for(const [axis,delta] of [['x',dx],['z',dz]] as const){
   if(!delta)continue;const next={x:actor.x,z:actor.z};next[axis]+=delta;
   const blocked=obstruction(s,next,actor,following);
@@ -89,10 +114,19 @@ function recoverTrail(s:JourneyState,goal:Point=s.player):Point[] {
 
 export function movingToPlate(s:JourneyState):boolean {return s.toto.plate!==null&&!s.toto.waiting;}
 
+function refreshBlockedTrail(s:JourneyState,goal:Point,dt:number):void {
+ const r=runtime(s);r.repathAfter=Math.max(0,r.repathAfter-dt);
+ if(r.repathAfter>0)return;
+ if(!r.path.length||!clearSegment(s,s.toto,r.path[0]!)){
+  r.path=recoverTrail(s,goal);r.repathAfter=.25;
+ }
+}
+
 function advanceToPlate(s:JourneyState,dt:number):void {
  const goal=platePoint(s.toto.plate);if(!goal)return;
  const r=runtime(s);if(!r.initialized){r.path=recoverTrail(s,goal);r.initialized=true;}
  while(r.path.length>1&&distance(s.toto,r.path[0]!)<.08)r.path.shift();
+ refreshBlockedTrail(s,goal,dt);
  const target=r.path[0];if(!target)return;
  const d=distance(s.toto,target),travel=Math.min(d,3*dt),count=Math.max(1,Math.ceil(travel/.08));
  for(let i=0;i<count;i++){
@@ -140,7 +174,7 @@ function restRoute(s:JourneyState,target:Point):Point[]|null {
  if(playerClearRestSegment(s,start,target))return [target];
  const startAngle=Math.atan2(start.z-s.player.z,start.x-s.player.x),endAngle=Math.atan2(target.z-s.player.z,target.x-s.player.x);
  let shortest=endAngle-startAngle;while(shortest>Math.PI)shortest-=Math.PI*2;while(shortest< -Math.PI)shortest+=Math.PI*2;
- for(const radius of [1.05,1.3])for(const turn of [shortest,shortest>0?shortest-Math.PI*2:shortest+Math.PI*2]){
+ for(const radius of [1.05,1.3,1.6,1.9,2])for(const turn of [shortest,shortest>0?shortest-Math.PI*2:shortest+Math.PI*2]){
   const count=Math.max(1,Math.ceil(Math.abs(turn)/(Math.PI/8))),path:Point[]=[];
   for(let i=0;i<=count;i++){const angle=startAngle+turn*i/count;path.push({x:s.player.x+Math.cos(angle)*radius,z:s.player.z+Math.sin(angle)*radius});}
   path.push(target);let previous=start,valid=true;
@@ -170,7 +204,7 @@ function restBesideCamera(s:JourneyState,dt:number):boolean {
    return crossA-crossB||distance(s.toto,a)-distance(s.toto,b);
   }));
   for(const point of candidates){
-   if(!clearsFocusedObject(s,point)||narrowRestArea(point)||Math.abs(heightAt(point)-heightAt(s.player))>=.02||!safeRestSegment(s,s.player,point))continue;
+   if(!clearsFocusedObject(s,point)||narrowRestArea(point)||Math.abs(heightAt(point)-heightAt(s.player))>=.02||obstruction(s,point,point,true))continue;
    const route=restRoute(s,point);if(route){r.restTarget=point;r.restPath=route;break;}
   }
  }
@@ -226,12 +260,24 @@ function advanceFriend(s:JourneyState,dt:number):void {
    const dx=separation>.001?(s.toto.x-s.player.x)/separation:Math.sin(s.player.facing+Math.PI/2);
    const dz=separation>.001?(s.toto.z-s.player.z)/separation:Math.cos(s.player.facing+Math.PI/2);
    const retreat=Math.min(1.05-separation,2*dt);
+   const before={x:s.toto.x,z:s.toto.z};
    moveActor(s,s.toto,dx*retreat,dz*retreat,true);
+   if(distance(before,s.toto)<.00001){
+    // A close companion against furniture can sidestep instead of repeatedly
+    // trying to retreat into it. Every candidate increases personal space.
+    for(const turn of [Math.PI/4,-Math.PI/4,Math.PI/2,-Math.PI/2,3*Math.PI/4,-3*Math.PI/4]){
+     const nx=dx*Math.cos(turn)-dz*Math.sin(turn),nz=dx*Math.sin(turn)+dz*Math.cos(turn);
+     const next={x:s.toto.x+nx*retreat,z:s.toto.z+nz*retreat};
+     if(distance(next,s.player)<separation||!clearSegment(s,s.toto,next))continue;
+     moveActor(s,s.toto,nx*retreat,nz*retreat,true);break;
+    }
+   }
    s.toto.facing=Math.atan2(s.player.x-s.toto.x,s.player.z-s.toto.z);
    return;
   }
   if(separation<=1.05)return;
  }
+ refreshBlockedTrail(s,s.player,dt);
  const target=r.path[0];if(!target)return;
  const d=distance(s.toto,target);if(d<.02)return;
  const travel=Math.min(d,4.9*dt,finalApproach?Math.max(0,separation-1.05):Infinity),n=Math.max(1,Math.ceil(travel/.1));
@@ -353,13 +399,13 @@ export function interact(s:JourneyState):JourneyEvent[] {
   case 'drain':if(s.solved[1])return [notice('water-memory','水は車輪へ届き、橋は下りたままだ。')];s.p2Drain=!s.p2Drain;ev.push(sound('press'));break;
   case 'stopper':if(s.solved[1])return [notice('mill-memory','水車が回る音がする。')];s.p2Stopper=!s.p2Stopper;ev.push(sound('press'));break;
   case 'wait':return partner(s);
-  case 'latch':if(s.gateLatched)return [notice('latch-memory','留め金が、門を開いたまま支えている。')];s.gateLatched=true;ev.push(sound('press'),line('latch-fixed','これで門は閉じない。Tでトトを呼ぼう。','主人公'));break;
+  case 'latch':if(s.gateLatched)return [notice('latch-memory','留め金が、門を開いたまま支えている。')];s.gateLatched=true;repairNewOverlaps(s);runtime(s).initialized=false;ev.push(sound('press'),line('latch-fixed','これで門は閉じない。Tでトトを呼ぼう。','主人公'));break;
   case 'wall':
    if(!s.wallSeen&&s.quarter%2===0)return [notice('wall-front','白い線が、段の形に並んでいる。')];
    if(!s.wallSeen){s.wallSeen=true;ev.push(line('wall-recognized','上まで続いている。自分で歩いて上れそうだ。','主人公'));}
    else ev.push(notice('wall-known','白い段は、上の道へ続いている。'));break;
-  case 'lever-a':s.ringA=((s.ringA+1)%3) as 0|1|2;ev.push(sound('press'));break;
-  case 'lever-b':s.ringB=((s.ringB+1)%3) as 0|1|2;ev.push(sound('press'));break;
+  case 'lever-a':s.ringA=((s.ringA+1)%3) as 0|1|2;repairNewOverlaps(s);runtime(s).initialized=false;ev.push(sound('press'));break;
+  case 'lever-b':s.ringB=((s.ringB+1)%3) as 0|1|2;repairNewOverlaps(s);runtime(s).initialized=false;ev.push(sound('press'));break;
   case 'observe':
    s.mode='observe';
    if(!s.solved[4]&&s.ringA===1&&s.ringB===2){s.solved[4]=true;s.era=3;ev.push({type:'evolution',id:'resonance',era:3,text:'ふたりの光が、世界に残る'},line('ring-complete','輪がつながった。……でも、まだゲームの中だ。','主人公'),line('resonance-control','入口の枠が光ってる。Rで、残った光を確かめられる。いっしょに戻ろう。'));}
@@ -410,6 +456,34 @@ export function objective(s:JourneyState):string {
  return '二人で元の世界へ帰ろう';
 }
 
+/** Migrate only coordinates that were valid before solid-object collision existed. */
+function repairNewOverlaps(s:JourneyState):boolean {
+ for(const actor of [s.player,s.toto]){
+  if(!obstruction(s,actor,actor,actor===s.toto))continue;
+  const from={x:actor.x,z:actor.z},sx=s.phase==='world'?1:ROOM_X_SCALE;
+  const legacyClear=(to:Point)=>{
+   const n=Math.max(1,Math.ceil(distance(from,to)/.08));let previous=from;
+   for(let i=1;i<=n;i++){
+    const p={x:from.x+(to.x-from.x)*i/n,z:from.z+(to.z-from.z)*i/n};
+    if(legacyObstruction(s,p,previous,actor===s.toto))return false;previous=p;
+   }
+   return true;
+  };
+  let safe:Point|null=null;
+  // Ring samples prefer the nearest physical position, including in the widened room.
+  for(let radius=.04;radius<=6&&!safe;radius+=.04){
+   const count=Math.max(32,Math.ceil(2*Math.PI*radius/.06));
+   for(let i=0;i<count;i++){
+    const angle=Math.PI/2+i*Math.PI*2/count,p={x:from.x+Math.cos(angle)*radius/sx,z:from.z+Math.sin(angle)*radius};
+    if(!obstruction(s,p,p,actor===s.toto)&&legacyClear(p)){safe=p;break;}
+   }
+  }
+  if(!safe)return false;
+  actor.x=safe.x;actor.z=safe.z;
+ }
+ return true;
+}
+
 /** A new save namespace must never interpret an old anchor save as a walkable-world state. */
 export function validateSave(value:unknown):JourneyState|null {
  if(!value||typeof value!=='object')return null;
@@ -435,11 +509,13 @@ export function validateSave(value:unknown):JourneyState|null {
  }else{
   if([s.player,s.toto].some(p=>p.x< -11.73||p.x>11.73||p.z< -64.73||p.z>7.73))return null;
   if(s.player.z< -10.55&&!s.solved[0]||s.player.z< -24.3&&!s.solved[1]||s.player.z< -35.6&&!s.gateLatched&&s.toto.plate!=='gate'||s.player.z< -49&&!s.wallSeen||s.player.z>3.35&&s.era<3)return null;
-  if(obstruction(s,s.player,s.player)||obstruction(s,s.toto,s.toto,true))return null;
+  if(legacyObstruction(s,s.player,s.player)||legacyObstruction(s,s.toto,s.toto,true))return null;
   if(s.mode==='observe'&&(!s.solved[3]||distance(s.player,MAP.observe)>INTERACT+.01))return null;
  }
  if(s.toto.plate!==null){const p=platePoint(s.toto.plate);if(!p||(s.toto.waiting&&distance(s.toto,p)>.00001)||s.era<1||s.toto.plate==='gate'&&!s.solved[1]||s.toto.plate!=='gate'&&s.era!==3)return null;
-  if(movingToPlate(s)&&recoverTrail(s,p).length===0)return null;
  }
- return {version:3,phase:s.phase,player:{x:s.player.x,z:s.player.z,facing:s.player.facing},toto:{x:s.toto.x,z:s.toto.z,facing:s.toto.facing,waiting:s.toto.waiting,plate:s.toto.plate},era:s.era,quarter:s.quarter,mode:s.mode,p1:s.p1,p2Drain:s.p2Drain,p2Stopper:s.p2Stopper,gateLatched:s.gateLatched,wallSeen:s.wallSeen,ringA:s.ringA,ringB:s.ringB,solved:[...s.solved],portalOpen:s.portalOpen,seen:[...new Set(s.seen)],steps:s.steps};
+ const restored:JourneyState={version:3,phase:s.phase,player:{x:s.player.x,z:s.player.z,facing:s.player.facing},toto:{x:s.toto.x,z:s.toto.z,facing:s.toto.facing,waiting:s.toto.waiting,plate:s.toto.plate},era:s.era,quarter:s.quarter,mode:s.mode,p1:s.p1,p2Drain:s.p2Drain,p2Stopper:s.p2Stopper,gateLatched:s.gateLatched,wallSeen:s.wallSeen,ringA:s.ringA,ringB:s.ringB,solved:[...s.solved],portalOpen:s.portalOpen,seen:[...new Set(s.seen)],steps:s.steps};
+ if(!repairNewOverlaps(restored))return null;
+ if(movingToPlate(restored)&&recoverTrail(restored,platePoint(restored.toto.plate)!).length===0)return null;
+ return restored;
 }

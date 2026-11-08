@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { MAP } from './contract';
 import { box, cylinder, lightPool, torus } from './sceneArt';
 
-import {ROOM_X_SCALE} from './roomPresentation';
-const FURNITURE_X_SCALE=1.18;
+import {FURNITURE_X_SCALE,ROOM_X_SCALE} from './roomPresentation';
+import {ROOM_SOLIDS} from './collision';
 
 /** Small deterministic, locally painted surfaces. No network assets or gameplay state. */
 function painted(width:number,height:number,draw:(c:CanvasRenderingContext2D)=>void){
@@ -79,11 +79,11 @@ export function createRoomArt(room:THREE.Group):{screen:THREE.Object3D;calendar:
  box(room,8.12,.15,.16,0,-.07,3,0x8e5d38);
  finishSection('room-shell',0,ROOM_X_SCALE);
  // Walnut case, recessed shelf interiors and a quiet handful of books.
- const shelfX=-2.94,shelfZ=-3.39;
+ const {x:shelfX,z:shelfZ}=ROOM_SOLIDS.shelf;
  timber(1.65,2.22,.12,shelfX,1.14,-3.73,0x78513b);
  for(const x of[shelfX-.84,shelfX+.84])timber(.13,2.28,.68,x,1.16,shelfZ,0xb28b66);
  for(const y of[.12,.8,1.47,2.23]){timber(1.8,.11,.73,shelfX,y,shelfZ,0xb08a64);timber(1.8,.05,.05,shelfX,y+.04,-3.01,0xd0a575);}
- timber(1.88,.25,.77,shelfX,2.32,shelfZ,0xa77b53);
+ timber(ROOM_SOLIDS.shelf.width,.25,ROOM_SOLIDS.shelf.depth,shelfX,2.32,shelfZ,0xa77b53);
  for(let i=0;i<5;i++){
   const book=box(room,.105,.32+(i%3)*.05,.27,-3.52+i*.12,.34+(i%3)*.025,-3.29,[0x465d55,0xa96e4c,0xb5a17b,0x5c6b72,0x805849][i]!);
   book.rotation.z=i===4?-.12:0;box(room,.07,.018,.012,book.position.x,.26,-3.148,0xd2b98b);
@@ -99,7 +99,7 @@ export function createRoomArt(room:THREE.Group):{screen:THREE.Object3D;calendar:
  finishSection('woven-rug',0);
  // The console anchor follows the shared display mapping, not model/collision coordinates.
  const {x:cx,z:cz}=MAP.console;
- timber(1.95,.53,.85,cx,.36,cz,0x9b6b48);timber(2.04,.12,.96,cx,.69,cz,0xd6a06b);
+ timber(1.95,.53,.85,cx,.36,cz,0x9b6b48);timber(ROOM_SOLIDS.desk.width,.12,ROOM_SOLIDS.desk.depth,cx,.69,cz,0xd6a06b);
  for(const x of[cx-.82,cx+.82])for(const z of[cz-.32,cz+.32])timber(.13,.24,.13,x,.12,z,0x865a3c);
  box(room,.58,.055,.3,cx,.78,cz-.23,0x26383b);box(room,.13,.3,.1,cx,.91,cz-.29,0x2b3c3e);
  box(room,1.46,.88,.13,cx,1.3,cz-.29,0x23363b);
@@ -137,22 +137,22 @@ export function createRoomArt(room:THREE.Group):{screen:THREE.Object3D;calendar:
  timber(2.17,.1,.28,wx,wy-.77,wz+.11,0xd6ae7c);
  finishSection('winter-window',wx);
  // Faceted linen lamp with warm spill rather than a uniform orange room wash.
- const lx=2.25,lz=-2.58;
+ const {x:lx,z:lz}=ROOM_SOLIDS.lamp;
  cylinder(room,.3,.12,lx,.12,lz,0xa3743e,12);cylinder(room,.23,.29,lx,.31,lz,0xf0c375,12);
  cylinder(room,.04,.52,lx,.66,lz,0x967143,10);
- const shade=new THREE.Mesh(new THREE.CylinderGeometry(.22,.43,.57,10,1,true),new THREE.MeshStandardMaterial({color:0xf0d6a2,side:THREE.DoubleSide,roughness:1,flatShading:true,emissive:0xffca76,emissiveIntensity:.16}));shade.position.set(lx,.97,lz);shade.castShadow=true;room.add(shade);
+ const shade=new THREE.Mesh(new THREE.CylinderGeometry(.22,ROOM_SOLIDS.lamp.radius,.57,10,1,true),new THREE.MeshStandardMaterial({color:0xf0d6a2,side:THREE.DoubleSide,roughness:1,flatShading:true,emissive:0xffca76,emissiveIntensity:.16}));shade.position.set(lx,.97,lz);shade.castShadow=true;room.add(shade);
  const lampTop=new THREE.Mesh(new THREE.CircleGeometry(.215,10),new THREE.MeshBasicMaterial({color:0xfff1b8}));lampTop.rotation.x=-Math.PI/2;lampTop.position.set(lx,1.257,lz);room.add(lampTop);
  const pool=lightPool(room,lx,lz,1.65);pool.material.opacity=.8;
  const indoorLight=new THREE.PointLight(0xffbd6c,9,9,2);indoorLight.position.set(lx,1.48,lz+.15);room.add(indoorLight);
  finishSection('reading-lamp',lx);
  // Green upholstered reading chair and its walnut frame stay at the original edge.
- const ax=3.25,az=1.7;
+ const {x:ax,z:az}=ROOM_SOLIDS.chair;
  for(const x of[ax-.4,ax+.4])for(const z of[az-.34,az+.36])timber(.105,.38,.11,x,.19,z,0x8a5a39);
  timber(.97,.14,.86,ax,.38,az,0x966a46);
  box(room,.81,.23,.76,ax,.55,az,0x63745b);
  const back=box(room,.85,.7,.19,ax,.88,az-.34,0x5b7059);back.rotation.x=-.06;
  box(room,.7,.12,.16,ax,1.22,az-.36,0x718066);
- for(const x of[ax-.48,ax+.48]){timber(.13,.55,.13,x,.58,az-.25,0x94623f);timber(.14,.13,.89,x,.8,az,0xb38352);}
+ for(const x of[ax-(ROOM_SOLIDS.chair.width/2-.07),ax+(ROOM_SOLIDS.chair.width/2-.07)]){timber(.13,.55,.13,x,.58,az-.25,0x94623f);timber(.14,.13,ROOM_SOLIDS.chair.depth,x,.8,az,0xb38352);}
  finishSection('green-armchair',ax);
  return {screen,calendar};
 }

@@ -11,13 +11,13 @@ function walk(s:JourneyState,to:Point){
  }
  throw new Error(`Cannot walk from ${s.player.x},${s.player.z} to ${to.x},${to.z}`);
 }
-function begin(){const s=createState();walk(s,MAP.console);interact(s);return s;}
+function begin(){const s=createState();walk(s,{x:0,z:-1.5});interact(s);return s;}
 function solveTile(s:JourneyState){walk(s,{x:2.6,z:-3});walk(s,{x:3,z:-5.2});interact(s);walk(s,{x:2.6,z:-8.5});}
 function toGate(){
  const s=begin();solveTile(s);walk(s,{x:0,z:-13});walk(s,{x:MAP.drainControl.x+.3,z:-13.7});interact(s);walk(s,{x:MAP.stopperControl.x+.3,z:-13.7});interact(s);walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:0,z:-26});walk(s,MAP.gatePlate);return s;
 }
 function toWall(){
- const s=toGate();partner(s);walk(s,{x:0,z:-33});walk(s,{x:0,z:-37});walk(s,MAP.latch);interact(s);partner(s);wait(s,360);expect(s.solved[2]).toBe(true);walk(s,{x:8,z:-42});return s;
+ const s=toGate();partner(s);walk(s,{x:0,z:-33});walk(s,{x:0,z:-37});walk(s,{x:2,z:-37});interact(s);partner(s);wait(s,360);expect(s.solved[2]).toBe(true);walk(s,{x:8,z:-42});return s;
 }
 
 describe('evolution direct-control model',()=>{
@@ -43,9 +43,9 @@ describe('evolution direct-control model',()=>{
  it('links the last-day calendar to an optional star on the path before and after color',()=>{
   let s=createState();walk(s,MAP.calendar);expect(context(s)?.id).toBe('calendar');
   expect(interact(s).some(e=>e.id==='discovery-calendar')).toBe(true);
-  walk(s,MAP.console);expect(context(s)?.id).toBe('begin');interact(s);walk(s,MAP.starPost);
+  walk(s,{x:0,z:-1.5});expect(context(s)?.id).toBe('begin');interact(s);walk(s,{x:MAP.starPost.x+1,z:MAP.starPost.z});
   expect(context(s)?.id).toBe('star-post');expect(interact(s).some(e=>e.id==='discovery-star-before')).toBe(true);
-  solveTile(s);walk(s,MAP.starPost);expect(interact(s).some(e=>e.id==='discovery-star-color')).toBe(true);
+  solveTile(s);walk(s,{x:3,z:-3});walk(s,{x:MAP.starPost.x+1,z:MAP.starPost.z});expect(interact(s).some(e=>e.id==='discovery-star-color')).toBe(true);
   s=validateSave(s)!;expect(s.seen).toContain('discovery-calendar');expect(s.seen).toContain('discovery-star-before');expect(s.seen).toContain('discovery-star-color');
   expect(s.solved[0]).toBe(true);expect(s.solved.slice(1)).toEqual([false,false,false,false,false]);
  });
@@ -74,7 +74,7 @@ describe('evolution direct-control model',()=>{
   expect(s.player.z).toBeGreaterThan(-34.41);
  });
  it('the bridge and gate cannot be bypassed at their sides',()=>{
-  const s=begin();solveTile(s);walk(s,{x:5,z:-21});
+  const s=begin();solveTile(s);walk(s,{x:5,z:-11});walk(s,{x:5,z:-21});
   for(let i=0;i<100;i++)step(s,{x:0,z:-1,run:true},.1);
   expect(s.player.z).toBeGreaterThan(-21.71);
   walk(s,{x:0,z:-13});walk(s,{x:MAP.drainControl.x+.3,z:-13.7});interact(s);walk(s,{x:MAP.stopperControl.x+.3,z:-13.7});interact(s);
@@ -88,7 +88,7 @@ describe('evolution direct-control model',()=>{
    expect(s.toto.x-s.player.x).toBeCloseTo(1.15,1);expect(Math.abs(s.toto.z-s.player.z)).toBeLessThan(.03);
    expect(validateSave(s)).not.toBeNull();interact(s);
   }
-  expect(s.solved[1]).toBe(true);walk(s,{x:-2,z:-16});walk(s,{x:-4,z:-16});
+  expect(s.solved[1]).toBe(true);walk(s,{x:-2,z:-13});walk(s,{x:-5,z:-13});walk(s,{x:-5,z:-15.5});
   for(let i=0;i<120;i++)step(s,{x:0,z:-1,run:true},1/60);
   expect(s.player.z).toBeGreaterThanOrEqual(-16.5);expect(context(s)?.id).not.toBe('stopper');
   for(const point of [MAP.drain,MAP.stopper,MAP.mill,{x:-7,z:-20},{x:-7,z:-16},{x:MAP.drainControl.x-.85,z:MAP.drainControl.z-.6},{x:MAP.stopperControl.x-.85,z:MAP.stopperControl.z-.6}]){
@@ -130,7 +130,7 @@ describe('evolution direct-control model',()=>{
    const s=begin();solveTile(s);walk(s,{x:0,z:-12});walk(s,approach);
    for(const id of order){
     walk(s,{x:s.player.x,z:-13});const c=id==='drain'?MAP.drainControl:MAP.stopperControl;
-    const destination={x:c.x+offset.x,z:c.z+offset.z};walk(s,destination);
+    const destination={x:c.x+offset.x,z:c.z+offset.z};walk(s,{x:destination.x,z:-13});walk(s,destination);
     for(let i=0;i<100;i++){const dx=destination.x-s.player.x,dz=destination.z-s.player.z,d=Math.hypot(dx,dz);if(d<.00001)break;step(s,{x:dx/d,z:dz/d,run:true},Math.min(.01,d/4.8));}
     expect(context(s)?.id).toBe(id);
     interact(s);const player={...s.player},stage=millCompanionStaging(s)!;
@@ -265,12 +265,13 @@ describe('evolution direct-control model',()=>{
    }
   }
  });
- it('walks around the player when the safe object-side rest candidate changes sides',()=>{
+ it('keeps safe personal space after restoring a companion inside a lever',()=>{
   const raw=toWall();rotate(raw);interact(raw);walk(raw,MAP.wallTop);Object.assign(raw.player,{x:6,z:-55});Object.assign(raw.toto,{x:6,z:-56.05});
   const s=validateSave(raw)!;expect(s).not.toBeNull();let minimum=Infinity;
   for(let i=0;i<240;i++){const previous={...s.toto};stepCompanion(s,1/60);minimum=Math.min(minimum,distance(s.player,s.toto));expect(distance(previous,s.toto)).toBeLessThanOrEqual(.082);expect(validateSave(s)).not.toBeNull();}
   expect(minimum,`minimum separation ${minimum}`).toBeGreaterThanOrEqual(1);
-  expect(s.toto.z).toBeGreaterThan(-54.05);
+  expect(distance(s.player,s.toto)).toBeLessThanOrEqual(2.02);
+  expect(distance(s.toto,MAP.leverB)).toBeGreaterThan(.94);
  });
  it('increases an initially overlapping rest distance and keeps a blocked rest fallback outside the player',()=>{
   const base=toWall();rotate(base);interact(base);walk(base,MAP.wallTop);
@@ -296,7 +297,7 @@ describe('evolution direct-control model',()=>{
   }
  });
  it('never corrects an unassigned companion onto any of the three pressure plates',()=>{
-  const base=toWall();rotate(base);interact(base);walk(base,MAP.wallTop);walk(base,MAP.leverA);interact(base);walk(base,MAP.leverB);interact(base);walk(base,MAP.observe);interact(base);interact(base);
+  const base=toWall();rotate(base);interact(base);walk(base,MAP.wallTop);walk(base,{x:0,z:-55});interact(base);walk(base,{x:6,z:-55});interact(base);walk(base,MAP.observe);interact(base);interact(base);
   for(const plate of [MAP.gatePlate,MAP.frontPlate,MAP.backPlate]){
    const raw=structuredClone(base);Object.assign(raw.player,{x:plate.x+2.6,z:plate.z});Object.assign(raw.toto,{x:plate.x+3.3,z:plate.z+.7});
    const s=validateSave(raw)!;expect(s).not.toBeNull();
@@ -306,10 +307,10 @@ describe('evolution direct-control model',()=>{
  });
  it('completes all six through walked routes, physical plates and observation, with valid saves',()=>{
   const s=toWall();expect(validateSave(s)).not.toBeNull();rotate(s);interact(s);walk(s,MAP.wallTop);expect(s.solved[3]).toBe(true);
-  walk(s,MAP.leverA);expect(context(s)?.label).toBe('レバーAを動かす');interact(s);walk(s,MAP.leverB);expect(context(s)?.label).toBe('レバーBを動かす');interact(s);
+  walk(s,{x:0,z:-55});expect(context(s)?.label).toBe('レバーAを動かす');interact(s);walk(s,{x:6,z:-55});expect(context(s)?.label).toBe('レバーBを動かす');interact(s);
   expect([s.ringA,s.ringB]).toEqual([1,2]);expect(s.solved[4]).toBe(false);
   walk(s,MAP.observe);interact(s);expect(s.solved[4]).toBe(true);expect(s.mode).toBe('observe');expect(s.era).toBe(3);expect(validateSave(s)).not.toBeNull();
-  interact(s);walk(s,MAP.wallTop);walk(s,{x:8,z:-42});walk(s,{x:0,z:-37});walk(s,{x:0,z:-33});walk(s,{x:0,z:-26});walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:3,z:-8});walk(s,{x:3,z:-4});walk(s,MAP.spawn);walk(s,MAP.frontPlate);
+  interact(s);walk(s,MAP.wallTop);walk(s,{x:8,z:-42});walk(s,{x:0,z:-40});walk(s,{x:0,z:-37});walk(s,{x:0,z:-33});walk(s,{x:0,z:-26});walk(s,{x:0,z:-15});walk(s,{x:0,z:-20});walk(s,{x:3,z:-8});walk(s,{x:3,z:-4});walk(s,MAP.spawn);walk(s,MAP.frontPlate);
   partner(s);expect(s.toto.plate).toBe('front');walk(s,{x:3,z:2.5});walk(s,{x:3,z:5.5});walk(s,MAP.backPlate);
   expect(s.portalOpen).toBe(true);expect(s.solved.every(Boolean)).toBe(true);expect(validateSave(s)).not.toBeNull();
   const wrong=interact(s);expect(s.phase).toBe('world');expect(wrong[0]?.type).toBe('notice');

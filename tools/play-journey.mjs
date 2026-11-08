@@ -65,16 +65,16 @@ async function solved(n){await until(s=>s.solved[n-1],`P${n}`);await record('puz
 try{
  await page.goto(url);await page.locator('#journey-new').waitFor();assert.equal(await saved(),null,'Fresh isolated browser context must have no save');await shot('00-title');
  await page.locator('#journey-new').click();await dialogue();await shot('01-room');
- await walk(0,-1.6);await use('いっしょに始める');await shot('02-world');
+ await walk(0,-1.35);await use('いっしょに始める');await shot('02-world');
  await walk(3,-3);await walk(3.1,-5.2);await shot('03-p1-before');await use('ハンドルを回す');await solved(1);
  await walk(3,-8.5);await walk(0,-13);await walk(-5.7,-13.7);await use('排水口を閉じる');await walk(-2.7,-13.7);await use('止め具を外す');await solved(2);
  await walk(0,-15);await walk(0,-20);await walk(0,-26);await walk(-2.2,-31.5);await press('KeyT');await walk(0,-33);await until(s=>s.toto.waiting,'Toto reached gate plate');
- await walk(0,-37);await walk(2,-38);await use('留め金を固定する');await press('KeyT');await solved(3);
+ await walk(0,-37);await walk(2,-37);await use('留め金を固定する');await press('KeyT');await solved(3);
  await walk(8,-42);await dialogue();const before=await saved();await record('reload-before','Actual autosave after P03');await page.reload();await page.locator('#journey-continue').click();await dialogue();const after=await saved();
  assert.deepEqual(after.solved,before.solved);assert.deepEqual(after.player,before.player);assert.equal(after.quarter,before.quarter);assert.equal(after.gateLatched,true);await record('reload-pass','Continue restored position and solved puzzles');await shot('04-reloaded');
  await press('KeyQ');await use('白い段を調べる');await walk(8,-50.5);await solved(4);
- await walk(0,-56);await use('レバーAを動かす');await walk(6,-56);await use('レバーBを動かす');await walk(3,-54);await shot('05-observe-before');await use('輪をのぞく');await solved(5);await use('観測をやめる');
- await walk(8,-50.5);await walk(8,-42);await walk(0,-37);await walk(0,-33);await walk(0,-26);await walk(0,-20);await walk(0,-15);await walk(3,-8);await walk(3,-4);await walk(0,0);await walk(.9,2.5);
+ await walk(0,-55);await use('レバーAを動かす');await walk(6,-55);await use('レバーBを動かす');await walk(3,-54);await shot('05-observe-before');await use('輪をのぞく');await solved(5);await use('観測をやめる');
+ await walk(8,-50.5);await walk(8,-42);await walk(0,-40);await walk(0,-37);await walk(0,-33);await walk(0,-26);await walk(0,-20);await walk(0,-15);await walk(3,-8);await walk(3,-4);await walk(0,0);await walk(.9,2.5);
  await press('KeyR');await shot('06-resonance');await press('KeyR');await press('KeyT');await walk(3,2.5);await until(s=>s.toto.waiting,'Toto reached front plate');await walk(3,5.5);await walk(0,5.5);await solved(6);
  await press('KeyT');
  // Companion movement alone is not autosaved every frame. Use its public UI state,
