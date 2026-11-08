@@ -195,7 +195,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  resize();
  return {resize,dispose(){monochrome.dispose();renderer.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points){o.geometry.dispose();}});},render(s:JourneyState,dt:number,options:RenderOptions){
   time+=Math.max(0,Math.min(.1,dt));const inRoom=s.phase!=='world';outdoor.visible=!inRoom;room.visible=inRoom;scene.fog=inRoom?null:new THREE.Fog(s.era===3?0x8588ac:0x909cba,30,85);scene.background=new THREE.Color(inRoom?0x292e32:s.era===3?0x8588ac:0x909cba);
-  if(lastEra!==s.era||lastQuality!==options.quality||lastRoom!==inRoom){const scale=!inRoom&&s.era===0?Math.min(1,640/width):!inRoom&&s.era===1?Math.min(1,720/width):options.quality==='low'?1:Math.min(devicePixelRatio||1,1.5);renderer.setPixelRatio(1);renderer.setSize(Math.round(width*scale),Math.round(height*scale),false);canvas.style.imageRendering=!inRoom&&s.era<2?'pixelated':'auto';renderer.shadowMap.enabled=(inRoom||s.era===3)&&options.quality!=='low';lastEra=s.era;lastQuality=options.quality;lastRoom=inRoom;}
+  if(lastEra!==s.era||lastQuality!==options.quality||lastRoom!==inRoom){const scale=!inRoom&&s.era===0?Math.min(1,320/height):!inRoom&&s.era===1?Math.min(1,720/width):options.quality==='low'?1:Math.min(devicePixelRatio||1,1.5);renderer.setPixelRatio(1);renderer.setSize(Math.round(width*scale),Math.round(height*scale),false);canvas.style.imageRendering=!inRoom&&s.era<2?'pixelated':'auto';renderer.shadowMap.enabled=(inRoom||s.era===3)&&options.quality!=='low';lastEra=s.era;lastQuality=options.quality;lastRoom=inRoom;}
   // E0 is authored in greyscale; no global contrast filter can wash out its snow or actors.
   canvas.style.transition='none';
   canvas.style.filter='none';
