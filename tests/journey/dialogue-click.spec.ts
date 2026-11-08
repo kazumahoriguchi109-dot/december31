@@ -26,7 +26,7 @@ test('last desk-line click opens the movie without carrying the click into skip 
  await page.locator('#journey-interact').click();for(let i=0;i<OPENING_DESK.length-1;i++)await page.locator('#journey-line').click();
  await expect(page.locator('#journey-line')).toHaveText(OPENING_DESK.at(-1)![1]);await page.locator('#journey-line').dblclick();await expect(page.locator('.journey-portal')).toBeVisible();
  await page.mouse.click(240,125);await page.waitForTimeout(1800);await page.mouse.click(240,125);await expect(page.locator('.journey-portal')).toBeVisible();
- const skip=await page.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).boundingBox();await page.mouse.dblclick(skip!.x+skip!.width/2,skip!.y+skip!.height/2,{delay:80});await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);await page.waitForTimeout(150);await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);
+ const skipButton=page.getByRole('button',{name:'映像をスキップしてゲームへ進む'});await expect(skipButton).toBeEnabled({timeout:20000});const skip=await skipButton.boundingBox();await page.mouse.dblclick(skip!.x+skip!.width/2,skip!.y+skip!.height/2,{delay:80});await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);await page.waitForTimeout(150);await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);
  await page.locator('#journey-line').click();await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[1]![1]);
 });
 test('touch surface tap and accessible button remain separate, single-advance inputs',async({browser})=>{
