@@ -6,7 +6,7 @@ The soundtrack is original: six warm chords, a sparse bell-like melody, soft win
 
 ## Reliable start and deliberate skipping
 
-The previous eighteen-second file and natural timer were correct, but a second E press shortly after the final dialogue could dismiss the movie almost immediately. The fix ignores carry-over advance input for the first 1.2 seconds of actual animation and ignores rapid repeated E/Space/Enter presses until input has been quiet for 600ms. Escape remains an immediate, deliberate skip. A later pointer or keyboard skip still works. Double clicks cannot transfer directly into the newly displayed skip button.
+The previous eighteen-second file and natural timer were correct, but a second E press shortly after the final dialogue could dismiss the movie almost immediately. A short guard alone also allowed slower dialogue-key presses to skip it. E/Space/Enter now never skip from general focus. Escape remains an immediate, deliberate skip. The explicit skip button supports pointer/touch activation, or Tab followed by native Enter/Space activation, after the first 1.2 seconds. Double clicks cannot transfer directly into the newly displayed skip button.
 
 Loading time does not consume the animation. The small video is fetched completely before playback. If video readiness is slow or playback is rejected, the decoded illustration starts the equivalent Canvas animation; that choice is retained rather than jumping into the middle of a late video. If neither asset is ready, a loading message remains and no animation timer runs. Video completion follows actual media time, not a wall timer that could expire while waiting for bytes.
 

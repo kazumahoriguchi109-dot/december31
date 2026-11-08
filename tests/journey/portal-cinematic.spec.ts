@@ -54,6 +54,7 @@ test('rapid advance keys and held repeats cannot skip the opening, deliberate sk
  await page.keyboard.down('Space');await page.keyboard.down('Space');await page.keyboard.up('Space');
  await expect(page.locator('.journey-portal')).toBeVisible();
  await page.waitForTimeout(1600);await page.keyboard.press('KeyE');
+ await expect(page.locator('.journey-portal')).toBeVisible();await page.keyboard.press('Escape');
  await expect(page.locator('.journey-portal')).toHaveCount(0);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
 });
 test('late movie response cannot consume the animation or jump into its middle',async({page})=>{
@@ -78,4 +79,23 @@ test('a playback promise that never settles falls back instead of waiting indefi
  test.setTimeout(120000);await page.addInitScript(()=>{HTMLMediaElement.prototype.play=function(){return new Promise<void>(()=>{});};});
  await reachPortal(page);await expect(page.locator('.journey-portal p')).toHaveText('ふたりで、画面の向こうへ。',{timeout:10000});
  await expect(page.locator('.journey-portal video')).toHaveCSS('opacity','0');await page.keyboard.press('Escape');await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
+});
+
+
+test('slow dialogue advancement keys never dismiss the movie',async({page})=>{
+ test.setTimeout(120000);await reachPortal(page);
+ for(const key of ['KeyE','Space','Enter','KeyE','Space','Enter']){
+  await page.waitForTimeout(800);await page.keyboard.press(key);
+  await expect(page.locator('.journey-portal')).toBeVisible();
+ }
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
+});
+for(const key of ['Enter','Space'])test(`focused skip button supports native ${key} exactly once`,async({page})=>{
+ test.setTimeout(120000);await reachPortal(page);
+ const skip=page.locator('.journey-portal button');await expect(skip).toBeEnabled();
+ await page.keyboard.press('Tab');await expect(skip).toBeFocused();
+ await page.keyboard.press(key);await expect(page.locator('.journey-portal')).toHaveCount(0);
+ await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
+ await page.waitForTimeout(300);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
 });

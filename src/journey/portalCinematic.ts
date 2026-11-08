@@ -12,7 +12,7 @@ export function createPortalCinematic(root:HTMLElement){
    cleanup?.();
    const reduced=options.reducedMotion||matchMedia('(prefers-reduced-motion: reduce)').matches;
    const overlay=document.createElement('section');overlay.className='journey-portal';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','二人がゲームの世界へ吸い込まれる映像');
-   overlay.innerHTML='<canvas aria-hidden="true"></canvas><footer><p aria-live="polite">映像を準備しています…</p><button type="button" aria-label="映像をスキップしてゲームへ進む">スキップ <span aria-hidden="true">E / Esc</span></button></footer>';
+   overlay.innerHTML='<canvas aria-hidden="true"></canvas><footer><p aria-live="polite">映像を準備しています…</p><button type="button" aria-label="映像をスキップしてゲームへ進む">スキップ <span aria-hidden="true">Esc</span></button></footer>';
    const prior=document.activeElement as HTMLElement|null;
    const siblings=Array.from(root.children).filter((e):e is HTMLElement=>e instanceof HTMLElement).map(e=>({e,inert:e.inert}));
    siblings.forEach(({e})=>e.inert=true);root.append(overlay);
@@ -20,7 +20,7 @@ export function createPortalCinematic(root:HTMLElement){
    overlay.tabIndex=-1;overlay.focus();button.disabled=true;
    let finished=false,elapsed=0,last=performance.now(),raf=0,mode:'loading'|'video'|'canvas'='loading';
    let playPending=false,playRequestAt=0;
-   let lastAdvanceInput=performance.now(),videoFailed=false,imageFailed=false,failed=false,objectUrl='',stopSound=()=>{};
+   let videoFailed=false,imageFailed=false,failed=false,objectUrl='',stopSound=()=>{};
    const requestedAt=performance.now(),controller=new AbortController();
    const video=document.createElement('video');video.muted=true;video.playsInline=true;video.preload='auto';video.setAttribute('aria-hidden','true');video.style.opacity='0';
    if(!reduced)overlay.insertBefore(video,overlay.querySelector('footer'));
@@ -47,15 +47,18 @@ export function createPortalCinematic(root:HTMLElement){
     if(readyImage()&&(videoFailed||performance.now()-requestedAt>=1200)){begin('canvas');return;}
     if(!failed&&imageFailed&&(videoFailed||reduced)){failed=true;caption.textContent='映像を読み込めませんでした。ゲームへ進めます。';button.disabled=false;}
    };
-   const finish=(complete=true)=>{if(finished)return;finished=true;controller.abort();video.pause();video.removeAttribute('src');video.load();if(objectUrl)URL.revokeObjectURL(objectUrl);cancelAnimationFrame(raf);stopSound();document.removeEventListener('keydown',key,true);document.removeEventListener('keyup',release,true);document.removeEventListener('visibilitychange',visibility);overlay.remove();siblings.forEach(({e,inert})=>e.inert=inert);cleanup=null;if(complete)options.onComplete();else prior?.focus();};
+   const finish=(complete=true)=>{if(finished)return;finished=true;controller.abort();video.pause();video.removeAttribute('src');video.load();if(objectUrl)URL.revokeObjectURL(objectUrl);cancelAnimationFrame(raf);stopSound();document.removeEventListener('keydown',key,true);document.removeEventListener('visibilitychange',visibility);overlay.remove();siblings.forEach(({e,inert})=>e.inert=inert);cleanup=null;if(complete)options.onComplete();else prior?.focus();};
    const advanceKeys=['KeyE','Space','Enter'];
    const pastGuard=()=>mode==='loading'?performance.now()-requestedAt>=1200:elapsed>=(reduced?0:1200);
-   const canAdvance=(now:number)=>(failed||pastGuard())&&now-lastAdvanceInput>=600;
-   const key=(e:KeyboardEvent)=>{if(e.ctrlKey||e.metaKey||e.altKey)return;e.stopImmediatePropagation();if(e.code==='Escape'){e.preventDefault();if(!e.repeat)finish();}else if(advanceKeys.includes(e.code)){e.preventDefault();const now=performance.now(),allowed=canAdvance(now);lastAdvanceInput=now;if(!e.repeat&&allowed)finish();}else if(e.code==='Tab'){e.preventDefault();if(!button.disabled)button.focus();}};
-   const release=(e:KeyboardEvent)=>{if(advanceKeys.includes(e.code)){lastAdvanceInput=performance.now();e.preventDefault();}};
+   // Dialogue advancement is never a movie-skip shortcut. Native activation is
+   // reserved for a deliberately focused skip button; Escape remains immediate.
+   const key=(e:KeyboardEvent)=>{if(e.ctrlKey||e.metaKey||e.altKey)return;e.stopImmediatePropagation();if(e.code==='Escape'){e.preventDefault();if(!e.repeat)finish();}else if(advanceKeys.includes(e.code)){
+    const nativeButton=(e.code==='Space'||e.code==='Enter')&&e.target===button&&!button.disabled;
+    if(!nativeButton||e.repeat)e.preventDefault();
+   }else if(e.code==='Tab'){e.preventDefault();if(!button.disabled)button.focus();}};
    const visibility=()=>{last=performance.now();if(document.hidden)video.pause();else if(mode==='video')void video.play().catch(()=>{if(readyImage()){elapsed=video.currentTime*1000;mode='canvas';video.style.opacity='0';}});else choose();};
-   document.addEventListener('keydown',key,true);document.addEventListener('keyup',release,true);document.addEventListener('visibilitychange',visibility);
-   button.addEventListener('click',e=>{if(e.detail>1)return;if((failed||pastGuard())&&(e.detail>0||performance.now()-lastAdvanceInput>=600))finish();});
+   document.addEventListener('keydown',key,true);document.addEventListener('visibilitychange',visibility);
+   button.addEventListener('click',e=>{e.stopPropagation();if(e.detail>1)return;if(failed||pastGuard())finish();});
    video.addEventListener('loadeddata',choose);
    video.addEventListener('error',()=>{videoFailed=true;if(mode==='video'&&readyImage()){elapsed=video.currentTime*1000;mode='canvas';last=performance.now();video.style.opacity='0';}else choose();});
    // Fetch the entire small clip before playing so a slow response cannot shorten or stall it.
