@@ -8,7 +8,7 @@ export function monochromeFrame(width:number,height:number,player:{x:number;z:nu
  const h=320,w=Math.max(64,Math.round(h*width/Math.max(1,height)));
  // Keep a useful area around the player on portrait screens without stretching pixels.
  const unit=Math.min(18,w/15),centerZ=player.z-4;
- return {w,h,unit,x:(x:number)=>Math.round(w/2+(x-player.x)*unit),y:(z:number)=>Math.round(h*.49+(z-centerZ)*unit*.65)};
+ return {w,h,unit,x:(x:number)=>Math.round(w/2+(x-player.x)*unit),y:(z:number)=>Math.round(h*.54+(z-centerZ)*unit*.65)};
 }
 export function createMonochromeArt(){
  const cv=document.createElement('canvas'),ctx=cv.getContext('2d')!;
@@ -79,7 +79,7 @@ export function createMonochromeArt(){
   for(let i=0;i<7;i++)for(const [j,x]of[-6.16,-5.84].entries())rect(f.x(x),f.y(-3.5-i*.45),Math.max(1,f.unit*(j?.14:.17)),Math.max(2,f.unit*(j?.25:.3)),shadow);
   // Depth-sorted scenery and actors preserve feet, approach positions and clear interaction.
   const draw:{z:number;run:()=>void}[]=[];
-  for(const side of [-1,1])for(let z=7;z>=-16;z-=3.7){const x=side*(12.35+.3*Math.sin(z));draw.push({z,run:()=>tree(f.x(x),f.y(z),f.unit/18*.9)});}
+  for(const side of [-1,1])for(let z=7;z>=-18;z-=6.8){const x=side*(12.35+.3*Math.sin(z));draw.push({z,run:()=>tree(f.x(x),f.y(z),f.unit/18*.9)});}
   // Low shrubs / rocks stay outside the walking corridor and never impersonate controls.
   for(let i=0;i<26;i++){const x=(i%2?-1:1)*(8.8+Math.sin(i*9.1)),z=6-i*.65;draw.push({z,run:()=>{const xx=f.x(x),yy=f.y(z);rect(xx,yy-3,2,4,shadow);rect(xx-3,yy-5,2,4,shadow);rect(xx+3,yy-4,2,3,shadow);}});}
   draw.push({z:-10,run:()=>{for(const side of [-1,1]){const x=f.x(side<0?-12:4);masonry(x,f.y(-10)-16,f.unit*8,16);rect(x,f.y(-10)-18,f.unit*8,4,snow);}castle(f.x(0),f.y(-10),f.unit);}});
@@ -94,7 +94,7 @@ export function createMonochromeArt(){
   // A worn standing board, not an automatic hint or a new control.
   rect(f.x(MAP.tileControl.x)-5,f.y(MAP.tileControl.z)+2,10,4,shadow);
   draw.push({z:-3,run:()=>{ctx.save();ctx.translate(f.x(-3),f.y(-3));ctx.scale(f.unit/18,f.unit/18);const x=0,y=0;rect(x-3,y-3,6,4,ink);rect(x-1,y-20,2,18,ink);rect(x-5,y-27,10,9,ink);rect(x-3,y-25,6,5,snow);rect(x-6,y-29,12,3,shadow);ctx.restore();}});
-  draw.push({z:MAP.starPost.z,run:()=>{ctx.save();ctx.translate(f.x(MAP.starPost.x),f.y(MAP.starPost.z));ctx.scale(f.unit/18,f.unit/18);const x=0,y=0;rect(x-2,y-20,4,21,ink);rect(x-14,y-31,29,15,ink);rect(x-12,y-29,25,11,light);rect(x-10,y-26,20,2,shadow);rect(x-10,y-22,15,2,snow);rect(x-12,y-32,24,3,snow);ctx.restore();}});
+  draw.push({z:MAP.starPost.z,run:()=>{ctx.save();ctx.translate(f.x(MAP.starPost.x),f.y(MAP.starPost.z));ctx.scale(f.unit/18,f.unit/18);const x=0,y=0;rect(x-2,y-20,4,21,ink);rect(x-14,y-31,29,15,ink);rect(x-12,y-29,25,11,light);rect(x-10,y-26,12,2,shadow);rect(x-10,y-22,10,2,snow);poly([x+7,y-28,x+8,y-25,x+11,y-24,x+8,y-23,x+7,y-20,x+6,y-23,x+3,y-24,x+6,y-25],ink);rect(x-12,y-32,24,3,snow);ctx.restore();}});
   // Portal behind the arrival point: its occupied uprights retain their visible positions.
   draw.push({z:MAP.portal.z,run:()=>{for(const side of[-1,1]){const x=f.x(MAP.portal.x+side*1.25);masonry(x-4,f.y(MAP.portal.z)-24,8,24);rect(x-5,f.y(MAP.portal.z)-26,10,4,snow);}rect(f.x(MAP.portal.x-1.25),f.y(MAP.portal.z)-25,f.unit*2.5,4,ink);for(let i=0;i<16;i++)for(const side of[-1,1])rect(f.x(MAP.portal.x+side*(-.95+i*1.9/15)),f.y(MAP.portal.z)-3-i*1.2,2,2,shadow);}});
   draw.push({z:8,run:()=>{for(let x=-12;x<=12;x+=1.5)rect(f.x(x),f.y(8)-9,2,10,ink);rect(f.x(-12),f.y(8)-7,24*f.unit,2,shadow);}});
