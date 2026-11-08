@@ -73,7 +73,7 @@ try{
  await walk(8,-42);await dialogue();const before=await saved();await record('reload-before','Actual autosave after P03');await page.reload();await page.locator('#journey-continue').click();await dialogue();const after=await saved();
  assert.deepEqual(after.solved,before.solved);assert.deepEqual(after.player,before.player);assert.equal(after.quarter,before.quarter);assert.equal(after.gateLatched,true);await record('reload-pass','Continue restored position and solved puzzles');await shot('04-reloaded');
  await press('KeyQ');await use('白い段を調べる');await walk(8,-50.5);await solved(4);
- await walk(0,-55);await use('レバーAを動かす');await walk(6,-55);await use('レバーBを動かす');await walk(3,-54);await shot('05-observe-before');await use('輪をのぞく');await solved(5);await use('観測をやめる');
+ await walk(8,-53);await walk(0,-53);await walk(0,-55);await use('レバーAを動かす');await walk(0,-53);await walk(6,-53);await walk(6,-55);await use('レバーBを動かす');await walk(3,-54);await shot('05-observe-before');await use('輪をのぞく');await solved(5);await use('観測をやめる');
  await walk(8,-50.5);await walk(8,-42);await walk(0,-40);await walk(0,-37);await walk(0,-33);await walk(0,-26);await walk(0,-20);await walk(0,-15);await walk(3,-8);await walk(3,-4);await walk(0,0);await walk(.9,2.5);
  await press('KeyR');await shot('06-resonance');await press('KeyR');await press('KeyT');await walk(3,2.5);await until(s=>s.toto.waiting,'Toto reached front plate');await walk(3,5.5);await walk(0,5.5);await solved(6);
  await press('KeyT');
