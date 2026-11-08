@@ -1,0 +1,16 @@
+import {chromium} from '@playwright/test';
+import {mkdirSync} from 'node:fs';
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await browser.newPage({viewport:{width:1280,height:720},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const out=process.env.OUTPUT_DIR||'/tmp/title-resume';mkdirSync(out,{recursive:true});
+const click=id=>page.locator(`[data-id="${id}"]`).click();
+const visiblePanel=()=>page.locator('.panel').evaluate(el=>{const r=el.getBoundingClientRect();const overlay=document.querySelector('.overlay'),title=document.querySelector('.title');return Number(getComputedStyle(overlay).zIndex)>Number(getComputedStyle(title).zIndex)&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});
+const saved=()=>page.evaluate(()=>localStorage.getItem('dec31-evolving-puzzles-v1'));
+await page.goto(process.env.E2E_URL||'http://127.0.0.1:4192');await page.locator('[data-id=new]').waitFor({state:'visible'});await page.locator('.title-bg').evaluate(img=>img.decode());await page.waitForTimeout(250);await page.screenshot({path:out+'/title.png'});
+await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');if(!await visiblePanel())throw Error('keyboard settings hidden');await page.keyboard.press('Escape');await click('new');for(let i=0;i<3;i++)await page.getByRole('button',{name:'▼',exact:true}).click();await page.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).click();await click('interact');await click('close');await click('pause');await click('title');
+const before=await saved();await click('new');await page.screenshot({path:out+'/new-confirm.png'});if(!await visiblePanel())throw Error('new-confirm is hidden behind title');await click('close');if(await saved()!==before)throw Error('cancel changed saved game');
+await click('settings');if(!await visiblePanel())throw Error('settings is hidden behind title');await click('close');await click('continue');if(!await page.locator('.game').isVisible())throw Error('continue failed');await click('pause');await click('title');
+await click('new');await click('fresh');if(!await page.getByRole('button',{name:'▼',exact:true}).isVisible())throw Error('restart failed');
+await page.reload();await click('continue');if(!await page.getByRole('button',{name:'▼',exact:true}).isVisible())throw Error('opening resume failed');
+await page.reload();await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);await page.screenshot({path:out+'/title-mobile.png'});await click('new');if(!await visiblePanel())throw Error('mobile confirmation hidden');await click('close');await click('settings');if(!await visiblePanel())throw Error('mobile settings hidden');await click('close');
+console.log('TITLE NEW/CANCEL/SETTINGS/CONTINUE/RESTART/INTRO RESUME/MOBILE PASSED',errors);await browser.close();if(errors.length)process.exitCode=1;
