@@ -14,7 +14,7 @@ function deskSave(){
 }
 async function reachPortal(page:Page){
  await page.addInitScript(save=>{if(!localStorage.getItem('dec31-evolution-c013:journey'))localStorage.setItem('dec31-evolution-c013:journey',JSON.stringify(save));},deskSave());
- await page.goto('./');await page.locator('#journey-continue').click();
+ await page.goto('./?edition=legacy');await page.locator('#journey-continue').click();
  for(let i=0;i<4;i++)await page.locator('#journey-dialogue [data-action="next"]').click();
 }
 test('portal survives reload, blocks movement, skips once, and never replays after arrival',async({page})=>{
@@ -24,14 +24,14 @@ test('portal survives reload, blocks movement, skips once, and never replays aft
  await page.keyboard.press('KeyW');await page.reload();await page.locator('#journey-continue').click();
  await expect(page.locator('.journey-portal')).toBeVisible();expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('dec31-evolution-c013:journey')!).player)).toEqual(position);
  await page.keyboard.press('Escape');await expect(page.locator('.journey-portal')).toHaveCount(0);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
- await page.waitForTimeout(30500);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
+ await page.waitForTimeout(15500);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
  await page.reload();await page.locator('#journey-continue').click();await expect(page.locator('.journey-portal')).toHaveCount(0);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');expect(errors).toEqual([]);
 });
 test('portal plays to the monochrome world without input',async({page})=>{
  test.setTimeout(120000);await reachPortal(page);await expect(page.locator('.journey-portal')).toBeVisible();
  await expect(page.locator('.journey-portal video')).toHaveJSProperty('muted',true);
- await page.waitForTimeout(18500);await expect(page.locator('.journey-portal')).toBeVisible();
- await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:45000});await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
+ await page.waitForTimeout(8500);await expect(page.locator('.journey-portal')).toBeVisible();
+ await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:22000});await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('dec31-evolution-c013:journey')!).era)).toBe(0);
  await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
 });
@@ -43,7 +43,7 @@ test('OS reduced motion uses a short still dissolve without video',async({page})
 test('blocked video autoplay uses the animated fallback and still completes',async({page})=>{
  test.setTimeout(120000);await page.addInitScript(()=>{HTMLMediaElement.prototype.play=function(){return Promise.reject(new DOMException('Test autoplay block','NotAllowedError'));};});
  await reachPortal(page);await expect(page.locator('.journey-portal')).toBeVisible();await expect(page.locator('.journey-portal video')).toHaveCSS('opacity','0');
- await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:45000});await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
+ await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:22000});await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
 });
 
 // Fast dialogue advancement must not carry through into an accidental movie skip.
@@ -68,7 +68,7 @@ test('late movie response cannot consume the animation or jump into its middle',
 
 test('double tapping the final dialogue does not activate the new skip button',async({page})=>{
  test.setTimeout(120000);await page.addInitScript(save=>localStorage.setItem('dec31-evolution-c013:journey',JSON.stringify(save)),deskSave());
- await page.goto('./');await page.locator('#journey-continue').click();for(let i=0;i<3;i++)await page.locator('#journey-dialogue [data-action="next"]').click();
+ await page.goto('./?edition=legacy');await page.locator('#journey-continue').click();for(let i=0;i<3;i++)await page.locator('#journey-dialogue [data-action="next"]').click();
  const box=await page.locator('#journey-dialogue [data-action="next"]').boundingBox();
  await page.mouse.dblclick(box!.x+box!.width/2,box!.y+box!.height/2,{delay:100});
  await page.waitForTimeout(300);await expect(page.locator('.journey-portal')).toBeVisible();

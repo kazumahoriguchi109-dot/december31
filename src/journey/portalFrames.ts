@@ -38,5 +38,5 @@ export function drawPortalFrame(ctx:CanvasRenderingContext2D,image:CanvasImageSo
  }
  ctx.filter='none';
  // A single soft dark dissolve avoids flashes and hands off to the monochrome world.
- ctx.fillStyle=`rgba(9,14,23,${reduced?smooth(p):smooth((seconds-(PORTAL_SECONDS-2))/2)})`;ctx.fillRect(-w,-h,w*3,h*3);ctx.restore();
+ ctx.fillStyle=`rgba(9,14,23,${reduced?smooth(p):smooth((seconds-(PORTAL_SECONDS-1))/1)})`;ctx.fillRect(-w,-h,w*3,h*3);ctx.restore();
 }

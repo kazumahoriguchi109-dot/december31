@@ -1,4 +1,4 @@
-/** Reproducible thirty-second motion illustration with original music and effects. */
+/** Reproducible fifteen-second motion illustration with original music and effects. */
 import {webkit} from '@playwright/test';
 import {spawn} from 'node:child_process';
 import {writeFileSync,mkdirSync} from 'node:fs';
@@ -15,7 +15,7 @@ header.writeUInt32LE(rate,24);header.writeUInt32LE(rate*2,28);header.writeUInt16
 header.write('data',36);header.writeUInt32LE(pcm.length,40);
 const wav='/tmp/portal-original-soundtrack.wav';writeFileSync(wav,Buffer.concat([header,pcm]));
 // Render the new timing from source; stretching an earlier clip would prolong its dark ending.
-if(process.env.PORTAL_SOURCE_VIDEO)throw new Error('The thirty-second version must render from the Canvas source.');
+if(process.env.PORTAL_SOURCE_VIDEO)throw new Error('The fifteen-second version must render from the Canvas source.');
 const inputs=['-f','image2pipe','-framerate','10','-i','pipe:0','-i',wav];
 const filter='fps=30';
 const encoder=spawn(ffmpeg,['-y','-loglevel','warning',...inputs,'-map','0:v:0','-map','1:a:0','-vf',filter,'-t',String(PORTAL_SECONDS),'-c:v','libx264','-preset','slow','-crf','23','-pix_fmt','yuv420p','-c:a','aac','-b:a','128k','-movflags','+faststart',`${out}/portal-opening.mp4`],{stdio:['pipe','inherit','inherit']});
