@@ -77,3 +77,6 @@ export function pendingOpeningStory(s:JourneyState):JourneyEvent[]{
  if(s.phase==='world'&&s.seen.includes('opening-arrival-started'))return lines(s,'arrival');
  return [];
 }
+
+/** A completed desk conversation is saved before its cinematic; reload resumes it safely. */
+export const pendingPortalEntry=(s:JourneyState)=>hasOpeningStory(s)&&s.phase==='room'&&s.seen.includes('opening-desk-started')&&count(s,'desk')===OPENING_DESK.length;

@@ -24,6 +24,9 @@ async function dialogue(){
   if(await visible('#journey-dialogue')){
    await record('dialogue',await page.locator('#journey-line').innerText());
    await page.locator('#journey-dialogue [data-action="next"]').click();quiet=0;
+  }else if(await visible('.journey-portal')){
+   if(!log.some(entry=>entry.kind==='portal')){await record('portal','Watching the complete opening cinematic without skipping');await shot('01b-portal');}
+   quiet=0;
   }else if(await visible('#journey-evolution'))quiet=0;
   else if(++quiet>=3)return;
   await page.waitForTimeout(160);

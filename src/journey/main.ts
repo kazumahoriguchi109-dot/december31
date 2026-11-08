@@ -1,4 +1,5 @@
-import {beginDeskStory,pendingOpeningStory,acknowledgeOpeningLine} from './openingStory';
+import {createPortalCinematic} from './portalCinematic';
+import {beginDeskStory,pendingOpeningStory,acknowledgeOpeningLine,pendingPortalEntry} from './openingStory';
 import {createState,step,stepCompanion,millCompanionStaging,context,interact,partner,rotate,objective} from './model';
 import {memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation,acknowledgeMemoryLine,unreadMemoryLines} from './memories';
 import {createRenderer} from './renderer';
@@ -28,13 +29,15 @@ const root=document.querySelector<HTMLElement>('#app')!;
 const audio=createJourneyAudio();audio.setVolume(preferences.volume);
 const ui=createUI(root,action);
 const renderer=createRenderer(ui.canvas);
+const portal=createPortalCinematic(root);let portalActive=false;
+function enterPortal(){if(portalActive)return;portalActive=true;keys.clear();ui.setDialogue(null);dialogueVisible=false;saveNow();portal.play({reducedMotion:preferences.reducedMotion,onSound:()=>audio.portal(),onComplete:()=>{portalActive=false;keys.clear();events(interact(state));ui.canvas.focus();}});}
 ui.setSettings(preferences);ui.setContinue(!!loadJourney());ui.setScreen('title');
 const unlockNames=['','色と流れが生まれた','世界に奥行きが生まれた','ふたりの跡が見える'];
 function saveNow(){const ok=saveJourney(state);lastSave=performance.now();ui.setSaveStatus(ok?'保存しました':'保存できません。このページを閉じると進行が失われます');}
 function toast(text:string,id=''){toastId=id;ui.setToast(text);toastUntil=performance.now()+4500;}
 function setScreen(next:typeof screen){screen=next;keys.clear();guardHeld=false;if(next!=='game'){pendingInteraction=null;actionCue=null;}ui.setScreen(next);if(next==='game'){renderer.resize();ui.canvas.focus();}if(next==='title')ui.setContinue(!!loadJourney());}
 function dialogueBlocked(){const stage=millCompanionStaging(state);return performance.now()<evolutionRevealUntil||performance.now()<millRevealUntil||(dialogueStageRemaining>0&&!!stage&&!stage.ready);}
-function showLine(){const line=dialogueBlocked()?null:dialogue[0]??null;dialogueVisible=!!line;ui.setDialogue(line);if(!dialogue.length&&pendingEnding){pendingEnding=false;setScreen('credits');}}
+function showLine(){if(portalActive)return;const line=dialogueBlocked()?null:dialogue[0]??null;dialogueVisible=!!line;ui.setDialogue(line);if(!dialogue.length&&pendingEnding){pendingEnding=false;setScreen('credits');}}
 function events(list:JourneyEvent[]){
  for(const event of list){
   if(event.type==='dialogue'){dialogue.push({id:event.id,speaker:event.speaker??'トト',text:event.text??event.id,expression:expressionFor(event.id,event.text??'')});if(event.id==='mill-solved'){millRevealUntil=performance.now()+(preferences.reducedMotion?100:1050);keys.clear();}if(event.id==='mill-solved'&&millCompanionStaging(state)&&!millCompanionStaging(state)?.ready)dialogueStageRemaining=1;}
@@ -48,14 +51,15 @@ function events(list:JourneyEvent[]){
  if(list.length){saveNow();showLine();}
 }
 function interactionBusy(){return !!pendingInteraction||!!(actionCue&&actionCue.id!=='partner'&&performance.now()<actionCue.start+actionCue.duration);}
-function available(){return screen==='game'&&!dialogue.length&&!interactionBusy()&&performance.now()>=transitionUntil&&performance.now()>=millRevealUntil;}
+function available(){return !portalActive&&screen==='game'&&!dialogue.length&&!interactionBusy()&&performance.now()>=transitionUntil&&performance.now()>=millRevealUntil;}
 function begin(fresh:boolean){
  const existing=loadJourney();
  // Recheck at activation: another tab may have removed or invalidated the save.
  if(!fresh&&!existing){ui.setContinue(false);setScreen('title');return;}
  if(fresh&&existing&&!window.confirm('今の冒険の記録を上書きして、新しく始めますか？'))return;
- state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;millRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
+ portal.cancel();portalActive=false;state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;millRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
  if(fresh)events(step(state,{x:0,z:0,run:false},0));
+ else if(pendingPortalEntry(state))enterPortal();
  else if(state.phase==='ending')setScreen('credits');
  else {const opening=pendingOpeningStory(state);if(opening.length)events(opening);else {const pending=pendingMemoryExplanation(state);if(pending){
   const unread:JourneyEvent[]=unreadMemoryLines(state,pending).map(({speaker,text,index})=>({type:'dialogue',id:`memory-${pending}-${index}`,speaker,text}));
@@ -67,6 +71,7 @@ function action(id:string,value?:string){
  audio.unlock();
  if(id==='volume'){preferences.volume=Math.max(0,Math.min(1,Number(value)));audio.setVolume(preferences.volume);savePreferences(preferences);return;}
  if(id==='motion'){preferences.reducedMotion=value==='true';ui.setSettings(preferences);savePreferences(preferences);return;}
+ if(portalActive)return;
  if(id==='new'){begin(true);return;}if(id==='continue'){begin(false);return;}
  if(id==='title'){saveNow();dialogue=[];dialogueVisible=false;ui.setDialogue(null);ui.setEvolution(null);setScreen('title');return;}
  if(id==='pause'&&screen==='game'){saveNow();setScreen('pause');return;}
@@ -76,7 +81,7 @@ function action(id:string,value?:string){
   const opening=acknowledgeOpeningLine(state,line.id);
   const match=/^memory-(gate|water|first)-(\d+)$/.exec(line.id);
   const changed=match?acknowledgeMemoryLine(state,match[1]!,Number(match[2])):line.id.startsWith('memory-light-')&&acknowledgeMemoryExplanation(state,line.id.slice('memory-light-'.length));
-  if(opening.enterWorld)events(interact(state));
+  if(opening.enterWorld)enterPortal();
   if(changed||opening.changed)saveNow();audio.play('line');showLine();keys.clear();return;}
  if(!available())return;
  if(id==='interact'){
@@ -139,7 +144,7 @@ function frame(now:number){
  const moving=Math.hypot(state.player.x-before.x,state.player.z-before.z)>.0001;
  if(moving)audio.step(input.run&&state.era>=1);
  if((moving&&now-lastSave>2000)||(wasMoving&&!moving)){saveNow();}wasMoving=moving;
- if(screen!=='title'){
+ if(screen!=='title'&&!portalActive){
   const actualContext=context(state),memory=memoryAt(state,resonance);
   const shownContext=dialogue.length?null:actualContext?.enabled?actualContext:memory?{id:`memory-${memory.id}`,label:memoryLit(state,memory.id)?'ふたりの思い出を聞く':'思い出を灯す',hint:memory.title,point:memory.point,enabled:true}:actualContext;
   const focusContext=available()&&!guardHeld&&shownContext?.enabled?shownContext:null;

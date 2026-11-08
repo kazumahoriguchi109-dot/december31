@@ -85,6 +85,23 @@ export function createJourneyAudio() {
     tone(frequency, at, .075, running ? .032 : .023);
     tone(frequency * 1.6, at + .008, .045, .009, 'triangle');
   }
+  function portal() {
+    if (!ready() || !context || !master) return () => {};
+    // Original synthesized wind sweep and a soft landing, no sampled third-party material.
+    const ctx=context, bus=ctx.createGain();bus.gain.value=1;bus.connect(master);
+    const nodes:AudioScheduledSourceNode[]=[];
+    const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*6),ctx.sampleRate),data=buffer.getChannelData(0);
+    let seed=123456789,low=0;
+    for(let i=0;i<data.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;low=low*.94+(seed/4294967296*2-1)*.06;data[i]=low;}
+    const noise=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();noise.buffer=buffer;filter.type='lowpass';
+    const at=ctx.currentTime;filter.frequency.setValueAtTime(250,at);filter.frequency.exponentialRampToValueAtTime(1800,at+3.6);filter.frequency.exponentialRampToValueAtTime(120,at+5.8);
+    gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.2,at+2.5);gain.gain.linearRampToValueAtTime(.11,at+4.6);gain.gain.linearRampToValueAtTime(0,at+6);
+    noise.connect(filter);filter.connect(gain);gain.connect(bus);noise.onended=()=>{noise.disconnect();filter.disconnect();gain.disconnect();};noise.start(at);noise.stop(at+6);nodes.push(noise);
+    for(const [frequency,start,duration,peak] of [[164.81,0,4.8,.018],[220,.15,4.6,.014],[82.41,4.8,.9,.04]]){
+      const osc=ctx.createOscillator(),env=ctx.createGain();osc.frequency.setValueAtTime(frequency!,at+start!);osc.frequency.exponentialRampToValueAtTime(frequency!*.67,at+start!+duration!);env.gain.setValueAtTime(0,at+start!);env.gain.linearRampToValueAtTime(peak!,at+start!+.2);env.gain.linearRampToValueAtTime(0,at+start!+duration!);osc.connect(env);env.connect(bus);osc.onended=()=>{osc.disconnect();env.disconnect();};osc.start(at+start!);osc.stop(at+start!+duration!);nodes.push(osc);
+    }
+    let stopped=false;return ()=>{if(stopped)return;stopped=true;bus.gain.cancelScheduledValues(ctx.currentTime);bus.gain.setValueAtTime(0,ctx.currentTime);for(const node of nodes){try{node.stop();}catch{}node.disconnect();}filter.disconnect();gain.disconnect();bus.disconnect();};
+  }
   function dispose() {
     disposed = true; clearInterval(timer); document.removeEventListener('visibilitychange', visibility);
     for (const source of voices) { source.onended = null; source.stop(); source.disconnect(); }
@@ -92,5 +109,5 @@ export function createJourneyAudio() {
     const old = context; context = null; master = null;
     if (old && old.state !== 'closed') void old.close().catch(() => {});
   }
-  return {unlock,setVolume,setEra(value: Era) { if ([0,1,2,3].includes(value)) era = value; },play,step,dispose};
+  return {unlock,setVolume,setEra(value: Era) { if ([0,1,2,3].includes(value)) era = value; },play,step,portal,dispose};
 }

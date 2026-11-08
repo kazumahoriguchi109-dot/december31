@@ -18,6 +18,7 @@ test('approved opening retains unread lines through pause, reload, desk and worl
  for(let i=0;i<2;i++){await expect(current(page)).toHaveText(OPENING_DESK[i]![1]);await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','room');await next(page);}
  await reload(page);
  for(let i=2;i<4;i++){await expect(current(page)).toHaveText(OPENING_DESK[i]![1]);await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','room');await next(page);}
+ await expect(page.locator('.journey-portal')).toBeVisible();await page.locator('.journey-portal button').click();
  await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');await expect(current(page)).toHaveText(OPENING_ARRIVAL[0]![1]);await next(page);await reload(page);
  await expect(current(page)).toHaveText(OPENING_ARRIVAL[1]![1]);await next(page);await expect(page.locator('#journey-dialogue')).toBeHidden();await reload(page);await expect(page.locator('#journey-dialogue')).toBeHidden();
 });

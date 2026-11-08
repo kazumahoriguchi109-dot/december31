@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {createState,step,interact,validateSave} from '../../src/journey/model';
-import {OPENING_ROOM,OPENING_DESK,OPENING_ARRIVAL,beginDeskStory,acknowledgeOpeningLine,pendingOpeningStory,hasOpeningStory} from '../../src/journey/openingStory';
+import {OPENING_ROOM,OPENING_DESK,OPENING_ARRIVAL,beginDeskStory,acknowledgeOpeningLine,pendingPortalEntry,pendingOpeningStory,hasOpeningStory} from '../../src/journey/openingStory';
 const initial=()=>{const s=createState();step(s,{x:0,z:0,run:false},0);return s;};
 const read=(s:ReturnType<typeof createState>)=>{const events=pendingOpeningStory(s);for(const e of events)acknowledgeOpeningLine(s,e.id);};
 describe('approved opening story',()=>{
@@ -36,6 +36,9 @@ describe('approved opening story',()=>{
    s=validateSave(JSON.parse(JSON.stringify(s)))!;expect(pendingOpeningStory(s)[0]?.id).toBe(`opening-arrival-${i}`);acknowledgeOpeningLine(s,`opening-arrival-${i}`);
   }
   expect(pendingOpeningStory(s)).toEqual([]);expect(s.seen).toHaveLength(7);
+ });
+ it('recognizes only unfinished room-to-world movies after a save round trip',()=>{
+  const s=initial();read(s);Object.assign(s.player,{x:0,z:-1.5});expect(pendingPortalEntry(s)).toBe(false);beginDeskStory(s);read(s);expect(pendingPortalEntry(validateSave(JSON.parse(JSON.stringify(s)))!)).toBe(true);interact(s);expect(pendingPortalEntry(s)).toBe(false);expect(pendingPortalEntry(createState())).toBe(false);
  });
  it('does not replay new introductions or change progress in legacy room/world saves',()=>{
   let s=createState();s.seen=['room-intro'];s.steps=41;
