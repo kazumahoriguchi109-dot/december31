@@ -1,0 +1,41 @@
+/** Original eighteen-second music and effects. No samples or third-party compositions. */
+export const PORTAL_SECONDS=18;
+export const PORTAL_SAMPLE_RATE=44100;
+export const PORTAL_MOTION_SCALE=3;
+export function createPortalSamples(sampleRate:number):Float32Array<ArrayBuffer> {
+ if(!Number.isFinite(sampleRate)||sampleRate<8000||sampleRate>192000)throw new Error('Unsupported portal sample rate');
+ const samples=new Float32Array(Math.round(sampleRate*PORTAL_SECONDS));
+ const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+ function note(frequency:number,start:number,duration:number,level:number,attack:number,pad=false){
+  const from=Math.max(0,Math.floor(start*sampleRate)),to=Math.min(samples.length,Math.ceil((start+duration)*sampleRate));
+  for(let i=from;i<to;i++){
+   const age=i/sampleRate-start,release=Math.min(pad?1.1:.65,duration*.4);
+   const envelope=smooth(age/attack)*smooth((duration-age)/release)*(pad?1:Math.exp(-age*.38));
+   const phase=2*Math.PI*frequency*age;
+   const wave=pad?Math.sin(phase):Math.sin(phase)*.83+Math.sin(phase*2)*.12+Math.sin(phase*3)*.05;
+   samples[i]!+=wave*envelope*level;
+  }
+ }
+ // Four slow, warm suspended chords. The notes keep their natural pitch.
+ const chords=[[130.8128,164.8138,195.9977],[110,130.8128,164.8138],[146.8324,174.6141,220],[130.8128,195.9977,261.6256]];
+ chords.forEach((chord,i)=>chord.forEach(f=>note(f,i*4.25,5.1,.022,.85,true)));
+ // An original sparse bell-like answering phrase over the moving picture.
+ [[0.75,523.2511],[2.15,659.2551],[3.45,587.3295],[5.05,523.2511],[6.55,440],[8.1,523.2511],[9.55,587.3295],[11.1,698.4565],[12.55,659.2551],[14,587.3295],[15.5,523.2511]].forEach(([t,f])=>note(f!,t!,2.3,.055,.035));
+ // A quiet, low-pass wind bed, shaped over the complete flight, never time-stretched audio.
+ let seed=123456789,low=0;
+ const smoothing=Math.exp(-2*Math.PI*360/sampleRate);
+ for(let i=0;i<samples.length;i++){
+  const t=i/sampleRate,p=t/PORTAL_SECONDS;
+  seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+  low=low*smoothing+(seed/4294967296*2-1)*(1-smoothing);
+  samples[i]!+=low*.07*smooth(p/.28)*(1-smooth((p-.68)/.28));
+ }
+ note(82.4069,15.4,2.45,.045,.15,true);
+ // Whole-track fades prevent discontinuities at either end and leave room below clipping.
+ for(let i=0;i<samples.length;i++){
+  const t=i/sampleRate;
+  samples[i]!*=smooth(t/.3)*smooth((PORTAL_SECONDS-t)/.6);
+ }
+ samples[0]=0;samples[samples.length-1]=0;
+ return samples;
+}

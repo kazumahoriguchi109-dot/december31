@@ -1,5 +1,6 @@
 /** Deterministic motion artwork shared by the runtime fallback and video render. */
-export const PORTAL_SECONDS=6;
+import {PORTAL_SECONDS,PORTAL_MOTION_SCALE} from './portalSoundtrack';
+export {PORTAL_SECONDS} from './portalSoundtrack';
 const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 export function drawPortalFrame(ctx:CanvasRenderingContext2D,image:CanvasImageSource,width:number,height:number,seconds:number,reduced=false){
  const p=Math.max(0,Math.min(1,seconds/PORTAL_SECONDS)),pull=smooth((p-.12)/.76);
@@ -28,7 +29,7 @@ export function drawPortalFrame(ctx:CanvasRenderingContext2D,image:CanvasImageSo
   ctx.restore();
   // Fine pixel streams converge towards the opening, keeping the still artwork readable.
   for(let i=0;i<100;i++){
-   const phase=(i*.61803398875+seconds*.12)%1,angle=i*2.39996323;
+   const phase=(i*.61803398875+seconds/PORTAL_MOTION_SCALE*.12)%1,angle=i*2.39996323;
    const r=(1-phase)*950,alpha=Math.sin(phase*Math.PI)*.58*smooth(p/.15)*(1-smooth((p-.85)/.15));
    const x=w*.52+Math.cos(angle+pull*.12)*r,y=h*.39+Math.sin(angle+pull*.12)*r*.65;
    const size=2+(1-phase)*7;ctx.globalAlpha=alpha;ctx.fillStyle=i%3?'#d6e2ef':'#f5d58b';ctx.fillRect(x,y,size,size);

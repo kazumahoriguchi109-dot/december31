@@ -19,8 +19,10 @@ export function createPortalCinematic(root:HTMLElement){
    const canvas=overlay.querySelector('canvas')!,ctx=canvas.getContext('2d')!;
    const button=overlay.querySelector('button')!;button.focus();
    let finished=false,elapsed=0,last=performance.now(),raf=0;
-   const video=document.createElement('video');video.muted=true;video.playsInline=true;video.preload='auto';video.setAttribute('aria-hidden','true');video.style.opacity='0';if(!reduced){video.src=videoUrl;overlay.insertBefore(video,overlay.querySelector('footer'));video.addEventListener('loadeddata',()=>{if(finished)return;video.currentTime=Math.min(5.9,elapsed/1000);if(!document.hidden)void video.play().then(()=>{video.style.opacity='1';}).catch(()=>{});});video.addEventListener('error',()=>{video.style.opacity='0';});}
+   const video=document.createElement('video');video.muted=true;video.playsInline=true;video.preload='auto';video.setAttribute('aria-hidden','true');video.style.opacity='0';if(!reduced){video.src=videoUrl;overlay.insertBefore(video,overlay.querySelector('footer'));video.addEventListener('loadeddata',()=>{if(finished)return;video.currentTime=Math.min(PORTAL_SECONDS-.1,elapsed/1000);if(!document.hidden)void video.play().then(()=>{video.style.opacity='1';}).catch(()=>{});});video.addEventListener('error',()=>{video.style.opacity='0';});}
    const stopSound=reduced?()=>{}:options.onSound();
+   // PCM creation may take time on a busy machine; start visual time with the audio.
+   last=performance.now();
    const finish=(complete=true)=>{if(finished)return;finished=true;video.pause();video.removeAttribute('src');video.load();cancelAnimationFrame(raf);stopSound();document.removeEventListener('keydown',key,true);document.removeEventListener('visibilitychange',visibility);overlay.remove();siblings.forEach(({e,inert})=>e.inert=inert);cleanup=null;if(complete)options.onComplete();else prior?.focus();};
    const key=(e:KeyboardEvent)=>{if(e.ctrlKey||e.metaKey||e.altKey)return;e.stopImmediatePropagation();if(['Escape','KeyE','Space','Enter'].includes(e.code)){e.preventDefault();if(!e.repeat)finish();}else if(e.code==='Tab'){e.preventDefault();button.focus();}};
    const visibility=()=>{last=performance.now();if(document.hidden)video.pause();else if(!reduced&&video.readyState>=2)void video.play().catch(()=>{video.style.opacity='0';});};

@@ -22,7 +22,7 @@ async function record(kind,detail){log.push({seconds:+((Date.now()-start)/1000).
 const visible=selector=>page.locator(selector).isVisible();
 async function dialogue(){
  let quiet=0;
- for(let i=0;i<100;i++){
+ for(let i=0;i<300;i++){
   if(await visible('#journey-dialogue')){
    await record('dialogue',await page.locator('#journey-line').innerText());
    await page.locator('#journey-dialogue [data-action="next"]').click();quiet=0;

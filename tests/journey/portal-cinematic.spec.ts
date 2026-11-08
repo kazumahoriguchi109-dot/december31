@@ -24,23 +24,23 @@ test('portal survives reload, blocks movement, skips once, and never replays aft
  await page.keyboard.press('KeyW');await page.reload();await page.locator('#journey-continue').click();
  await expect(page.locator('.journey-portal')).toBeVisible();expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('dec31-evolution-c013:journey')!).player)).toEqual(position);
  await page.keyboard.press('Escape');await expect(page.locator('.journey-portal')).toHaveCount(0);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
- await page.waitForTimeout(6500);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
+ await page.waitForTimeout(18500);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
  await page.reload();await page.locator('#journey-continue').click();await expect(page.locator('.journey-portal')).toHaveCount(0);await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');expect(errors).toEqual([]);
 });
 test('portal plays to the monochrome world without input',async({page})=>{
  test.setTimeout(120000);await reachPortal(page);await expect(page.locator('.journey-portal')).toBeVisible();
  await expect(page.locator('.journey-portal video')).toHaveJSProperty('muted',true);
- await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:15000});await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
+ await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:30000});await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('dec31-evolution-c013:journey')!).era)).toBe(0);
  await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
 });
 test('OS reduced motion uses a short still dissolve without video',async({page})=>{
  test.setTimeout(120000);await page.emulateMedia({reducedMotion:'reduce'});await reachPortal(page);
  await expect(page.locator('.journey-portal')).toBeVisible();await expect(page.locator('.journey-portal video')).toHaveCount(0);
- await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:15000});await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
+ await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:30000});await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
 });
 test('blocked video autoplay uses the animated fallback and still completes',async({page})=>{
  test.setTimeout(120000);await page.addInitScript(()=>{HTMLMediaElement.prototype.play=function(){return Promise.reject(new DOMException('Test autoplay block','NotAllowedError'));};});
  await reachPortal(page);await expect(page.locator('.journey-portal')).toBeVisible();await expect(page.locator('.journey-portal video')).toHaveCSS('opacity','0');
- await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:15000});await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
+ await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:30000});await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
 });

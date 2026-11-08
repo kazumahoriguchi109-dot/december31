@@ -1,11 +1,13 @@
 import type { Era } from './contract';
+import {createPortalSamples,PORTAL_SECONDS,PORTAL_SAMPLE_RATE} from './portalSoundtrack';
 
 /** Original quiet procedural score and footsteps; no downloaded audio or pre-gesture context.
  * Score/feedback: at most 16 oscillator voices, each envelope <= .06.
  * The portal uses separate filtered-noise and tone envelopes through the same
  * volume-controlled master. Parameter limits are not a listening validation. */
 export function createJourneyAudio() {
-  let context: AudioContext | null = null, master: GainNode | null = null;
+  let context: AudioContext | null = null, master: GainNode | null = null, routineBus:GainNode|null=null;
+  let portalStop:(()=>void)|null=null;
   let volume = .65, era: Era = 0, timer = 0, nextBar = 0, bar = 0, lastStep = -Infinity, foot = 0, disposed = false;
   const voices = new Set<OscillatorNode>();
   const lastEffect = new Map<string, number>();
@@ -19,12 +21,12 @@ export function createJourneyAudio() {
     envelope.gain.linearRampToValueAtTime(Math.min(.06, Math.max(0, peak)), at + Math.min(.12, duration / 4));
     envelope.gain.exponentialRampToValueAtTime(.00001, at + duration);
     envelope.gain.linearRampToValueAtTime(0, at + duration + .015);
-    source.connect(envelope); envelope.connect(master); voices.add(source);
+    source.connect(envelope); envelope.connect(routineBus??master); voices.add(source);
     source.onended = () => { source.disconnect(); envelope.disconnect(); voices.delete(source); };
     source.start(at); source.stop(at + duration + .02);
   }
   function score() {
-    if (!ready() || !context || context.currentTime < nextBar) return;
+    if (portalStop || !ready() || !context || context.currentTime < nextBar) return;
     const t = context.currentTime + .025;
     nextBar = t + 3.2;
     // The same four-bar phrase gains harmony and a high answering voice as the world develops.
@@ -47,7 +49,7 @@ export function createJourneyAudio() {
       if (!AC) return;
       try { context = new AC(); } catch { return; }
       master = context.createGain(); master.gain.value = volume * .55;
-      master.connect(context.destination);
+      master.connect(context.destination);routineBus=context.createGain();routineBus.connect(master);
       document.addEventListener('visibilitychange', visibility);
       timer = window.setInterval(score, 250);
     }
@@ -87,27 +89,32 @@ export function createJourneyAudio() {
     tone(frequency * 1.6, at + .008, .045, .009, 'triangle');
   }
   function portal() {
-    if (!ready() || !context || !master) return () => {};
-    // Original synthesized wind sweep and a soft landing, no sampled third-party material.
-    const ctx=context, bus=ctx.createGain();bus.gain.value=1;bus.connect(master);
-    const nodes:AudioScheduledSourceNode[]=[];
-    const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*6),ctx.sampleRate),data=buffer.getChannelData(0);
-    let seed=123456789,low=0;
-    for(let i=0;i<data.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;low=low*.94+(seed/4294967296*2-1)*.06;data[i]=low;}
-    const noise=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();noise.buffer=buffer;filter.type='lowpass';
-    const at=ctx.currentTime;filter.frequency.setValueAtTime(250,at);filter.frequency.exponentialRampToValueAtTime(1800,at+3.6);filter.frequency.exponentialRampToValueAtTime(120,at+5.8);
-    gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.2,at+2.5);gain.gain.linearRampToValueAtTime(.11,at+4.6);gain.gain.linearRampToValueAtTime(0,at+6);
-    noise.connect(filter);filter.connect(gain);gain.connect(bus);noise.onended=()=>{noise.disconnect();filter.disconnect();gain.disconnect();};noise.start(at);noise.stop(at+6);nodes.push(noise);
-    for(const [frequency,start,duration,peak] of [[164.81,0,4.8,.018],[220,.15,4.6,.014],[82.41,4.8,.9,.04]]){
-      const osc=ctx.createOscillator(),env=ctx.createGain();osc.frequency.setValueAtTime(frequency!,at+start!);osc.frequency.exponentialRampToValueAtTime(frequency!*.67,at+start!+duration!);env.gain.setValueAtTime(0,at+start!);env.gain.linearRampToValueAtTime(peak!,at+start!+.2);env.gain.linearRampToValueAtTime(0,at+start!+duration!);osc.connect(env);env.connect(bus);osc.onended=()=>{osc.disconnect();env.disconnect();};osc.start(at+start!);osc.stop(at+start!+duration!);nodes.push(osc);
-    }
-    let stopped=false;return ()=>{if(stopped)return;stopped=true;bus.gain.cancelScheduledValues(ctx.currentTime);bus.gain.setValueAtTime(0,ctx.currentTime);for(const node of nodes){try{node.stop();}catch{}node.disconnect();}filter.disconnect();gain.disconnect();bus.disconnect();};
+    portalStop?.();
+    if (!context || !master || !routineBus) return () => {};
+    const ctx=context, routine=routineBus, source=ctx.createBufferSource(), bus=ctx.createGain();
+    const buffer=ctx.createBuffer(1,Math.round(PORTAL_SAMPLE_RATE*PORTAL_SECONDS),PORTAL_SAMPLE_RATE);
+    buffer.copyToChannel(createPortalSamples(PORTAL_SAMPLE_RATE),0);source.buffer=buffer;
+    source.connect(bus);bus.connect(master);
+    const at=ctx.currentTime;
+    routine.gain.cancelScheduledValues(at);routine.gain.setValueAtTime(routine.gain.value,at);routine.gain.linearRampToValueAtTime(0,at+.15);
+    let stopped=false;
+    const stop=()=>{
+      if(stopped)return;stopped=true;
+      const now=ctx.currentTime;bus.gain.cancelScheduledValues(now);bus.gain.setValueAtTime(bus.gain.value,now);bus.gain.linearRampToValueAtTime(0,now+.04);
+      try{source.stop(now+.05);}catch{}
+      if(portalStop===stop)portalStop=null;
+      routine.gain.cancelScheduledValues(now);routine.gain.setValueAtTime(routine.gain.value,now);routine.gain.linearRampToValueAtTime(1,now+.18);
+      nextBar=now+.2;
+    };
+    portalStop=stop;source.onended=()=>{source.disconnect();bus.disconnect();};
+    source.start(at);source.stop(at+PORTAL_SECONDS);
+    return stop;
   }
   function dispose() {
-    disposed = true; clearInterval(timer); document.removeEventListener('visibilitychange', visibility);
+    disposed = true; portalStop?.(); clearInterval(timer); document.removeEventListener('visibilitychange', visibility);
     for (const source of voices) { source.onended = null; source.stop(); source.disconnect(); }
     voices.clear(); lastEffect.clear();
-    const old = context; context = null; master = null;
+    const old = context; context = null; master = null; routineBus=null;
     if (old && old.state !== 'closed') void old.close().catch(() => {});
   }
   return {unlock,setVolume,setEra(value: Era) { if ([0,1,2,3].includes(value)) era = value; },play,step,portal,dispose};
