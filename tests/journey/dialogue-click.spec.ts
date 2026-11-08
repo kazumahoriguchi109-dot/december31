@@ -7,12 +7,16 @@ test('world/panel clicks advance once; drag, selection, long press, right click 
  await current();await line.click();await advanced();await world.click({position:{x:240,y:125}});await advanced();await page.locator('#journey-portrait').click();await advanced();await cue.click();await advanced();
  await world.focus();await page.keyboard.press('KeyE');await advanced();await page.keyboard.press('Space');await advanced();
  await world.click({position:{x:240,y:125},button:'right'});await current();
+ // A key changes the line during a held pointer: releasing it must not advance again.
+ await page.mouse.move(200,125);await page.mouse.down();await page.keyboard.press('KeyE');await advanced();await page.mouse.up();await current();
+ await page.mouse.move(200,125);await page.mouse.down();await world.dispatchEvent('pointercancel',{pointerId:1,bubbles:true});await page.mouse.up();await current();
+ const panel=await page.locator('#journey-dialogue').boundingBox();await page.mouse.move(200,panel!.y-2);await page.mouse.down();await page.mouse.move(200,panel!.y+2);await page.mouse.up();await current();
  await page.mouse.move(200,125);await page.mouse.down();await page.mouse.move(260,125,{steps:5});await page.mouse.move(200,125,{steps:5});await page.mouse.up();await current();
  await page.mouse.move(200,125);await page.mouse.down();await page.waitForTimeout(1100);await page.mouse.up();await current();
  const textBox=await line.boundingBox();await page.mouse.move(textBox!.x+5,textBox!.y+10);await page.mouse.down();await page.mouse.move(textBox!.x+100,textBox!.y+10,{steps:5});await page.mouse.up();await current();
  await page.locator('[data-action="pause"]').click();await expect(page.locator('#journey-pause')).toBeVisible();await page.locator('#journey-volume').fill('0');await page.locator('#journey-motion').check();await page.locator('[data-action="resume"]').click();await current();
- // A second click from a native double-click is not another line advance.
- await world.dblclick({position:{x:240,y:125}});await advanced();
+ // Deliberate rapid clicks each advance one line; the following test guards the movie boundary.
+ await world.click({position:{x:240,y:125}});await advanced();await world.dblclick({position:{x:240,y:125}});index+=2;await current();
  // Reload uses the real autosave, with the next unread line retained.
  await page.reload();await page.locator('#journey-continue').click();await current();expect(errors).toEqual([]);
 });
@@ -22,7 +26,7 @@ test('last desk-line click opens the movie without carrying the click into skip 
  await page.locator('#journey-interact').click();for(let i=0;i<OPENING_DESK.length-1;i++)await page.locator('#journey-line').click();
  await expect(page.locator('#journey-line')).toHaveText(OPENING_DESK.at(-1)![1]);await page.locator('#journey-line').dblclick();await expect(page.locator('.journey-portal')).toBeVisible();
  await page.mouse.click(240,125);await page.waitForTimeout(1800);await page.mouse.click(240,125);await expect(page.locator('.journey-portal')).toBeVisible();
- await page.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).click();await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);await page.waitForTimeout(150);await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);
+ const skip=await page.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).boundingBox();await page.mouse.dblclick(skip!.x+skip!.width/2,skip!.y+skip!.height/2,{delay:80});await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);await page.waitForTimeout(150);await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[0]![1]);
  await page.locator('#journey-line').click();await expect(page.locator('#journey-line')).toHaveText(OPENING_ARRIVAL[1]![1]);
 });
 test('touch surface tap and accessible button remain separate, single-advance inputs',async({browser})=>{

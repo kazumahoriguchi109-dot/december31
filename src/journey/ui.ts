@@ -94,7 +94,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
  let screen:Screen='title', talking=false, dialogueKey='', observed=false, toastTimer:ReturnType<typeof setTimeout>|undefined;
  let dialogueRevision=0;
  let lastEra=-1, lastSolved='', lastPhase='', lastPartnerStatus='';
- root.addEventListener('click',event=>{const button=(event.target as Element).closest<HTMLButtonElement>('[data-action]');if(button&&!button.disabled){if(button.dataset['action']==='next')event.stopPropagation();onAction(button.dataset['action']!);}});
+ root.addEventListener('click',event=>{const button=(event.target as Element).closest<HTMLButtonElement>('[data-action]');if(button&&!button.disabled){if(button.dataset['action']==='next'){event.stopPropagation();if(!dialoguePointer.acceptButtonClick(event)){event.preventDefault();return;}}onAction(button.dataset['action']!);}});
  const dialoguePointer=bindDialoguePointer(root,canvas,dialogue,()=>screen==='game'&&talking&&!app.inert&&!dialogue.hidden?dialogueRevision:null,()=>onAction('next'));
  const settingsDialog=get<HTMLDialogElement>('journey-title-settings'), settingsButton=get<HTMLButtonElement>('journey-title-settings-button');
  const titleMenu=root.querySelector<HTMLElement>('.journey-title-menu')!;
@@ -155,13 +155,13 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   },
   setScreen(next){
    if(settingsDialog.open&&next!=='title')settingsDialog.close();
-   dialoguePointer.reset();screen=next;titleVideo.setTitle(next==='title');app.dataset['screen']=next;canvas.tabIndex=next==='game'?0:-1;canvas.inert=next!=='game';
+   dialoguePointer.reset();if(next==='game'&&screen!=='game')dialoguePointer.beginConversation();screen=next;titleVideo.setTitle(next==='title');app.dataset['screen']=next;canvas.tabIndex=next==='game'?0:-1;canvas.inert=next!=='game';
    show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();
    if(next==='title'){focusTitle();return;}
    const focus=next==='game'?canvas:next==='pause'?get('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):get('journey-credits').querySelector('button');focus?.focus({preventScroll:true});
   },
   setDialogue(line){
-   dialoguePointer.reset();dialogueRevision++;
+   dialoguePointer.reset();if(line&&!talking)dialoguePointer.beginConversation();dialogueRevision++;
    talking=!!line;app.dataset['talking']=String(talking);
    if(line){const key=`${line.speaker}\n${line.text}\n${line.expression??''}`;if(key!==dialogueKey){dialogueKey=key;text(get('journey-speaker'),line.speaker);text(get('journey-line'),line.text);const emotion=emotionFor(line);get('journey-portrait').innerHTML=materialPortrait(line.speaker,emotion); dialogue.dataset['speaker']=line.speaker==='トト'?'toto':'player';dialogue.dataset['emotion']=emotion;}}
    else dialogueKey='';syncExploration();

@@ -4,8 +4,10 @@ export function isDialogueTap(maxDistance:number,duration:number){return maxDist
  * The real button remains the keyboard/assistive-technology control. */
 export function bindDialoguePointer(root:HTMLElement,canvas:HTMLCanvasElement,dialogue:HTMLElement,token:()=>number|null,advance:()=>void){
  type Press={id:number;x:number;y:number;at:number;token:number;surface:Element;maxDistance:number;released:boolean};
- let press:Press|null=null;
+ let press:Press|null=null,rejectRepeated=true;
  const reset=()=>{press=null;};
+ const beginConversation=()=>{reset();rejectRepeated=true;};
+ const acceptButtonClick=(event:MouseEvent)=>{if(rejectRepeated&&event.detail>1)return false;rejectRepeated=false;return true;};
  const surface=(target:EventTarget|null)=>{
   if(!(target instanceof Element)||target.closest('button,a,input,select,textarea,summary,[role="button"],[contenteditable],[data-action]'))return null;
   return target===canvas?canvas:dialogue.contains(target)?dialogue:null;
@@ -26,9 +28,10 @@ export function bindDialoguePointer(root:HTMLElement,canvas:HTMLCanvasElement,di
  });
  root.addEventListener('click',e=>{
   const candidate=press;reset();
-  if(!candidate?.released||e.button!==0||e.detail!==1||modified(e)||surface(e.target)!==candidate.surface||token()!==candidate.token||!isDialogueTap(candidate.maxDistance,performance.now()-candidate.at)||document.getSelection()?.toString())return;
+  if(!candidate?.released||e.button!==0||e.detail<1||(rejectRepeated&&e.detail>1)||modified(e)||surface(e.target)!==candidate.surface||token()!==candidate.token||!isDialogueTap(candidate.maxDistance,performance.now()-candidate.at)||(candidate.surface===dialogue&&document.getSelection()?.toString()))return;
+  rejectRepeated=false;
   // A final-line click must never reach an overlay created synchronously by advance().
   e.preventDefault();e.stopPropagation();advance();
  });
- return {reset};
+ return {reset,beginConversation,acceptButtonClick};
 }
