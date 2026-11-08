@@ -526,3 +526,12 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
 .journey-title-video[hidden] {display:none!important;}
 
 .journey-title-video[data-playing="true"] {opacity:1;}
+
+/* The first world has its own ink-and-snow RPG frame; later eras keep their panels. */
+.journey-app[data-phase="world"][data-era="0"] .journey-vignette {background:none;}
+.journey-app[data-phase="world"][data-era="0"] #journey-dialogue {background:#101010;border:2px solid #fafafa;border-radius:0;box-shadow:0 0 0 3px #151515,inset 0 0 0 3px #101010,inset 0 0 0 4px #fafafa;color:#fafafa;}
+.journey-app[data-phase="world"][data-era="0"] #journey-dialogue::before,.journey-app[data-phase="world"][data-era="0"] #journey-dialogue::after {display:none;}
+.journey-app[data-phase="world"][data-era="0"] #journey-portrait {border-radius:0;border-color:#fafafa;}
+.journey-app[data-phase="world"][data-era="0"] #journey-dialogue h2 {border-radius:0;background:#fafafa;color:#101010;border-color:#fafafa;}
+.journey-app[data-phase="world"][data-era="0"] .journey-dialogue-copy {border-color:#777;}
+.journey-app[data-phase="world"][data-era="0"] .journey-next {border-radius:0;border-color:#fafafa;background:#101010;color:#fafafa;}
