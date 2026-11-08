@@ -1,3 +1,4 @@
+import {createMonochromeArt} from './monochromeArt';
 import {ROOM_X_SCALE} from './roomPresentation';
 import {BANK_STONE_POINTS,LANTERN_POINTS} from './collision';
 import {gateOpen} from './model';
@@ -15,6 +16,7 @@ import {C,asset,box,cylinder,glyph,line,torus,fence,material,snowTexture,trail,s
 /** The renderer observes state; all travel, puzzle gates and saves belong to the model. */
 export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
  const renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false});renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.type=THREE.PCFShadowMap;
+ const monochrome=createMonochromeArt();
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x738e97);scene.fog=new THREE.Fog(0x738e97,32,90);
  const outdoor=new THREE.Group(),room=new THREE.Group(),trees:THREE.Group[]=[];scene.add(outdoor,room);
  const hemi=new THREE.HemisphereLight(0xdce4ff,0x787895,2.1),sun=new THREE.DirectionalLight(0xffe0ab,2.3);sun.position.set(-10,20,10);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.1,far:65});sun.shadow.bias=-.001;sun.shadow.normalBias=.03;scene.add(hemi,sun,sun.target);
@@ -191,13 +193,12 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   optical.fov=THREE.MathUtils.radToDeg(2*Math.atan(.6*height/(2*radiusPx)));
   optical.setViewOffset(width,height,0,height*.05,width,height);optical.updateProjectionMatrix();}
  resize();
- return {resize,dispose(){renderer.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points){o.geometry.dispose();}});},render(s:JourneyState,dt:number,options:RenderOptions){
+ return {resize,dispose(){monochrome.dispose();renderer.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points){o.geometry.dispose();}});},render(s:JourneyState,dt:number,options:RenderOptions){
   time+=Math.max(0,Math.min(.1,dt));const inRoom=s.phase!=='world';outdoor.visible=!inRoom;room.visible=inRoom;scene.fog=inRoom?null:new THREE.Fog(s.era===3?0x8588ac:0x909cba,30,85);scene.background=new THREE.Color(inRoom?0x292e32:s.era===3?0x8588ac:0x909cba);
-  if(lastEra!==s.era||lastQuality!==options.quality||lastRoom!==inRoom){const scale=!inRoom&&s.era===0?Math.min(1,360/width):!inRoom&&s.era===1?Math.min(1,720/width):options.quality==='low'?1:Math.min(devicePixelRatio||1,1.5);renderer.setPixelRatio(1);renderer.setSize(Math.round(width*scale),Math.round(height*scale),false);canvas.style.imageRendering=!inRoom&&s.era<2?'pixelated':'auto';renderer.shadowMap.enabled=(inRoom||s.era===3)&&options.quality!=='low';lastEra=s.era;lastQuality=options.quality;lastRoom=inRoom;}
-  // Only the game-world canvas loses colour in E0; room, title and DOM dialogue remain untouched.
-  // CSS compositing avoids GPU readback. Reduced motion applies the new palette immediately.
-  canvas.style.transition=!inRoom&&s.era===1&&!options.reducedMotion?'filter 700ms ease-out':'none';
-  canvas.style.filter=!inRoom&&s.era===0?'grayscale(1) contrast(1.28) brightness(.96)':'none';
+  if(lastEra!==s.era||lastQuality!==options.quality||lastRoom!==inRoom){const scale=!inRoom&&s.era===0?Math.min(1,640/width):!inRoom&&s.era===1?Math.min(1,720/width):options.quality==='low'?1:Math.min(devicePixelRatio||1,1.5);renderer.setPixelRatio(1);renderer.setSize(Math.round(width*scale),Math.round(height*scale),false);canvas.style.imageRendering=!inRoom&&s.era<2?'pixelated':'auto';renderer.shadowMap.enabled=(inRoom||s.era===3)&&options.quality!=='low';lastEra=s.era;lastQuality=options.quality;lastRoom=inRoom;}
+  // E0 is authored in greyscale; no global contrast filter can wash out its snow or actors.
+  canvas.style.transition='none';
+  canvas.style.filter='none';
   sun.color.set(inRoom?0xffe0ab:s.era===3?0xffe3d0:0xe5eaff);sun.intensity=inRoom?1.4:s.era===0?1.15:s.era===3?2.15:1.8;lampPools.forEach(pool=>{pool.visible=!inRoom&&s.era>=1;pool.material.opacity=s.era===3?.85:.32;});millLight.intensity=s.era===3?2.4:0;millGlow.visible=s.era>=1;millGlow.material.opacity=s.era===3?.55:.28;if(!options.reducedMotion)riverTexture.offset.x=-time*.028;hemi.intensity=inRoom?1.5:s.era===0?2.3:1.8;
   const movingP=started?distance(s.player,lastP):0,movingT=started?distance(s.toto,lastT):0;walkP+=movingP*7;walkT+=movingT*7;
   const actionTargets:Record<string,{x:number;z:number}>={begin:MAP.console,tile:{x:MAP.tileControl.x-.8,z:MAP.tileControl.z+.25},drain:{x:MAP.drainControl.x-.85,z:MAP.drainControl.z-.6},stopper:{x:MAP.stopperControl.x-.85,z:MAP.stopperControl.z-.6},latch:MAP.latch,'lever-a':MAP.leverA,'lever-b':MAP.leverB,wall:MAP.wall,observe:MAP.observe,portal:MAP.portal};
@@ -244,6 +245,7 @@ export function createRenderer(canvas:HTMLCanvasElement):JourneyRenderer{
   sun.position.copy(origin).add(new THREE.Vector3(-10,20,10));sun.target.position.copy(origin);
   optical.position.set(3,4.6,-55);optical.lookAt(3,4.6,-60);const observe=!inRoom&&s.mode==='observe';player.visible=toto.visible=!observe&&(inRoom||s.era>=2);pixels.forEach((p,i)=>{const a=i?s.toto:s.player;p.sprite.visible=!inRoom&&!observe&&s.era<2;p.sprite.position.set(a.x,heightAt(a)+.025,a.z);if(s.era<2)p.update(s.era,presentationFacing[i]!,options.reducedMotion?0:(i?movingT:movingP)>.001?(i?walkT:walkP):0,{speaking:options.speaker===(i?'toto':'player'),expression:options.speaker===(i?'toto':'player')?(options.expression??'neutral'):'neutral',action:i===0?options.action:undefined,reducedMotion:options.reducedMotion});});shadows.forEach(m=>m.visible=!observe);snow.visible=!inRoom&&s.era===3&&!observe;snow.position.set(s.player.x,0,s.player.z);if(!options.reducedMotion)snow.position.y=-(time*.25)%3;
   scene.traverse(o=>{if(o.userData['journeyMarker']){const p=o.getWorldPosition(new THREE.Vector3());o.visible=distance(s.player,p)>=2&&distance(s.toto,p)>=.9;}});
-  renderer.render(scene,observe?optical:camera);
+  if(!inRoom&&s.era===0){monochrome.render(s,dt,options,width,height);renderer.render(monochrome.scene,monochrome.camera);}
+  else renderer.render(scene,observe?optical:camera);
  }};
 }

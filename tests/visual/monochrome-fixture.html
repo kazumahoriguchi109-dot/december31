@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}canvas{width:100vw;height:100vh;display:block}</style></head><body><canvas id="world"></canvas><script type="module">
+import {createRenderer} from '/src/journey/renderer.ts';
+import {createState} from '/src/journey/model.ts';
+const s=createState();s.phase='world';s.era=0;s.player={x:0,z:0,facing:Math.PI/2};s.toto={x:1.2,z:.2,facing:-Math.PI/2,waiting:false,plate:null};
+const p=new URLSearchParams(location.search);if(p.has('control'))s.player={x:3,z:-5.2,facing:-Math.PI/2};
+const before=JSON.stringify(s);const renderer=createRenderer(document.querySelector('canvas'));renderer.render(s,0,{quality:'normal',reducedMotion:true,speaker:'player'});document.body.dataset.ready='true';document.body.dataset.stateUnchanged=String(before===JSON.stringify(s));window.addEventListener('resize',()=>{renderer.resize();renderer.render(s,0,{quality:'normal',reducedMotion:true,speaker:'player'});document.body.dataset.stateUnchanged=String(before===JSON.stringify(s));});
+</script></body></html>

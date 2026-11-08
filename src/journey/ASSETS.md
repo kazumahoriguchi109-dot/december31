@@ -23,3 +23,11 @@ Winter scenery is authored in `sceneArt.ts`: deterministic cool snow texture, sh
 `tests/visual/` contains local-only UI fixtures. They are not the game and are not production entry points. These captures cannot substitute for the normal-input whole-journey test.
 
 The cycle also fixes an existing visibility problem: before discovering the white wall, looking from its rear could hide both friends. Only that rear-facing wall proxy fades when a friend is immediately behind it. The staircase remains undiscovered and hidden in that view; this does not alter collision, puzzle state or the camera.
+
+## Original monochrome snow world
+
+`monochromeArt.ts` draws individual original snow tiles, pines, stone gate masonry,
+sign, lantern, table, handwheel, portal and two directional walking actors from code.
+The approved concept was visually referenced, but no screenshot or generated key visual
+is painted over the game. All positions and the table rotation come from live state.
+Era zero uses this view; the later color, depth and resonance views remain unchanged.

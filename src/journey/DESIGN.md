@@ -70,3 +70,11 @@ P02 keeps its existing model and save conditions: drain closed and stopper relea
 After success the bridge rotates down over one second; dialogue and movement wait until the reveal ends, so the open collision and visible bridge do not invite walking during the transition. Reduced motion jumps to the final position and waits only briefly. A save/reload after success initializes the bridge in its final state. These are presentation changes; initial source game state, logic and post-solve lock are preserved. It is not evidence that a first-time player understands the mechanism without text or sound. Cycle013 uses separate `dec31-evolution-c013` journey and preference keys with no migration.
 
 The room calendar is now fixed wall geometry: backing, layered paper, binding rings and a December 31/star texture, rather than a camera-facing sprite. The television displays an original two-player winter game image and play symbol; a physical console and two wired controllers sit inside the existing desk footprint. This is presentation-only and preserves both the optional calendar interaction and the begin-game target, collision geometry and saves.
+### Live monochrome presentation
+
+Era zero uses an individually drawn pixel scene, projected from the existing X/Z model.
+The front masonry gate sits on the existing first barrier at z=-10. It is scenery for
+that barrier, not an added room, destination or interaction. The real table, east crank,
+sign, lantern and portal remain at their model coordinates. Direction, walking and the
+rotatable channel are live; movement, collisions, progression and storage are unchanged.
+Responsive projection preserves square pixels; canvas resize reallocates its GPU texture.
