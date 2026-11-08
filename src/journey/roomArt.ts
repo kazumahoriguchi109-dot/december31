@@ -104,28 +104,55 @@ export function createRoomArt(room:THREE.Group):{screen:THREE.Object3D;calendar:
  box(room,.58,.055,.3,cx,.78,cz-.23,0x26383b);box(room,.13,.3,.1,cx,.91,cz-.29,0x2b3c3e);
  box(room,1.46,.88,.13,cx,1.3,cz-.29,0x23363b);
  const screen=box(room,1.27,.67,.025,cx,1.31,cz-.213,0xffffff);
- screen.material.map=painted(384,220,c=>{
-  const glow=c.createLinearGradient(0,0,0,220);glow.addColorStop(0,'#506f74');glow.addColorStop(1,'#344f56');c.fillStyle=glow;c.fillRect(0,0,384,220);
-  c.strokeStyle='#ebc783';c.lineWidth=4;c.beginPath();c.roundRect(143,58,98,104,21);c.stroke();
-  c.fillStyle='#f3cf91';c.beginPath();c.moveTo(177,79);c.lineTo(220,110);c.lineTo(177,141);c.closePath();c.fill();
-  c.fillStyle='rgba(231,239,224,.08)';c.fillRect(0,0,384,7);
+ screen.name='game-television-screen';
+ screen.material.map=painted(640,360,c=>{
+  const glow=c.createLinearGradient(0,0,0,360);glow.addColorStop(0,'#162c48');glow.addColorStop(1,'#527f87');c.fillStyle=glow;c.fillRect(0,0,640,360);
+  // Original pixel-game landscape, clearly distinct from the window view.
+  c.fillStyle='#f4d798';for(const [x,y] of [[60,48],[146,93],[520,60],[573,128]] as const){c.fillRect(x,y,6,6);}
+  c.fillStyle='#829fa3';c.beginPath();c.moveTo(0,260);c.lineTo(130,124);c.lineTo(245,251);c.lineTo(446,112);c.lineTo(640,273);c.closePath();c.fill();
+  c.fillStyle='#e3e9d8';c.beginPath();c.moveTo(0,284);c.lineTo(125,261);c.lineTo(251,281);c.lineTo(434,251);c.lineTo(640,279);c.lineTo(640,360);c.lineTo(0,360);c.fill();
+  for(const [x,color] of [[119,'#c17b51'],[491,'#64896f']] as const){c.fillStyle='#302c2c';c.fillRect(x,228,26,18);c.fillStyle='#f4d5ae';c.fillRect(x+3,241,20,16);c.fillStyle=color;c.fillRect(x-3,257,32,33);c.fillStyle='#243844';c.fillRect(x,290,10,13);c.fillRect(x+17,290,10,13);}
+  c.fillStyle='#193747';c.beginPath();c.roundRect(257,116,126,112,18);c.fill();c.strokeStyle='#efcf8e';c.lineWidth=5;c.stroke();
+  c.fillStyle='#ffe0a2';c.beginPath();c.moveTo(303,140);c.lineTo(350,172);c.lineTo(303,204);c.closePath();c.fill();
+  c.fillStyle='#f6e6bd';c.font='bold 24px sans-serif';c.textAlign='center';c.fillText('2 PLAYER',320,52);
+  c.fillStyle='rgba(231,239,224,.1)';c.fillRect(0,0,640,9);
  });
- for(const x of[cx-.34,cx+.34]){
-  cylinder(room,.105,.17,x,.833,cz+.22,0xe6cca0,16);
-  cylinder(room,.084,.007,x,.921,cz+.22,0x96704b,16);
-  const rim=torus(room,.09,.012,x,.927,cz+.22,0xf2ddb7);rim.rotation.x=Math.PI/2;
-  const handle=torus(room,.047,.017,x+.114,.85,cz+.22,0xe6cca0);handle.scale.y=.9;
+ // Keep the renderer-owned proximity highlight; the painted game image supplies the screen colors.
+ // Physical two-player console and controllers stay within the existing desk collider.
+ const consoleBody=box(room,.53,.13,.3,cx,.825,cz+.13,0xd7d2bb);consoleBody.name='game-console-body';
+ box(room,.49,.035,.285,cx,.891,cz+.13,0xe9e2cb);
+ box(room,.27,.014,.03,cx,.914,cz+.09,0x283b40);
+ for(let i=0;i<5;i++)box(room,.014,.012,.095,cx+.14+i*.025,.915,cz+.15,0x596765);
+ box(room,.025,.02,.012,cx-.19,.835,cz+.287,0x85cbb0);
+ for(const x of[cx-.43,cx+.43]){
+  const pad=box(room,.28,.065,.17,x,.795,cz+.30,0x344b50);pad.name='game-controller';
+  cylinder(room,.065,.065,x-.105,.795,cz+.335,0x344b50,12);cylinder(room,.065,.065,x+.105,.795,cz+.335,0x344b50,12);
+  box(room,.065,.014,.025,x-.07,.835,cz+.30,0xe5d8b7);box(room,.025,.014,.065,x-.07,.835,cz+.30,0xe5d8b7);
+  cylinder(room,.018,.015,x+.065,.835,cz+.28,0xdca56a,12);cylinder(room,.018,.015,x+.10,.835,cz+.32,0x9dbb9c,12);
+  const cable=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(x,.79,cz+.22),new THREE.Vector3(x*.9,.78,cz+.03),new THREE.Vector3(x*.4,.79,cz+.26)]),16,.009,5,false),new THREE.MeshStandardMaterial({color:0x293b3e,roughness:1}));room.add(cable);
+ }
+ for(const x of[cx-.79,cx+.79]){
+  cylinder(room,.085,.15,x,.825,cz+.12,0xe6cca0,16);
+  cylinder(room,.069,.007,x,.902,cz+.12,0x96704b,16);
+  const rim=torus(room,.073,.01,x,.906,cz+.12,0xf2ddb7);rim.rotation.x=Math.PI/2;
+  const handle=torus(room,.038,.014,x+.091,.84,cz+.12,0xe6cca0);handle.scale.y=.9;
  }
  finishSection('console-desk',cx);
- // Calendar uses a sprite like the original so the date stays clear at the gameplay angle.
- const calendar=new THREE.Group();calendar.name='december-calendar';calendar.position.set(-1.48,1.93,-3.69);room.add(calendar);
- const page=painted(256,256,c=>{
-  c.fillStyle='#9b7a50';c.fillRect(10,10,240,240);c.fillStyle='#f3e3bd';c.fillRect(5,4,239,239);
-  c.fillStyle='#39312a';c.font='bold 177px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('31',116,111);
-  c.fillStyle='#c88f3b';c.font='58px sans-serif';c.fillText('✦',199,199);
-  c.fillStyle='#b79e77';c.fillRect(32,3,13,7);c.fillRect(204,3,13,7);
+ // Wall-mounted geometry, not a camera-facing sprite: paper edges and binding cast real shadows.
+ const calendar=new THREE.Group();calendar.name='december-calendar';calendar.position.set(-1.48,1.97,-3.78);room.add(calendar);
+ box(calendar,1.02,1.36,.065,0,0,0,0x8b6545);
+ for(let i=0;i<3;i++)box(calendar,.96,1.27,.012,.008*i,-.015*i,.044+i*.013,0xe8d8b7);
+ const page=painted(512,640,c=>{
+  c.fillStyle='#f6e8c9';c.fillRect(0,0,512,640);
+  c.fillStyle='#9c5945';c.fillRect(0,0,512,124);
+  c.fillStyle='#fff1d1';c.textAlign='center';c.textBaseline='middle';c.font='bold 70px sans-serif';c.fillText('12月',256,68);
+  c.fillStyle='#38372e';c.font='bold 244px sans-serif';c.fillText('31',256,306);
+  c.strokeStyle='#cbb58a';c.lineWidth=3;c.beginPath();c.moveTo(55,456);c.lineTo(457,456);c.stroke();
+  c.fillStyle='#9b7851';c.font='25px sans-serif';c.fillText('DECEMBER',190,516);
+  c.fillStyle='#c98e35';c.font='76px sans-serif';c.fillText('✦',397,533);
  });
- const calendarPage=new THREE.Sprite(new THREE.SpriteMaterial({map:page}));calendarPage.scale.set(1.12,1.12,1);calendar.add(calendarPage);
+ const calendarPage=new THREE.Mesh(new THREE.PlaneGeometry(.96,1.27),new THREE.MeshStandardMaterial({map:page,roughness:1}));calendarPage.name='calendar-paper-face';calendarPage.position.z=.084;calendar.add(calendarPage);
+ for(const x of[-.32,.32]){const ring=torus(calendar,.055,.016,x,.65,.055,0x444c46);ring.rotation.y=Math.PI/2;}
  finishSection('calendar-display',calendar.position.x);
  // Framed winter view is a locally painted diorama backing, safely inside the room shell.
  const wx=2.65,wy=2.03,wz=-3.86;
