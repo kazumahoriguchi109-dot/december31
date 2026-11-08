@@ -19,8 +19,8 @@ test('four world eras use the approved navy dialogue and accessible focus',async
   appearances.push(await page.locator('#journey-dialogue').evaluate(n=>{const c=getComputedStyle(n);return[c.borderRadius,c.borderColor,c.boxShadow].join('|')}));
   await page.screenshot({path:`${out}/era-${era}.png`});
  }
- // The approved dialogue redesign replaces the former per-era paper frames.
- expect(new Set(appearances).size).toBe(1);
+ // The first world uses an ink-and-white frame; later worlds share the approved navy panel.
+ expect(appearances[0]).not.toBe(appearances[1]);expect(new Set(appearances.slice(1)).size).toBe(1);
  await expect(page.locator('#journey-dialogue')).toHaveCSS('color','rgb(255, 240, 210)');
 });
 test('portrait and next action remain visible in narrow viewports',async({page})=>{

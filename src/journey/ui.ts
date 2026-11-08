@@ -56,7 +56,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
     <nav class="journey-abilities" aria-label="できること"><button data-action="partner" id="journey-partner" hidden><kbd>T</kbd><span id="journey-partner-label">トトに声をかける</span><small id="journey-partner-state" role="status" hidden></small></button><button data-action="rotate" id="journey-rotate" hidden><kbd>Q</kbd><span>見回す</span></button><button data-action="resonance" id="journey-resonance" hidden><kbd>R</kbd><span>共鳴</span></button></nav>
     </div>
    </div>
-   <section id="journey-dialogue" class="journey-dialogue" aria-labelledby="journey-speaker" hidden><div class="journey-portrait" id="journey-portrait" aria-hidden="true"></div><div class="journey-dialogue-copy"><h2 id="journey-speaker"></h2><p id="journey-line" role="status" aria-live="polite" aria-atomic="true"></p></div><button class="journey-button journey-next" data-action="next"><span>つづきを聞く</span><kbd aria-hidden="true">E</kbd></button></section>
+   <section id="journey-dialogue" class="journey-dialogue" aria-labelledby="journey-speaker" hidden><div class="journey-portrait" id="journey-portrait" aria-hidden="true"></div><div class="journey-dialogue-copy"><h2 id="journey-speaker"></h2><p id="journey-line" role="status" aria-live="polite" aria-atomic="true"></p></div><button type="button" class="journey-button journey-next" data-action="next" aria-label="つづきを聞く" aria-keyshortcuts="E Space Enter" title="会話を進める"><span aria-hidden="true">▼</span></button></section>
 
    <p id="journey-toast" class="journey-toast" role="status" aria-live="polite" hidden></p>
   </div>

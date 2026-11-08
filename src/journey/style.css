@@ -535,3 +535,9 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
 .journey-app[data-phase="world"][data-era="0"] #journey-dialogue h2 {border-radius:0;background:#fafafa;color:#101010;border-color:#fafafa;}
 .journey-app[data-phase="world"][data-era="0"] .journey-dialogue-copy {border-color:#777;}
 .journey-app[data-phase="world"][data-era="0"] .journey-next {border-radius:0;border-color:#fafafa;background:#101010;color:#fafafa;}
+
+/* One quiet continuation cue for mouse, touch and keyboard; retain a 48px hit target. */
+.journey-app[data-phase] #journey-dialogue .journey-next {width:48px;min-width:48px;height:48px;min-height:48px;padding:0;gap:0;display:flex;align-items:center;justify-content:center;border:0;border-radius:4px;background:transparent;box-shadow:none;color:inherit;font-size:20px;line-height:1;}
+.journey-app[data-phase] #journey-dialogue .journey-next:hover:not(:disabled) {background:#ffffff18;color:inherit;}
+.journey-app[data-phase] #journey-dialogue .journey-next:active:not(:disabled) {background:#ffffff28;}
+.journey-app[data-phase] #journey-dialogue .journey-next:focus-visible {outline:2px solid currentColor;outline-offset:2px;}
