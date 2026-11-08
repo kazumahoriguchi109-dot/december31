@@ -17,7 +17,7 @@ describe('observable puzzle guidance',()=>{
  });
  it('distinguishes closed gear phases and charge waiting reasons',()=>{
   const s=createState();s.stage=1;const a=getGuidance(s).status;s.gear=1;expect(getGuidance(s).status).not.toBe(a);
-  s.stage=6;s.actors=[{x:1,z:6},{x:5,z:6}];expect(getGuidance(s).status).toContain('床 空');s.actors[1]={x:5,z:3};expect(getGuidance(s).status).toContain('床 人がいる');s.gear=2;expect(getGuidance(s).status).toContain('充電中');
+  s.stage=6;s.actors=[{x:1,z:6},{x:5,z:6}];expect(getGuidance(s).status).toContain('床 空');s.actors[1]={x:5,z:3};expect(getGuidance(s).status).toContain('床 人がいる');s.gear=2;expect(getGuidance(s).status).toContain('今の部屋へ切替で再開');s.active=1;expect(getGuidance(s).status).toContain('充電中');
  });
  it('names the reversible action at a lever',()=>{
   const s=createState();s.stage=2;s.actors=[{x:1,z:6},{x:3,z:7}];expect(getScene(s).context).toContain('入れる');interact(s);expect(getScene(s).context).toContain('切る');expect(s.message).toContain('右のロックが外れた');

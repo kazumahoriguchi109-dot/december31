@@ -27,6 +27,7 @@ export function createRenderer(canvas:HTMLCanvasElement){
   if(state.stage>=4&&state.stage<=6){label('昔の部屋',1,.2,.15,'#ffffff',.38);label('今の部屋',5,.2,-.7,'#ffffff',.38);label('つながる通路',3.4,.2,7.5,'#ffffff',.30);}
   // Physical conduits identify cause and effect, not which input solves the room.
   function conduit(points:number[][],active:boolean){points.slice(1).forEach((p,i)=>{const q=points[i]!;const dx=p[0]!-q[0]!,dz=p[1]!-q[1]!;const mesh=box((p[0]!+q[0]!)/2,.11,(p[1]!+q[1]!)/2,.09,.06,Math.hypot(dx,dz),mono?'#ffffff':active?'#ffe5a3':'#728c98',active);mesh.rotation.y=Math.atan2(dx,dz);});}
+  if(state.stage===2){conduit([[1,1],[1,.45],[3,.45],[3,0]],!state.wires[1]);conduit([[3,1],[3,0]],state.wires[2]);conduit([[5,1],[5,.45],[3,.45],[3,0]],state.wires[0]);}
   if(state.stage===3)conduit([[1,5],[1,4],[3,4],[3,3]],state.latch||state.actors.some(p=>p.x===1&&p.z===5));
   if(state.stage===4||state.stage===6)conduit([[1,1],[2.5,1],[2.5,3],[5,3]],state.gear===2);
   if(state.stage===5){label('乗り場 □',5,.2,6.45,'#ffffff',.32);}
@@ -37,7 +38,7 @@ export function createRenderer(canvas:HTMLCanvasElement){
   v.actors.forEach((a,i)=>{const h=state.riding===i?state.platform:v.tiles.find(t=>t.x===a.x&&t.z===a.z)?.height??0;if(v.view==='mono'||v.view==='color')pixelActor(a.x,a.z,i,i===state.active);else {actor(a.x,a.z,h,i,i===state.active,mono);label((i?'トト':'主人公')+(i===state.active?' ▼':''),a.x,h+1.35,a.z,'#ffffff',.29);}});
   const center=new THREE.Vector3(3,0,4);if(v.view==='dark'){camera.up.set(0,1,0);camera.position.set(3,10,12);camera.lookAt(center);}else if(v.view==='mono'||v.view==='color'){camera.position.set(3,19,4.001);camera.up.set(0,0,-1);camera.lookAt(center);}else {camera.up.set(0,1,0);const offsets=[[0,13,16],[-16,13,0],[0,13,-16]];const p=offsets[v.camera]??offsets[0]!;camera.position.set(3+p[0]!,p[1]!,4+p[2]!);camera.lookAt(center);}
  }
- const width=canvas.clientWidth,height=canvas.clientHeight;const w=Math.max(1,width),h=Math.max(1,height);if(canvas.width!==Math.round(w*Math.min(devicePixelRatio,2))||canvas.height!==Math.round(h*Math.min(devicePixelRatio,2)))renderer.setSize(w,h,false);const aspect=w/h;const span=aspect<1?Math.max(4.6,3.5/aspect):4.8;camera.left=-span*aspect;camera.right=span*aspect;camera.top=span;camera.bottom=-span;camera.updateProjectionMatrix();renderer.render(scene,camera);
+ const width=canvas.clientWidth,height=canvas.clientHeight;const w=Math.max(1,width),h=Math.max(1,height);if(canvas.width!==Math.round(w*Math.min(devicePixelRatio,2))||canvas.height!==Math.round(h*Math.min(devicePixelRatio,2)))renderer.setSize(w,h,false);const aspect=w/h;const horizontalSpan=v.view==='three'?4.8:3.5;const span=aspect<1?Math.max(4.6,horizontalSpan/aspect):4.8;camera.left=-span*aspect;camera.right=span*aspect;camera.top=span;camera.bottom=-span;camera.updateProjectionMatrix();renderer.render(scene,camera);
  }
  return {render};
 }

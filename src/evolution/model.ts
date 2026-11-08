@@ -118,7 +118,7 @@ export function getGuidance(s:State):{status:string;affordance:string}{
  if(s.stage===3)return {status:`門：${s.latch?'開放固定':isGateOpen(s)?'床スイッチで開いている':'閉じている'} ｜ 出口側 ${together}/2人`,affordance:'Tで二人を切替。操作しない子はその場で待つ。'+shared};
  if(s.stage===4)return {status:`配電器 ${['○','□','△'][s.gear]} → 受け口 △ ｜ 門：${s.latch?'開放固定':isGateOpen(s)?'開いている':'閉じている'} ｜ 出口側 ${together}/2人`,affordance:'昔と今は下の通路でつながる。Tで仲間のいる部屋へ切替。'};
  if(s.stage===5)return {status:`足場：${['□ 下','○ 中','△ 上'][s.platform]}${s.riding===null?'（空）':`（${who(s.riding)}が乗車）`} ｜ かけら：${s.key?'取得済み・階段開通':'未取得'} ｜ 出口側 ${together}/2人`,affordance:'□は乗り場。足場が来たら E で乗り降り。Tで人物切替。'};
- if(s.stage===6)return {status:`配電器 ${['○','□','△'][s.gear]} → 充電床 △ ｜ ${Math.round(s.charge*100)}%${s.charge>=1?'・帰り道 開通':s.gear===2&&s.actors.some(p=>same(p,{x:5,z:3}))&&s.actors.some(p=>roomOf(s,p)==='old')?'・充電中':'・待機中'} ｜ 床 ${s.actors.some(p=>same(p,{x:5,z:3}))?'人がいる':'空'} ・ 昔の担当 ${s.actors.some(p=>roomOf(s,p)==='old')?'いる':'いない'} ｜ 出口側 ${together}/2人`,affordance:'充電床は上に立って使う。Tで人物切替。蓄えた光は消えない。'};
+ if(s.stage===6)return {status:`配電器 ${['○','□','△'][s.gear]} → 充電床 △ ｜ ${Math.round(s.charge*100)}%${s.charge>=1?'・帰り道 開通':roomOf(s)==='old'?'・今の部屋へ切替で再開':s.gear===2&&s.actors.some(p=>same(p,{x:5,z:3}))&&s.actors.some(p=>roomOf(s,p)==='old')?'・充電中':'・待機中'} ｜ 床 ${s.actors.some(p=>same(p,{x:5,z:3}))?'人がいる':'空'} ・ 昔の担当 ${s.actors.some(p=>roomOf(s,p)==='old')?'いる':'いない'} ｜ 出口側 ${together}/2人`,affordance:'充電床は上に立って使う。Tで人物切替。蓄えた光は消えない。'};
  return {status:'帰還',affordance:''};
 }
 /** Reject malformed, cross-version and impossible snapshots without touching any old keys. */

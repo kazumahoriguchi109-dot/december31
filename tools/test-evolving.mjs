@@ -1,7 +1,7 @@
 import {chromium} from '@playwright/test';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import * as model from '../src/evolution/model.ts';
-const b=await chromium.launch({headless:true});const p=await b.newPage({viewport:{width:1280,height:820},reducedMotion:'reduce'});const errors=[];p.on('pageerror',e=>errors.push(e.message));const out=process.env.OUTPUT_DIR??'/tmp/evolution-qa';mkdirSync(out,{recursive:true});
+const b=await chromium.launch({headless:true,...(process.env.BROWSER_CHANNEL?{channel:process.env.BROWSER_CHANNEL}:{})});const p=await b.newPage({viewport:{width:1280,height:820},reducedMotion:'reduce'});const errors=[];p.on('pageerror',e=>errors.push(e.message));const out=process.env.OUTPUT_DIR??'/tmp/evolution-qa';mkdirSync(out,{recursive:true});
 const read=()=>p.evaluate(key=>JSON.parse(localStorage.getItem(key)),model.SAVE_KEY);
 const click=id=>p.locator(`[data-id="${id}"]`).click();
 async function dismiss(){if(await p.locator('.overlay').isVisible())await p.getByRole('button',{name:'進む',exact:true}).click();}
