@@ -524,10 +524,5 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
 /* Keep the still image underneath until decorative playback actually starts. */
 .journey-title-video {opacity:0;position:fixed;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;pointer-events:none;}
 .journey-title-video[hidden] {display:none!important;}
-/* The explicit play button can opt into title motion without changing game settings. */
-.journey-title-video-control {position:fixed;z-index:2;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));display:grid;justify-items:end;gap:4px;max-width:calc(100% - 24px);}
-.journey-title-video-control button {font:inherit;font-size:.65rem;color:#f8e9cb;background:#101d35dd;border:1px solid #c7a66a80;border-radius:6px;padding:7px 11px;min-height:36px;cursor:pointer;}
-.journey-title-video-control button:focus-visible {outline:2px solid #f8dc91;outline-offset:3px;}
-.journey-title-video-control span {font-size:.52rem;color:#f6e7cd;text-shadow:0 1px 3px #071020;background:#101d35bd;border-radius:3px;padding:1px 5px;}
 
 .journey-title-video[data-playing="true"] {opacity:1;}

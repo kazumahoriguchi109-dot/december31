@@ -1,64 +1,59 @@
-/** Decorative title motion never owns game state or stored preferences. */
-export function createTitleVideo(video: HTMLVideoElement, source: string, button: HTMLButtonElement, status: HTMLElement) {
+/** Automatic decorative loop; game state and saved preferences are never changed. */
+export function createTitleVideo(video: HTMLVideoElement, source: string) {
  const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
  const connection = (navigator as Navigator & {connection?: EventTarget & {saveData?: boolean}}).connection;
  let title = true, ready = false, reducedMotion = false, pending = false;
- let optedIn = false, manuallyPaused = false, blocked = false, failed = false, generation = 0;
+ let blocked = false, failed = false, generation = 0;
  video.muted = true;
- const preferenceBlocks = () => reducedMotion || motion.matches || !!connection?.saveData;
- const permitted = () => ready && title && !document.hidden && !manuallyPaused && (optedIn || !preferenceBlocks()) && !blocked && !failed;
- function updateControl() {
-  const playing = !video.paused && video.dataset['playing'] === 'true';
-  button.textContent = playing || pending ? '背景動画を一時停止' : failed ? '背景動画を再試行' : '背景動画を再生';
-  button.setAttribute('aria-pressed', String(playing || pending));
-  status.textContent = failed ? '読み込めませんでした。再試行できます' : blocked ? '自動再生が止められています' : pending ? '読み込み中' : playing ? '再生中' : manuallyPaused ? '一時停止中' : preferenceBlocks() && !optedIn ? '動き・通信量の設定により静止画を表示中' : '静止画を表示中';
+ const allowed = () => ready && title && !document.hidden && !reducedMotion && !motion.matches && !connection?.saveData;
+ const permitted = () => allowed() && !blocked && !failed;
+ function stop() {
+  generation++;pending = false;video.pause();video.hidden = true;video.dataset['playing'] = 'false';
  }
- function stop() {generation++;pending = false;video.pause();video.hidden = true;video.dataset['playing'] = 'false';updateControl();}
  function sync() {
   if (!permitted()) {stop();return;}
   if (!video.getAttribute('src')) video.src = source;
-  if (pending || !video.paused) {updateControl();return;}
+  if (pending || !video.paused) return;
   pending = true;video.hidden = false;video.dataset['playing'] = 'false';
   const attempt = ++generation;
-  updateControl();
-  // Call play synchronously, including from the button's trusted user gesture.
+  // Keep the video in layout while starting; the still remains visible underneath.
   void video.play().then(() => {
    if (attempt !== generation) return;
    pending = false;
    if (permitted()) {video.hidden = false;video.dataset['playing'] = 'true';}
-   else {video.pause();video.hidden = true;video.dataset['playing'] = 'false';}
-   updateControl();
+   else stop();
   }).catch((error: unknown) => {
    if (attempt !== generation) return;
    pending = false;
    blocked = error instanceof DOMException && error.name === 'NotAllowedError';
    failed = !blocked;
-   video.hidden = true;video.dataset['playing'] = 'false';updateControl();
+   video.hidden = true;video.dataset['playing'] = 'false';
   });
  }
- button.addEventListener('click', () => {
-  if (pending || !video.paused && !video.hidden) {manuallyPaused = true;stop();return;}
-  const retry = failed || !!video.error;
-  optedIn = true;manuallyPaused = false;blocked = false;failed = false;
-  if (retry) video.load();
+ function retry() {
+  if (!allowed() || pending) return;
+  const reload = failed || !!video.error;
+  blocked = false;failed = false;
+  if (reload) video.load();
   sync();
- });
+ }
  video.addEventListener('error', () => {failed = true;blocked = false;stop();});
  video.addEventListener('playing', () => {
   if (permitted()) {video.hidden = false;video.dataset['playing'] = 'true';}
-  else {video.pause();video.hidden = true;video.dataset['playing'] = 'false';}
-  updateControl();
+  else stop();
  });
- video.addEventListener('pause', updateControl);
- document.addEventListener('visibilitychange', sync);
- motion.addEventListener('change', () => {if (motion.matches) optedIn = false;sync();});
- connection?.addEventListener('change', () => {if (connection.saveData) optedIn = false;sync();});
- updateControl();
+ // Recover a browser interruption, but never undo deliberate screen/preference pauses.
+ video.addEventListener('pause', () => {if (permitted()) queueMicrotask(sync);});
+ document.addEventListener('visibilitychange', () => {if (document.hidden) stop();else retry();});
+ // If autoplay is restricted, the next ordinary gesture supplies user activation.
+ // Failures do not schedule timers or repeatedly download a broken video.
+ document.addEventListener('pointerdown', retry, {capture:true});
+ document.addEventListener('keydown', retry, {capture:true});
+ window.addEventListener('online', retry);
+ motion.addEventListener('change', () => {if (motion.matches) stop();else retry();});
+ connection?.addEventListener('change', () => {if (connection.saveData) stop();else retry();});
  return {
-  setTitle(value: boolean) {title = value;sync();},
-  setReducedMotion(value: boolean) {
-   if (value && !reducedMotion) optedIn = false;
-   reducedMotion = value;ready = true;sync();
-  },
+  setTitle(value: boolean) {title = value;if (value) retry();else stop();},
+  setReducedMotion(value: boolean) {reducedMotion = value;ready = true;if (value) stop();else retry();},
  };
 }
