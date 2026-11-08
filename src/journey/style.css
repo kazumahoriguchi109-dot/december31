@@ -520,3 +520,9 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
  .journey-paper .journey-settings {margin:12px 0;padding:8px 0;}
  .journey-app .journey-evolution {padding:7px 12px;}
 }
+
+/* Keep the still image underneath until decorative playback actually starts. */
+.journey-title-video {position:fixed;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;pointer-events:none;}
+.journey-title-video[hidden] {display:none!important;}
+@media (prefers-reduced-motion:reduce) {.journey-title-video {display:none!important;}}
+.journey-app[data-reduced-motion="true"] .journey-title-video {display:none!important;}

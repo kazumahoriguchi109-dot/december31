@@ -3,6 +3,8 @@ import { MAP, distance } from './contract';
 import type { DialogueEmotion } from '../ui/portraits';
 import { materialPortrait } from './materialPortrait';
 import keyart from '../../assets/art/backgrounds/title-winter-v1.png';
+import titleLoop from '../../assets/art/backgrounds/title-winter-loop.mp4';
+import { createTitleVideo } from './titleVideo';
 import './style.css';
 
 type Screen = 'title' | 'game' | 'pause' | 'credits';
@@ -59,7 +61,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    <p id="journey-toast" class="journey-toast" role="status" aria-live="polite" hidden></p>
   </div>
   <section id="journey-title" class="journey-screen journey-title" aria-labelledby="journey-title-heading">
-   <img class="journey-title-art" src="${keyart}" width="1672" height="941" fetchpriority="high" alt=""/><div class="journey-title-shade" aria-hidden="true"></div>
+   <img class="journey-title-art" src="${keyart}" width="1672" height="941" fetchpriority="high" alt=""/><video id="journey-title-video" class="journey-title-video" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" disablepictureinpicture hidden></video><div class="journey-title-shade" aria-hidden="true"></div>
    <div class="journey-title-copy">
     <div class="journey-title-emblem" aria-hidden="true"><span></span>✧<span></span></div>
     <h1 id="journey-title-heading" aria-label="12月31日"><span class="journey-date-number">12</span><span class="journey-date-unit">月</span><span class="journey-date-number">31</span><span class="journey-date-unit">日</span></h1>
@@ -87,6 +89,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
  const partner=get('journey-partner'), rotate=get('journey-rotate'), resonance=get('journey-resonance');
  const objectiveNode=get('journey-objective'), eraNode=get('journey-era'), progress=root.querySelector<HTMLElement>('.journey-progress')!, marks=[...root.querySelectorAll<HTMLElement>('[data-puzzle]')];
  const toast=get('journey-toast'), evolution=get('journey-evolution');
+ const titleVideo=createTitleVideo(get<HTMLVideoElement>('journey-title-video'),titleLoop);
  let screen:Screen='title', talking=false, dialogueKey='', observed=false, toastTimer:ReturnType<typeof setTimeout>|undefined;
  let lastEra=-1, lastSolved='', lastPhase='', lastPartnerStatus='';
  root.addEventListener('click',event=>{const button=(event.target as Element).closest<HTMLButtonElement>('[data-action]');if(button&&!button.disabled){onAction(button.dataset['action']!);}});
@@ -109,6 +112,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
    get<HTMLInputElement>(`${prefix}-motion`).checked=settings.reducedMotion;
   }
   app.dataset['reducedMotion']=String(settings.reducedMotion);
+  titleVideo.setReducedMotion(settings.reducedMotion);
  }
  for(const prefix of ['journey','journey-title']){
   get<HTMLInputElement>(`${prefix}-volume`).addEventListener('input',event=>{
@@ -148,7 +152,7 @@ export function createUI(root: HTMLElement, onAction: (id: string, value?: strin
   },
   setScreen(next){
    if(settingsDialog.open&&next!=='title')settingsDialog.close();
-   screen=next;app.dataset['screen']=next;canvas.tabIndex=next==='game'?0:-1;canvas.inert=next!=='game';
+   screen=next;titleVideo.setTitle(next==='title');app.dataset['screen']=next;canvas.tabIndex=next==='game'?0:-1;canvas.inert=next!=='game';
    show(game,next==='game'||next==='pause');for(const name of ['title','pause','credits'] as const)show(get(`journey-${name}`),name===next);syncExploration();
    if(next==='title'){focusTitle();return;}
    const focus=next==='game'?canvas:next==='pause'?get('journey-pause').querySelector<HTMLButtonElement>('[data-action="resume"]'):get('journey-credits').querySelector('button');focus?.focus({preventScroll:true});
