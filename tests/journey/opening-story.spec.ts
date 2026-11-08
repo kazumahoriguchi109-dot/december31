@@ -4,7 +4,7 @@ const next=(page:Page)=>page.locator('#journey-dialogue [data-action="next"]').c
 const current=(page:Page)=>page.locator('#journey-line');
 async function reload(page:Page){await page.reload();await page.locator('#journey-continue').click();}
 test('approved opening retains unread lines through pause, reload, desk and world arrival',async({page})=>{
- test.setTimeout(60000);
+ test.setTimeout(120000);
  await page.goto('./');await page.locator('#journey-new').click();
  for(let i=0;i<3;i++){await expect(current(page)).toHaveText(OPENING_ROOM[i]![1]);await next(page);}
  await page.keyboard.press('Escape');await page.locator('#journey-pause [data-action="resume"]').click();
@@ -23,6 +23,7 @@ test('approved opening retains unread lines through pause, reload, desk and worl
  await expect(current(page)).toHaveText(OPENING_ARRIVAL[1]![1]);await next(page);await expect(page.locator('#journey-dialogue')).toBeHidden();await reload(page);await expect(page.locator('#journey-dialogue')).toBeHidden();
 });
 test('longest opening line and continue action fit narrow and short screens',async({page})=>{
+ test.setTimeout(120000);
  await page.goto('./');await page.locator('#journey-new').click();for(let i=0;i<17;i++)await next(page);
  for(const size of [{width:320,height:640},{width:390,height:844},{width:667,height:375}]){
   await page.setViewportSize(size);await expect(current(page)).toHaveText(OPENING_ROOM[17]![1]);

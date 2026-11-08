@@ -3,19 +3,21 @@
  * injected game code, seeded saves, clock mocking, or state mutation is used.
  * Run: LIVE_URL=http://127.0.0.1:5175 PLAY_OUT=/tmp/december31-material-evidence node tools/play-journey.mjs
  */
-import { chromium } from '@playwright/test';
+import { chromium, webkit } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 const url=process.env.LIVE_URL||'http://127.0.0.1:5175';
 const out=process.env.PLAY_OUT||'/tmp/december31-material-evidence';mkdirSync(out,{recursive:true});
-const browser=await chromium.launch({headless:true});
-const context=await browser.newContext({viewport:{width:1280,height:800},recordVideo:{dir:out,size:{width:1280,height:800}}});
+const browserName=process.env.PLAY_BROWSER==='webkit'?'webkit':'chromium';
+const browser=await ({chromium,webkit})[browserName].launch({headless:true});
+const viewport=process.env.PLAY_LOW_RESOURCE==='1'?{width:640,height:400}:{width:1280,height:800};
+const context=await browser.newContext({viewport,...(process.env.PLAY_RECORD==='0'?{}:{recordVideo:{dir:out,size:viewport}})});
 const page=await context.newPage();page.setDefaultTimeout(15000);
 const log=[],errors=[];let completed=false;const start=Date.now();
 page.on('pageerror',e=>errors.push(String(e)));
 page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
 const saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('dec31-evolution-c013:journey')||'null'));
-const report=()=>writeFileSync(`${out}/journey-actions.json`,JSON.stringify({completed,url,mode:'Automated keyboard/button play; not human first-play assessment',debugHooks:false,seededSave:false,telemetry:'Read-only localStorage of game-created autosaves for position, camera quarter, puzzle completion and reload checks',log,errors},null,2));
+const report=()=>writeFileSync(`${out}/journey-actions.json`,JSON.stringify({completed,url,browser:browserName,viewport,mode:'Automated keyboard/button play; not human first-play assessment',debugHooks:false,seededSave:false,telemetry:'Read-only localStorage of game-created autosaves for position, camera quarter, puzzle completion and reload checks',log,errors},null,2));
 async function record(kind,detail){log.push({seconds:+((Date.now()-start)/1000).toFixed(2),kind,detail,state:await saved()});report();console.log(kind,typeof detail==='string'?detail:JSON.stringify(detail));}
 const visible=selector=>page.locator(selector).isVisible();
 async function dialogue(){

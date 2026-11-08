@@ -1,8 +1,9 @@
 import type { Era } from './contract';
 
 /** Original quiet procedural score and footsteps; no downloaded audio or pre-gesture context.
- * At most 16 voices, each envelope <= .06, master <= .55: summed peak is bounded by .528.
- * This is a signal bound, not a claim of listening validation or perceived loudness. */
+ * Score/feedback: at most 16 oscillator voices, each envelope <= .06.
+ * The portal uses separate filtered-noise and tone envelopes through the same
+ * volume-controlled master. Parameter limits are not a listening validation. */
 export function createJourneyAudio() {
   let context: AudioContext | null = null, master: GainNode | null = null;
   let volume = .65, era: Era = 0, timer = 0, nextBar = 0, bar = 0, lastStep = -Infinity, foot = 0, disposed = false;
