@@ -541,3 +541,6 @@ body {background:#10221e;color:var(--journey-paper);font:18px/1.6 "Hiragino Sans
 .journey-app[data-phase] #journey-dialogue .journey-next:hover:not(:disabled) {background:#ffffff18;color:inherit;}
 .journey-app[data-phase] #journey-dialogue .journey-next:active:not(:disabled) {background:#ffffff28;}
 .journey-app[data-phase] #journey-dialogue .journey-next:focus-visible {outline:2px solid currentColor;outline-offset:2px;}
+
+/* Conversation text/world clicks are shortcuts; the native ▼ button remains accessible. */
+.journey-app[data-screen="game"][data-talking="true"] :is(#journey-world,#journey-dialogue) {cursor:pointer;}
