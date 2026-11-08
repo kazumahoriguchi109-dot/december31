@@ -47,7 +47,7 @@ async function walk(x,z){
   previous=s.player;
   if(i%20===0)await record('movement-progress',{target:{x,z},distance:d,iteration:i});
   const q=s.quarter*Math.PI/2,ix=dx*Math.cos(q)-dz*Math.sin(q),iz=dx*Math.sin(q)+dz*Math.cos(q);
-  const useX=Math.abs(ix)>.07&&(Math.abs(ix)>Math.abs(iz)*.45),useZ=Math.abs(iz)>.07&&(Math.abs(iz)>Math.abs(ix)*.45);
+  const useX=Math.abs(ix)>.07&&((stagnant>1||Math.abs(ix)>Math.abs(iz)*.45)),useZ=Math.abs(iz)>.07&&((stagnant>1||Math.abs(iz)>Math.abs(ix)*.45));
   const keys=[...(useX?[ix>0?'KeyD':'KeyA']:[]),...(useZ?[iz>0?'KeyS':'KeyW']:[])];
   // Real-time held keys. Stop after each pulse so the game itself writes an autosave.
   await page.locator('#journey-world').focus();const run=s.era>0&&d>1;if(run)await page.keyboard.down('ShiftLeft');for(const k of keys)await page.keyboard.down(k);
@@ -67,7 +67,7 @@ try{
  await page.locator('#journey-new').click();await dialogue();await shot('01-room');
  await walk(0,-1.35);await use('いっしょに始める');await shot('02-world');
  await walk(3,-3);await walk(3.1,-5.2);await shot('03-p1-before');await use('ハンドルを回す');await solved(1);
- await walk(3,-8.5);await walk(0,-13);await walk(-5.7,-13.7);await use('排水口を閉じる');await walk(-2.7,-13.7);await use('止め具を外す');await solved(2);
+ await walk(3,-8.5);await walk(0,-13);await walk(-5.7,-13);await walk(-5.7,-13.7);await use('排水口を閉じる');await walk(-5.7,-13);await walk(-2.7,-13);await walk(-2.7,-13.7);await use('止め具を外す');await solved(2);
  await walk(0,-15);await walk(0,-20);await walk(0,-26);await walk(-2.2,-31.5);await press('KeyT');await walk(0,-33);await until(s=>s.toto.waiting,'Toto reached gate plate');
  await walk(0,-37);await walk(2,-37);await use('留め金を固定する');await press('KeyT');await solved(3);
  await walk(8,-42);await dialogue();const before=await saved();await record('reload-before','Actual autosave after P03');await page.reload();await page.locator('#journey-continue').click();await dialogue();const after=await saved();

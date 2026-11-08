@@ -42,7 +42,7 @@ describe('evolution direct-control model',()=>{
  });
  it('links the last-day calendar to an optional star on the path before and after color',()=>{
   let s=createState();walk(s,MAP.calendar);expect(context(s)?.id).toBe('calendar');
-  expect(interact(s).some(e=>e.id==='discovery-calendar')).toBe(true);
+  expect(interact(s).some(e=>e.id==='calendar-note')).toBe(true);
   walk(s,{x:0,z:-1.5});expect(context(s)?.id).toBe('begin');interact(s);walk(s,{x:MAP.starPost.x+1,z:MAP.starPost.z});
   expect(context(s)?.id).toBe('star-post');expect(interact(s).some(e=>e.id==='discovery-star-before')).toBe(true);
   solveTile(s);walk(s,{x:3,z:-3});walk(s,{x:MAP.starPost.x+1,z:MAP.starPost.z});expect(interact(s).some(e=>e.id==='discovery-star-color')).toBe(true);

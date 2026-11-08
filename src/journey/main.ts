@@ -1,3 +1,4 @@
+import {beginDeskStory,pendingOpeningStory,acknowledgeOpeningLine} from './openingStory';
 import {createState,step,stepCompanion,millCompanionStaging,context,interact,partner,rotate,objective} from './model';
 import {memoryAt,lightMemory,memoryLit,pendingMemoryExplanation,acknowledgeMemoryExplanation,acknowledgeMemoryLine,unreadMemoryLines} from './memories';
 import {createRenderer} from './renderer';
@@ -13,7 +14,7 @@ let screen:'title'|'game'|'pause'|'credits'='title';
 let dialogue:{id:string,speaker:string,text:string,expression:Expression}[]=[];
 let pendingInteraction:{id:string,at:number}|null=null;
 let actionCue:{id:string,start:number,duration:number}|null=null;
-const expressionFor=(id:string,text:string):Expression=>/home|solved|portal-open|latch-fixed/.test(id)?'relieved':/arrival/.test(id)?'surprised':/wall|discovery|[？?]/.test(id+text)?'curious':'neutral';
+const expressionFor=(id:string,text:string):Expression=>/^opening-room-(8|9)$/.test(id)?'relieved':/home|solved|portal-open|latch-fixed/.test(id)?'relieved':/arrival|opening-desk/.test(id)?'surprised':/wall|discovery|[？?]/.test(id+text)?'curious':'neutral';
 let evolutionRevealUntil=0;
 let millRevealUntil=0;
 let dialogueStageRemaining=0;
@@ -56,10 +57,10 @@ function begin(fresh:boolean){
  state=fresh?createState():existing??createState();dialogue=[];pendingEnding=false;evolutionRevealUntil=0;millRevealUntil=0;dialogueStageRemaining=0;dialogueVisible=false;pendingInteraction=null;actionCue=null;resonance=false;transitionUntil=0;ui.setEvolution(null);ui.setDialogue(null);audio.setEra(state.era);setScreen('game');
  if(fresh)events(step(state,{x:0,z:0,run:false},0));
  else if(state.phase==='ending')setScreen('credits');
- else {const pending=pendingMemoryExplanation(state);if(pending){
+ else {const opening=pendingOpeningStory(state);if(opening.length)events(opening);else {const pending=pendingMemoryExplanation(state);if(pending){
   const unread:JourneyEvent[]=unreadMemoryLines(state,pending).map(({speaker,text,index})=>({type:'dialogue',id:`memory-${pending}-${index}`,speaker,text}));
   unread.push({type:'dialogue',id:`memory-light-${pending}`,speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'});events(unread);
- }}
+ }}}
  showLine();saveNow();
 }
 function action(id:string,value?:string){
@@ -72,9 +73,11 @@ function action(id:string,value?:string){
  if(id==='resume'&&screen==='pause'){setScreen('game');return;}
  if(id==='credits'){setScreen('credits');return;}
  if(id==='next'&&screen==='game'&&dialogue.length&&dialogueVisible){const line=dialogue.shift()!;
+  const opening=acknowledgeOpeningLine(state,line.id);
   const match=/^memory-(gate|water|first)-(\d+)$/.exec(line.id);
   const changed=match?acknowledgeMemoryLine(state,match[1]!,Number(match[2])):line.id.startsWith('memory-light-')&&acknowledgeMemoryExplanation(state,line.id.slice('memory-light-'.length));
-  if(changed)saveNow();audio.play('line');showLine();keys.clear();return;}
+  if(opening.enterWorld)events(interact(state));
+  if(changed||opening.changed)saveNow();audio.play('line');showLine();keys.clear();return;}
  if(!available())return;
  if(id==='interact'){
   const memory=memoryAt(state,resonance);
@@ -85,6 +88,7 @@ function action(id:string,value?:string){
    if(first)lines.push({type:'dialogue',id:`memory-light-${memory.id}`,speaker:'トト',text:'光が道に残った。帰り道のしるべになるね。'});
    events(lines);if(first)toast('思い出の光が道に灯った。','memory-lit');return;
   }
+  if(target?.id==='begin'&&target.enabled){const opening=beginDeskStory(state);if(opening.length){events(opening);return;}}
   const animate=target?.enabled&&(['lever-a','lever-b'].includes(target.id)||target.id==='tile'&&!state.solved[0]||['drain','stopper'].includes(target.id)&&!state.solved[1]||target.id==='latch'&&!state.gateLatched);
   if(animate&&target){const now=performance.now();keys.clear();actionCue={id:target.id,start:now,duration:preferences.reducedMotion?180:750};pendingInteraction={id:target.id,at:now+(preferences.reducedMotion?100:450)};}
   else events(interact(state));

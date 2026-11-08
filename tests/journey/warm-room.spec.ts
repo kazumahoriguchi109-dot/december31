@@ -2,12 +2,12 @@ import {test,expect,type Page} from '@playwright/test';
 import {mkdir} from 'node:fs/promises';
 const out=process.env.ROOM_SHOTS||'/tmp/december31-room-ui/final';
 const saveKey='dec31-evolution-c013:journey';
-async function dismiss(page:Page){for(let i=0;i<8&&await page.locator('#journey-dialogue').isVisible();i++){await page.locator('#journey-dialogue [data-action="next"]').click();await page.waitForTimeout(100);}}
+async function dismiss(page:Page){for(let i=0;i<40&&await page.locator('#journey-dialogue').isVisible();i++){await page.locator('#journey-dialogue [data-action="next"]').click();await page.waitForTimeout(100);}}
 test('compact room UI preserves opening, saved position and the real game interaction',async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('./');await page.locator('#journey-new').click();
- await expect(page.locator('#journey-line')).toContainText('机のところまで歩いてみて');
- await expect(page.locator('#journey-speaker')).toHaveText('トト');
+ await expect(page.locator('#journey-line')).toContainText('今年も、もう終わりだね');
+ await expect(page.locator('#journey-speaker')).toHaveText('主人公');
  await expect(page.locator('.journey-next')).toBeInViewport();
  await expect(page.locator('.journey-material-portrait')).toBeVisible();
  await mkdir(out,{recursive:true});if(info.project.name==='chromium')await page.screenshot({path:`${out}/room-dialogue.png`});

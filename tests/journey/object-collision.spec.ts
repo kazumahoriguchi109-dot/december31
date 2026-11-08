@@ -4,8 +4,9 @@ import {ACTOR_RADIUS,ROOM_SOLIDS} from '../../src/journey/collision';
 import {ROOM_X_SCALE,FURNITURE_X_SCALE} from '../../src/journey/roomPresentation';
 const key='dec31-evolution-c013:journey';
 test('desk stops sustained and diagonal movement without losing approach, save or interaction',async({page},info)=>{
+ test.setTimeout(60000); // Includes the longer authored opening before movement checks.
  await page.goto('./');await page.locator('#journey-new').click();
- for(let i=0;i<8&&await page.locator('#journey-dialogue').isVisible();i++){
+ for(let i=0;i<40&&await page.locator('#journey-dialogue').isVisible();i++){
   await page.locator('#journey-dialogue [data-action="next"]').click();await page.waitForTimeout(100);
  }
  const saved=()=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)!),key);
@@ -22,7 +23,9 @@ test('desk stops sustained and diagonal movement without losing approach, save o
  await page.keyboard.press('Escape');const before=await saved();await page.reload();await page.locator('#journey-continue').click();
  const after=await saved();expect(after.player).toEqual(before.player);
  await expect(page.locator('#journey-context-label')).toHaveText('いっしょに始める');
- await page.locator('#journey-interact').click();await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
+ await page.locator('#journey-interact').click();
+ for(let i=0;i<8&&await page.locator('#journey-dialogue').isVisible();i++)await page.locator('#journey-dialogue [data-action="next"]').click();
+ await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
 });
 
 test('an old save inside the desk resumes outside it without resetting progress',async({page})=>{

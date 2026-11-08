@@ -1,3 +1,4 @@
+import {beginOpeningStory,beginArrivalStory,hasOpeningStory} from './openingStory';
 import { MAP, distance, heightAt, inControlArea, PLATE_RADIUS, isOnPlate, type Actor, type ContextAction, type InputFrame, type JourneyEvent, type JourneyState, type Point } from './contract';
 
 import { ACTOR_RADIUS, solidObstruction } from './collision';
@@ -316,7 +317,7 @@ function consequences(s:JourneyState):JourneyEvent[] {
 export function step(s:JourneyState,input:InputFrame,dt:number):JourneyEvent[] {
  if(s.phase==='ending')return [];
  const ev:JourneyEvent[]=[];
- if(s.phase==='room')ev.push(...once(s,'room-intro',[line('room-intro','今年もいっしょに遊ぼう。机のところまで歩いてみて。')]));
+ if(s.phase==='room')ev.push(...(s.seen.includes('room-intro')?[]:(s.seen.push('room-intro'),beginOpeningStory(s))));
  if(s.mode!=='walk')return ev;
  const seconds=Math.max(0,Math.min(.1,Number.isFinite(dt)?dt:0));
  let ix=Number.isFinite(input.x)?input.x:0,iz=Number.isFinite(input.z)?input.z:0;
@@ -385,12 +386,12 @@ export function interact(s:JourneyState):JourneyEvent[] {
  if(!a.enabled)return [notice('context-unavailable',a.hint)];
  const ev:JourneyEvent[]=[];
  switch(a.id){
-  case 'calendar':return once(s,'discovery-calendar',[line('discovery-calendar','今日は12月31日。年が変わるまで、まだいっしょに遊べるね。'),line('calendar-star','この星、さっきふたりで描いたんだよ。','主人公')]).concat(notice('calendar-note','カレンダーの最後の日に、星が描いてある。'));
+  case 'calendar':if(hasOpeningStory(s)){once(s,'discovery-calendar',[]);return [notice('calendar-note','カレンダーの最後の日に、星が描いてある。')];}return once(s,'discovery-calendar',[line('discovery-calendar','今日は12月31日。年が変わるまで、まだいっしょに遊べるね。'),line('calendar-star','この星、さっきふたりで描いたんだよ。','主人公')]).concat(notice('calendar-note','カレンダーの最後の日に、星が描いてある。'));
   case 'star-post':return s.solved[0]?once(s,'discovery-star-color',[line('discovery-star-color','あっ、あの星に色がついてる。部屋で描いたのと同じ色だ。','主人公'),line('star-color-toto','さっきは形だけだったのに。ここも変わったんだね。')]).concat(notice('star-color-note','星の札は、金色に輝いている。')):once(s,'discovery-star-before',[line('discovery-star-before','この星、部屋のカレンダーで見た形に似てる。','主人公'),line('star-before-toto','色は分からないけど、ちゃんとここにあるね。')]).concat(notice('star-before-note','雪道の札に、小さな星が描かれている。'));
   case 'footprints':return once(s,'discovery-footprints',[line('discovery-footprints','ぼくらの足跡、少しずつ形が違う。ここまで本当に歩いてきたんだ。','主人公')]).concat(notice('footprints-memory','二人の足跡が、雪の上に並んでいる。'));
   case 'pond':return once(s,'discovery-pond',[line('discovery-pond','氷の下にも、光が動いてる。止まって見えたけど、ちゃんと流れてたんだね。')]).concat(notice('pond-memory','氷の下で、光がゆっくり流れている。'));
   case 'post':return once(s,'discovery-post',[line('discovery-post','さっきまで、一本の線みたいだったのに。横があったんだ。','主人公')]).concat(notice('post-memory','見る向きで、標柱の形が変わって見える。'));
-  case 'begin':s.phase='world';s.player={...MAP.spawn,facing:Math.PI};s.toto={x:1,z:.4,facing:Math.PI,waiting:false,plate:null};runtime(s).path=[];ev.push(line('arrival-one','あれ……本当に、ゲームの中にいる。','主人公'),line('arrival-two','道の先に城がある。まずは、あの光る石まで行ってみよう。'));break;
+  case 'begin':s.phase='world';s.player={...MAP.spawn,facing:Math.PI};s.toto={x:1,z:.4,facing:Math.PI,waiting:false,plate:null};runtime(s).path=[];ev.push(...beginArrivalStory(s));break;
   case 'tile':
    s.player.facing=Math.atan2(MAP.tile.x-s.player.x,MAP.tile.z-s.player.z);
    if(s.solved[0])return [notice('tile-memory','二つの光が、つながった線に残っている。')];
