@@ -30,6 +30,7 @@ test('compact room UI preserves opening, saved position and the real game intera
  const after=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!),saveKey);expect(after.player).toEqual(before.player);
  await expect(page.locator('#journey-context-label')).toHaveText('いっしょに始める');
  await page.locator('#journey-interact').click();await dismiss(page);
+ await expect(page.locator('.journey-portal')).toBeVisible();await page.locator('.journey-portal button').click();await dismiss(page);
  await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
  expect(errors).toEqual([]);
 });

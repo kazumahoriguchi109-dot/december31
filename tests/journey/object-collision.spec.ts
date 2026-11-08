@@ -25,6 +25,7 @@ test('desk stops sustained and diagonal movement without losing approach, save o
  await expect(page.locator('#journey-context-label')).toHaveText('いっしょに始める');
  await page.locator('#journey-interact').click();
  for(let i=0;i<8&&await page.locator('#journey-dialogue').isVisible();i++)await page.locator('#journey-dialogue [data-action="next"]').click();
+ await expect(page.locator('.journey-portal')).toBeVisible();await page.locator('.journey-portal button').click();
  await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
 });
 
