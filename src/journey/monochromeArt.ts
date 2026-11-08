@@ -75,6 +75,8 @@ export function createMonochromeArt(){
   const path=[[0,8],[0,0],[0,-2.6],[1.1,-3.4],[3.25,-4.3],[3.3,-6.8],[2.8,-8.1],[.1,-9.1],[0,-10.4]];
   ctx.strokeStyle='#b8b8b8';ctx.lineWidth=f.unit*2;ctx.lineJoin='miter';ctx.beginPath();path.forEach(([x,z],i)=>i?ctx.lineTo(f.x(x!),f.y(z!)):ctx.moveTo(f.x(x!),f.y(z!)));ctx.stroke();
   for(let i=0;i<24;i++){const z=7-i*.72;if(z< -3&&z> -9)continue;rect(f.x((i%2?-.25:.25)),f.y(z),2,2,light);}
+  // Optional paired tracks remain discoverable at the model's footprints interaction.
+  for(let i=0;i<7;i++)for(const [j,x]of[-6.16,-5.84].entries())rect(f.x(x),f.y(-3.5-i*.45),Math.max(1,f.unit*(j?.14:.17)),Math.max(2,f.unit*(j?.25:.3)),shadow);
   // Depth-sorted scenery and actors preserve feet, approach positions and clear interaction.
   const draw:{z:number;run:()=>void}[]=[];
   for(const side of [-1,1])for(let z=7;z>=-16;z-=3.7){const x=side*(12.35+.3*Math.sin(z));draw.push({z,run:()=>tree(f.x(x),f.y(z),f.unit/18*.9)});}
