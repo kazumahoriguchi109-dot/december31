@@ -14,6 +14,7 @@ test('monochrome world keeps live input, responsive UI and actual save across re
  for(const size of [{width:1280,height:800},{width:390,height:844},{width:844,height:390}]){
   await page.setViewportSize(size);await expect(page.locator('.journey-next')).toBeInViewport();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await test.info().attach(`monochrome-${size.width}`,{body:await page.screenshot(),contentType:'image/png'});
  }
  await page.setViewportSize({width:640,height:400});for(let i=0;i<2;i++)await page.locator('#journey-dialogue [data-action="next"]').click();
  const before=await save();await page.locator('#journey-world').focus();await page.keyboard.down('KeyD');await page.waitForTimeout(450);await page.keyboard.up('KeyD');await page.waitForTimeout(200);
