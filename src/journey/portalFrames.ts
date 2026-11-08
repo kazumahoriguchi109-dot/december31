@@ -3,7 +3,7 @@ import {PORTAL_SECONDS,PORTAL_MOTION_SCALE} from './portalSoundtrack';
 export {PORTAL_SECONDS} from './portalSoundtrack';
 const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 export function drawPortalFrame(ctx:CanvasRenderingContext2D,image:CanvasImageSource,width:number,height:number,seconds:number,reduced=false){
- const p=Math.max(0,Math.min(1,seconds/PORTAL_SECONDS)),pull=smooth((p-.12)/.76);
+ const p=Math.max(0,Math.min(1,seconds/PORTAL_SECONDS)),pull=.15*smooth(p/.18)+.85*smooth((p-.18)/.75);
  ctx.save();ctx.fillStyle='#0b1019';ctx.fillRect(0,0,width,height);
  const w=1672,h=941,scale=Math.min(width/w,height/h),ox=(width-w*scale)/2,oy=(height-h*scale)/2;
  ctx.translate(ox,oy);ctx.scale(scale,scale);
@@ -38,5 +38,5 @@ export function drawPortalFrame(ctx:CanvasRenderingContext2D,image:CanvasImageSo
  }
  ctx.filter='none';
  // A single soft dark dissolve avoids flashes and hands off to the monochrome world.
- ctx.fillStyle=`rgba(9,14,23,${smooth((p-.73)/.27)})`;ctx.fillRect(-w,-h,w*3,h*3);ctx.restore();
+ ctx.fillStyle=`rgba(9,14,23,${reduced?smooth(p):smooth((seconds-(PORTAL_SECONDS-2))/2)})`;ctx.fillRect(-w,-h,w*3,h*3);ctx.restore();
 }

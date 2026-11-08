@@ -14,7 +14,7 @@ const forbiddenText = ['M1A_P04', 'M1A_P05', 'm1a_p04', 'm1a_p05', '__d31', '__j
 let bad = 0;
 for (const f of walk('dist')) {
   if (/\.png$/i.test(f) && adoptedImages.has(createHash('sha256').update(readFileSync(f)).digest('hex'))) continue;
-  if (/^dist\/assets\/portal-opening-[\w-]+\.mp4$/.test(f) && statSync(f).size < 3_000_000 && createHash('sha256').update(readFileSync(f)).digest('hex') === portalVideo.sha256) continue;
+  if (/^dist\/assets\/portal-opening-[\w-]+\.mp4$/.test(f) && statSync(f).size < 5_000_000 && createHash('sha256').update(readFileSync(f)).digest('hex') === portalVideo.sha256) continue;
   if (/^dist\/assets\/title-winter-loop-[\w-]+\.mp4$/.test(f) && statSync(f).size < 3_000_000 && createHash('sha256').update(readFileSync(f)).digest('hex') === approvedVideo.sha256) continue;
   // Only the reviewed title and three licensed interaction samples may ship as binary assets.
   if (/^dist\/assets\/winter-keyart-[\w-]+\.jpg$/.test(f) && statSync(f).size < 600_000) continue;
