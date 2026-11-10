@@ -7,14 +7,14 @@ export function drawPortalFrame(ctx:CanvasRenderingContext2D,image:CanvasImageSo
  ctx.save();ctx.fillStyle='#0b1019';ctx.fillRect(0,0,width,height);
  const w=1672,h=941,scale=Math.min(width/w,height/h),ox=(width-w*scale)/2,oy=(height-h*scale)/2;
  ctx.translate(ox,oy);ctx.scale(scale,scale);
- // A slow inward drift rather than whole-screen spinning; the warm room loses colour.
+ // A focused spiral pull rather than whole-screen spinning; the warm room loses colour.
  ctx.filter=`saturate(${1-pull*.98})`;
  if(reduced)ctx.drawImage(image,0,0,w,h);
  else {
   // Continuous texture warp: the two figures and nearby room pixels travel
   // into the portal while its outer rim stays full-frame (no shrinking card).
   const cx=w*.52,cy=h*.39;
-  const point=(x:number,y:number)=>{const dx=x-cx,dy=y-cy,r=Math.hypot(dx,dy),weight=Math.max(0,1-r/1050);const k=1-pull*.94*weight*weight;return {x:cx+dx*k,y:cy+dy*k};};
+  const point=(x:number,y:number)=>{const dx=x-cx,dy=y-cy,r=Math.hypot(dx,dy),weight=Math.max(0,1-r/1050);const k=1-pull*.94*weight*weight;const twist=2.8*smooth(p/.85)*weight*weight,cs=Math.cos(twist),sn=Math.sin(twist);return {x:cx+(dx*cs-dy*sn)*k,y:cy+(dx*sn+dy*cs)*k};};
   const triangle=(a:{x:number,y:number},b:{x:number,y:number},c:{x:number,y:number},da:{x:number,y:number},db:{x:number,y:number},dc:{x:number,y:number})=>{
    const den=a.x*(b.y-c.y)+b.x*(c.y-a.y)+c.x*(a.y-b.y);
    const coeff=(u:number,v:number,z:number)=>[(u*(b.y-c.y)+v*(c.y-a.y)+z*(a.y-b.y))/den,(u*(c.x-b.x)+v*(a.x-c.x)+z*(b.x-a.x))/den,(u*(b.x*c.y-c.x*b.y)+v*(c.x*a.y-a.x*c.y)+z*(a.x*b.y-b.x*a.y))/den];
@@ -28,11 +28,11 @@ export function drawPortalFrame(ctx:CanvasRenderingContext2D,image:CanvasImageSo
   }
   ctx.restore();
   // Fine pixel streams converge towards the opening, keeping the still artwork readable.
-  for(let i=0;i<100;i++){
-   const phase=(i*.61803398875+seconds/PORTAL_MOTION_SCALE*.12)%1,angle=i*2.39996323;
+  for(let i=0;i<160;i++){
+   const phase=(i*.61803398875+seconds/PORTAL_MOTION_SCALE*.24)%1,angle=i*2.39996323+seconds*.85+phase*2.5;
    const r=(1-phase)*950,alpha=Math.sin(phase*Math.PI)*.58*smooth(p/.15)*(1-smooth((p-.85)/.15));
    const x=w*.52+Math.cos(angle+pull*.12)*r,y=h*.39+Math.sin(angle+pull*.12)*r*.65;
-   const size=2+(1-phase)*7;ctx.globalAlpha=alpha;ctx.fillStyle=i%3?'#d6e2ef':'#f5d58b';ctx.fillRect(x,y,size,size);
+   const size=2+(1-phase)*7;ctx.globalAlpha=alpha;ctx.fillStyle=i%3?'#d6e2ef':'#f5d58b';ctx.beginPath();ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=size*.55;ctx.moveTo(x,y);ctx.lineTo(w*.52+Math.cos(angle-.09)*r*1.08,h*.39+Math.sin(angle-.09)*r*.65*1.08);ctx.stroke();
   }
   ctx.globalAlpha=1;
  }

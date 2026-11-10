@@ -30,7 +30,7 @@ test('portal survives reload, blocks movement, skips once, and never replays aft
 test('portal plays to the monochrome world without input',async({page})=>{
  test.setTimeout(120000);await reachPortal(page);await expect(page.locator('.journey-portal')).toBeVisible();
  await expect(page.locator('.journey-portal video')).toHaveJSProperty('muted',true);
- await page.waitForTimeout(8500);await expect(page.locator('.journey-portal')).toBeVisible();
+ await page.waitForTimeout(2500);await expect(page.locator('.journey-portal')).toBeVisible();
  await expect(page.locator('.journey-portal')).toHaveCount(0,{timeout:22000});await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('dec31-evolution-c013:journey')!).era)).toBe(0);
  await expect(page.locator('#journey-line')).toHaveText('あれ……本当に、ゲームの中にいる。');
@@ -62,7 +62,7 @@ test('late movie response cannot consume the animation or jump into its middle',
  await reachPortal(page);await page.waitForTimeout(2500);
  await expect(page.locator('.journey-portal p')).toHaveText('ふたりで、画面の向こうへ。');
  await expect(page.locator('.journey-portal video')).toHaveCSS('opacity','0');
- await page.waitForTimeout(6000);await expect(page.locator('.journey-portal')).toBeVisible();await expect(page.locator('.journey-portal video')).toHaveCSS('opacity','0');
+ await page.waitForTimeout(1500);await expect(page.locator('.journey-portal')).toBeVisible();await expect(page.locator('.journey-portal video')).toHaveCSS('opacity','0');
  await page.keyboard.press('Escape');await expect(page.locator('.journey-app')).toHaveAttribute('data-phase','world');
 });
 
