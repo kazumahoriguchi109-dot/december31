@@ -19,7 +19,9 @@ const same=(a:Point,b:Point)=>a.x===b.x&&a.z===b.z;
 const near=(a:Point,b:Point)=>Math.abs(a.x-b.x)+Math.abs(a.z-b.z)<=1;
 export function createState():State{return {version:1,stage:0,actors:[{x:3,z:7},{x:3,z:8}],active:0,gear:0,wires:[false,false,false],latch:false,platform:0,platformDirection:1,riding:null,platformClock:0,key:false,charge:0,solved:[false,false,false,false,false,false],steps:0,message:'主人公「トト？ ……すぐ目の前に何かある。」'};}
 export function roomOf(s:State,p:Point=s.actors[s.active]):'old'|'new'|'main'{return s.stage>=4&&s.stage<=6?(p.x<=2&&p.z<7?'old':'new'):'main';}
-export function getView(s:State):View{return s.stage===0?'dark':s.stage===1||roomOf(s)==='old'?'mono':s.stage===2?'color':'three';}
+// Presentation belongs to the whole puzzle, never the selected actor's room.
+// Old-room movement and clock rules remain independent of the camera.
+export function getView(s:State):View{return s.stage===0?'dark':s.stage===1?'mono':s.stage===2?'color':'three';}
 export function getCamera(s:State):0|1|2{return getView(s)==='three'?(s.stage===3?1:s.stage===5?2:0):0;}
 function enter(s:State,stage:number){const done=s.solved.slice(),steps=s.steps;Object.assign(s,createState(),{stage,solved:done,steps});if(stage>=2)s.actors=[{x:3,z:7},{x:4,z:7}];if(stage>=4&&stage<=6)s.actors=[{x:1,z:6},{x:5,z:6}];if(stage===7)s.actors=[{x:3,z:4},{x:4,z:4}];}
 function say(s:State,text:string){s.message=text;return text;}
@@ -43,7 +45,7 @@ export function move(s:State,dx:number,dz:number):string{
  if(s.stage===0)return say(s,'暗くて道が見えない。目の前の留め金に手を伸ばそう。');
  if(s.stage===7)return '';
  if(s.riding===s.active)return say(s,'足場に乗っている。着いた場所で「調べる」を押すと降りられる。');
- if(getView(s)==='mono'&&dx!==0)return say(s,'この部屋では、上と下だけに歩ける。');
+ if((s.stage===1||roomOf(s)==='old')&&dx!==0)return say(s,'この部屋では、上と下だけに歩ける。');
  const p=s.actors[s.active],next={x:p.x+dx,z:p.z+dz};
  if(!floor(s,next))return say(s,'壁がある。別の道を探そう。');
  if(s.stage>=3&&same(next,s.actors[1-s.active]!))return say(s,'仲間がいる。切り替えて少し場所を空けよう。');

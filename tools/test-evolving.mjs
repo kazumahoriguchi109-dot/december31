@@ -3,7 +3,19 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import * as model from '../src/evolution/model.ts';
 const b=await chromium.launch({headless:true,...(process.env.BROWSER_CHANNEL?{channel:process.env.BROWSER_CHANNEL}:{})});const p=await b.newPage({viewport:{width:1280,height:820},reducedMotion:'reduce'});const errors=[];p.on('pageerror',e=>errors.push(e.message));const out=process.env.OUTPUT_DIR??'/tmp/evolution-qa';mkdirSync(out,{recursive:true});
 const read=()=>p.evaluate(key=>JSON.parse(localStorage.getItem(key)),model.SAVE_KEY);
-const click=id=>p.locator(`[data-id="${id}"]`).click();
+const rawClick=id=>p.locator(`[data-id="${id}"]`).click();
+async function click(id){
+ const before=await read();await rawClick(id);
+ if(before?.stage>=4&&before.stage<=6){
+  const after=await read();
+  if(after.stage===before.stage){
+   const era=await p.locator('.game').getAttribute('data-era');
+   if(era!=='three')throw Error('3D presentation changed during '+id);
+   if(model.getScene(after).camera!==model.getScene(before).camera)throw Error('camera changed during '+id);
+   if(model.roomOf(after)==='old'&&!(await p.locator('[data-id=left]').isDisabled()))throw Error('old room allowed horizontal movement');
+  }
+ }
+}
 async function dismiss(){if(await p.locator('.overlay').isVisible())await p.getByRole('button',{name:'進む',exact:true}).click();}
 async function walk(x,z){let start=await read();const queue=[[start,[]]],seen=new Set();let route;while(queue.length){const [s,path]=queue.shift(),a=s.actors[s.active];if(a.x===x&&a.z===z){route=path;break;}const key=[a.x,a.z,s.gear,s.platform].join(',');if(seen.has(key))continue;seen.add(key);for(const [dx,dz]of [[0,-1],[0,1],[-1,0],[1,0]]){const next=structuredClone(s);model.move(next,dx,dz);if(next.actors[next.active].x!==a.x||next.actors[next.active].z!==a.z)queue.push([next,[...path,[dx,dz]]]);}}if(!route)throw Error(`no path stage${start.stage} to ${x},${z}`);for(const d of route){const s=await read(),c=model.getScene(s).camera;let [dx,dz]=d;for(let n=0;n<c;n++){const old=dx;dx=dz;dz=-old;}await click(dx===1?'right':dx===-1?'left':dz===-1?'up':'down');}const s=await read(),a=s.actors[s.active];if(a.x!==x||a.z!==z)throw Error('UI movement mismatch '+JSON.stringify(a));}
 async function shot(n){await p.screenshot({path:`${out}/${n}.png`});await p.setViewportSize({width:390,height:844});await p.waitForTimeout(250);await p.screenshot({path:`${out}/${n}-mobile.png`});await p.setViewportSize({width:1280,height:820});}
