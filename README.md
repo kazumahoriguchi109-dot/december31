@@ -130,3 +130,7 @@ WebKit/Firefoxで各入力が一度ずつ会話を進めること、Chromiumで�
 通常の連続クリックは1クリックにつき1行進みます。会話から映像への切り替えや、映像スキップ後の二度押しは次の画面へ持ち越さず、到着直後の台詞を守ります。ゲームの進行・セーブ形式は変更していません。
 
 実Google ChromeとWebKitの6ケースで、パネル／画面／人物のクリック、ドラッグ・中断操作、設定、実セーブ再開、タッチ、最後の台詞から映像への移行、スキップの二度押しを確認しました。`playwright.dialogue-click.config.ts` のchromeプロジェクトはインストール済みGoogle Chromeを使います。
+
+## Character continuity rule
+
+Character artwork in dialogue must match the current game-world design and era. See [Character continuity](docs/CHARACTER_CONTINUITY.md) before changing character presentation. Run `node tools/test-character-continuity.mjs` against the local development server (default port 4197) for the targeted browser regression.
