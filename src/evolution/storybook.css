@@ -1,0 +1,44 @@
+/* Approved B: a page of the winter storybook. Scoped so dialogue/HUD stay untouched. */
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]){background:#07121e99;backdrop-filter:blur(3px);padding:24px;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel{
+ position:relative;isolation:isolate;max-width:660px;padding:54px 55px 78px;border:0;border-radius:4px;
+ background:transparent url('../../assets/art/ui/storybook-paper.svg') center/100% 100% no-repeat;
+ color:#302516;text-align:center;box-shadow:0 28px 65px #02070bc0;filter:drop-shadow(2px 3px 0 #88603b);
+ font-family:'Hiragino Mincho ProN','Yu Mincho',Georgia,serif;
+ outline:none;
+}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel h2{font-size:clamp(24px,3.3vw,34px);line-height:1.5;letter-spacing:.045em;color:#302516;margin:0 0 24px;font-weight:600;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel h2::after{content:'✧';display:block;font-size:18px;color:#86643b;line-height:1;margin:16px auto 0;width:72%;background:linear-gradient(90deg,transparent,#93754a 38%,transparent 38%,transparent 62%,#93754a 62%,transparent) center/100% 1px no-repeat;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel p{font-size:16px;line-height:1.95;margin:0 auto;max-width:26em;color:#3d3020;text-wrap:balance;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons{display:flex;justify-content:center;gap:12px;margin-top:28px;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons button{position:relative;min-height:48px;border:1px solid #8a673d;border-radius:3px;background:linear-gradient(135deg,#f9edcf,#e6cea4);box-shadow:inset 0 0 0 3px #f0ddb9,inset 0 0 0 4px #ab8a58,0 2px 4px #5c3c2530;color:#43311e;font-size:17px;font-weight:600;line-height:1.5;padding:12px 20px;font-family:inherit;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons .primary{background:linear-gradient(135deg,#77532c,#4b321c);color:#fff0ce;border-color:#573b1f;box-shadow:inset 0 0 0 3px #c5a16b,inset 0 0 0 4px #6e4b28,0 3px 7px #5c3c2550;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons button:hover{background:linear-gradient(135deg,#fff5df,#f2dfba);color:#2b1e10;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons .primary:hover{background:linear-gradient(135deg,#8b6336,#5b3e23);color:#fff8e7;}
+.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons button:focus-visible{outline:3px solid #2d5364;outline-offset:4px;}
+.overlay[data-kind="new-confirm"] .buttons{flex-direction:column;max-width:310px;margin-left:auto;margin-right:auto;}
+/* Keep safe Back-first keyboard/DOM order rather than placing overwrite under default Enter. */
+.overlay[data-kind="pause"] .panel{max-width:740px;padding-bottom:86px;}
+.overlay[data-kind="pause"] .buttons{flex-wrap:nowrap;gap:9px;}
+.overlay[data-kind="pause"] .buttons button{font-size:16px;padding:12px 14px;flex:1;}
+.overlay[data-kind="pause"] [data-id="reset-confirm"]{max-width:none;font-size:14px;white-space:nowrap;}
+@media(max-width:600px){
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]){padding:16px;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel{padding:42px 28px 65px;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel p{font-size:14px;}
+ .overlay[data-kind="pause"] .buttons{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+ .overlay[data-kind="pause"] [data-id="reset-confirm"]{max-width:none;white-space:normal;text-wrap:balance;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons button{font-size:15px;min-width:0;}
+}
+@media(max-height:500px){
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]){align-items:flex-start;padding:14px;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel{margin:auto;padding:26px 38px 42px;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel h2{font-size:24px;margin-bottom:12px;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel h2::after{margin-top:8px;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel p{font-size:14px;line-height:1.7;}
+ .overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons{margin-top:16px;gap:8px;}
+ .overlay[data-kind="new-confirm"] .buttons{flex-direction:row;max-width:none;}
+}
+@media(forced-colors:active){.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel{background:Canvas;color:CanvasText;border:2px solid CanvasText;filter:none;}.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .panel :is(h2,p,button){color:CanvasText;}.overlay:is([data-kind="new-confirm"],[data-kind="pause"]) .buttons button:focus-visible{outline-color:Highlight;}}
+
+.overlay[data-kind="new-confirm"] .storybook-statement{display:block;text-wrap:pretty;}

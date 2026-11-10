@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 500" preserveAspectRatio="none">
+<defs>
+ <radialGradient id="paper"><stop stop-color="#f8edcf"/><stop offset=".7" stop-color="#eedab3"/><stop offset="1" stop-color="#b98c52"/></radialGradient>
+ <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".54" numOctaves="3" seed="18"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".10"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter>
+ <g id="tree" fill="#806d4e" fill-opacity=".14" stroke="#75674e" stroke-width="1.6"><path d="M0 0 -8 19 -3 18 -14 34 -7 32 -22 52 -12 49 -30 70 -5 63 -5 77 5 77 5 63 30 70 12 49 22 52 7 32 14 34 3 18 8 19Z"/><path d="M0 4V71M0 19 -7 25M0 32 13 43M0 48 -19 59" fill="none"/></g>
+ <g id="flake" fill="none" stroke="#776144" stroke-width="1.5"><path d="M-12 0H12M0-12V12M-9-9 9 9M-9 9 9-9M-8-3 -5 0 -8 3M8-3 5 0 8 3M-3-8 0-5 3-8M-3 8 0 5 3 8"/></g>
+ <g id="corner" fill="none" stroke="#81643e" stroke-width="1.4"><path d="M0 48V5Q0 0 5 0H48M5 39V12Q5 5 12 5H39M9 28Q22 25 18 14Q14 6 9 13Q5 21 21 23L30 12M12 30Q27 36 30 21M20 6 26 11 32 6M6 20 11 26 6 32"/></g>
+</defs>
+<path d="M16 12 38 7 72 10 98 7 160 11 190 7 255 9 280 6 333 9 351 5 389 10 444 7 471 11 536 8 560 10 610 6 652 10 681 8 690 24 688 62 692 87 688 126 692 174 688 210 692 263 689 290 692 344 688 379 692 424 687 477 679 489 646 491 615 487 569 492 523 488 479 493 420 490 370 494 336 490 285 493 245 488 191 493 153 488 102 492 61 488 32 492 14 481 9 447 12 406 8 374 11 321 7 284 11 239 8 192 12 146 8 107 12 72 9 36Z" fill="url(#paper)" stroke="#9c7544" stroke-width="3"/>
+<rect x="20" y="17" width="660" height="466" rx="10" fill="#f3dfb8" filter="url(#grain)" opacity=".65"/>
+<path d="M36 21H664L678 36V464L664 480H36L22 464V36Z" fill="none" stroke="#86653e" stroke-width="1.4"/><path d="M40 27H660L671 39V461L660 474H40L29 461V39Z" fill="none" stroke="#a98b60" stroke-width=".8"/>
+<use href="#corner" x="34" y="33"/><use href="#corner" transform="translate(666 33) scale(-1 1)"/><use href="#corner" transform="translate(34 467) scale(1 -1)"/><use href="#corner" transform="translate(666 467) scale(-1 -1)"/>
+<g opacity=".55"><use href="#flake" x="622" y="68"/><use href="#flake" transform="translate(649 99) scale(.65)"/><use href="#flake" transform="translate(590 47) scale(.45)"/></g>
+<g opacity=".65"><path d="M35 450Q90 431 143 453T263 455M388 459Q465 431 521 448T666 443M40 462Q183 449 251 467M418 470Q559 453 662 458" fill="none" stroke="#8a7858"/>
+<use href="#tree" transform="translate(65 353) scale(.94)"/><use href="#tree" transform="translate(100 389) scale(.65)"/><use href="#tree" transform="translate(134 414) scale(.38)"/><use href="#tree" transform="translate(640 365) scale(.94)"/><use href="#tree" transform="translate(598 395) scale(.65)"/>
+<path d="M517 427 545 401 579 427H574V451H522V427Z" fill="#d4bd94" stroke="#7e694b" stroke-width="1.5"/><path d="m514 427 31-29 38 29-6 3-32-26-25 26Z" fill="#f5e9cb" stroke="#7e694b"/><path d="M529 432H537V441H529ZM552 431H561V441H552Z" fill="#c49d55" stroke="#7e694b"/><path d="M543 438H550V451H543Z" fill="#8c7552"/><path d="M560 407V393H568V414M566 389q-9-7 0-12t-1-12" fill="none" stroke="#8a7858"/></g>
+</svg>
