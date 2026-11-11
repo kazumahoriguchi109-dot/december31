@@ -141,3 +141,15 @@ export function restore(raw:unknown):State|null{
  if(s.stage>=3&&same(s.actors[0],s.actors[1]))return null;
  return JSON.parse(JSON.stringify(s)) as State;
 }
+
+/** Device that the existing context action can operate. No remote activation or puzzle bypass. */
+export function interactionDevice(s:State):string|null {
+ const p=s.actors[s.active];
+ if(s.stage===0)return 'chest';
+ if(s.stage===1)return near(p,{x:3,z:1})?'release':null;
+ if(s.stage===2){for(let i=0;i<3;i++)if(near(p,{x:1+i*2,z:5}))return 'wire-'+i;return near(p,{x:3,z:0})?'exit':null;}
+ if(s.stage===3)return near(p,{x:5,z:1})?'latch':near(p,{x:3,z:0})?'exit':null;
+ if(s.stage===4)return !s.latch&&near(p,{x:6,z:1})?'latch':near(p,{x:5,z:0})?'exit':null;
+ if(s.stage===5){if(s.riding===s.active)return s.platform===2?'key':'platform';if(same(p,{x:5,z:6}))return 'platform';return near(p,{x:6,z:0})?'exit':null;}
+ return s.stage===6&&near(p,{x:5,z:0})?'exit':null;
+}

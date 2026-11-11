@@ -44,9 +44,10 @@ export function createRenderer(canvas:HTMLCanvasElement){
   if(state.stage===3)conduit([[1,5],[1,4],[3,4],[3,3]],state.latch||state.actors.some(p=>p.x===1&&p.z===5));
   if(state.stage===4||state.stage===6)conduit([[1,1],[2.5,1],[2.5,3],[5,3]],state.gear===2);
   if(state.stage===5){label('乗り場 □',5,.2,6.45,'#ffffff',.32);}
-  for(const d of v.devices){const h=d.kind==='platform'?state.platform:v.tiles.find(t=>t.x===d.x&&t.z===d.z)?.height??0;const on=d.active;const color=mono?(on?'#ffffff':'#53585e'):(on?'#e8c87e':'#657b87');const k=d.kind as string;if(k==='wire'){const symbol=d.label.slice(-1);const released=symbol==='○'?!on:on;box(d.x,h+.12,d.z,.75,.20,.75,released?'#acc8aa':'#657b87');if(!released)box(d.x,h+.36,d.z,.70,.18,.16,'#f0d7a2');label(released?'解除':'固定',d.x,h+.2,d.z+.45,'#ffffff',.24);}
+  for(const d of v.devices){const firstChild=group.children.length;const h=d.kind==='platform'?state.platform:v.tiles.find(t=>t.x===d.x&&t.z===d.z)?.height??0;const on=d.active;const color=mono?(on?'#ffffff':'#53585e'):(on?'#e8c87e':'#657b87');const k=d.kind as string;if(k==='wire'){const symbol=d.label.slice(-1);const released=symbol==='○'?!on:on;box(d.x,h+.12,d.z,.75,.20,.75,released?'#acc8aa':'#657b87');if(!released)box(d.x,h+.36,d.z,.70,.18,.16,'#f0d7a2');label(released?'解除':'固定',d.x,h+.2,d.z+.45,'#ffffff',.24);}
    else if(k==='portal'||k==='gate'||k==='door'){box(d.x-.4,h+.65,d.z,.12,1.3,.18,'#577080');box(d.x+.4,h+.65,d.z,.12,1.3,.18,'#577080');box(d.x,h+1.32,d.z,.94,.14,.22,color);if(!on&&(k!=='portal'||state.stage===2))box(d.x,h+.62,d.z,.65,1.2,.08,color);}else if(k==='plate'){box(d.x,h+.04,d.z,.72,.07,.72,color,on);}else if(k==='platform'){box(d.x,h+.12,d.z,.82,.22,.82,color,on);}else if(k==='chest'){box(d.x,h+.25,d.z,.72,.48,.5,'#957454');box(d.x,h+.3,d.z+.26,.13,.16,.04,'#efd08d');}else {box(d.x,h+.24,d.z,.55,.46,.55,mono?'#555d62':'#456678');const handle=box(d.x,h+.66,d.z,.12,.45,.12,color,on);handle.rotation.z=on?-.6:.6;box(d.x,h+.9,d.z,.32,.10,.14,color);}
    const text=k==='portal'?(state.stage===2?'出口 '+(circuitReady(state)?'開':'閉'):'出口'):k==='platform'?d.label:k==='chest'?(state.stage===5?(state.key?'':'かけら △'):'宝箱'):d.label;if(text)label(text,d.x,h+1.65,d.z,on?'#ffe4a6':'#e9f2ef',state.stage===2?.31:.38);if(state.stage===2&&k==='lever')label(on?'入':'切',d.x,h+.2,d.z+.42,'#ffffff',.26);
+   for(const object of group.children.slice(firstChild))object.userData['deviceId']=d.id;
   }
   v.actors.forEach((a,i)=>{const h=state.riding===i?state.platform:v.tiles.find(t=>t.x===a.x&&t.z===a.z)?.height??0;if(i===state.active)actorMarker(a.x,a.z,h);});
   const center=new THREE.Vector3(3,0,4);if(v.view==='dark'){camera.up.set(0,1,0);camera.position.set(3,10,12);camera.lookAt(center);}else if(v.view==='mono'||v.view==='color'){camera.position.set(3,19,4.001);camera.up.set(0,0,-1);camera.lookAt(center);}else {camera.up.set(0,1,0);const offsets=[[0,13,16],[-16,13,0],[0,13,-16]];const p=offsets[v.camera]??offsets[0]!;camera.position.set(3+p[0]!,p[1]!,4+p[2]!);camera.lookAt(center);}
@@ -56,5 +57,13 @@ export function createRenderer(canvas:HTMLCanvasElement){
  });lastStage=state.stage;
  const {aspect}=resize();const horizontalSpan=v.view==='three'?4.8:3.5;const span=aspect<1?Math.max(4.6,horizontalSpan/aspect):4.8;camera.left=-span*aspect;camera.right=span*aspect;camera.top=span;camera.bottom=-span;camera.updateProjectionMatrix();renderer.render(scene,camera);
  }
- return {render};
+ const raycaster=new THREE.Raycaster();
+ function pickDevice(clientX:number,clientY:number):string|null {
+  if(!group.visible)return null;
+  const rect=canvas.getBoundingClientRect();
+  raycaster.setFromCamera(new THREE.Vector2((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1),camera);
+  const hit=raycaster.intersectObjects(group.children,false)[0];
+  return hit?.object.userData['deviceId']??null;
+ }
+ return {render,pickDevice};
 }
