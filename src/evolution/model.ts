@@ -64,7 +64,7 @@ export function tick(s:State,seconds:number):string{
  if(!Number.isFinite(seconds)||seconds<=0||s.stage<5||s.stage>6||roomOf(s)!=='new')return '';
  const dt=Math.min(seconds,1);
  if(s.stage===5){s.platformClock+=dt;while(s.platformClock>=2){s.platformClock-=2;advancePlatform(s);}return '';}
- if(s.charge<1&&s.gear===2&&s.actors.some(p=>same(p,{x:5,z:3}))&&s.actors.some(p=>roomOf(s,p)==='old')){const before=s.charge;s.charge=Math.min(1,s.charge+dt/4);if(before<1&&s.charge===1)return say(s,'充電完了。配電器が固定された。二人で出口へ帰ろう。');}
+ if(s.charge<1&&s.gear===2&&s.actors.some(p=>same(p,{x:5,z:3}))&&s.actors.some(p=>roomOf(s,p)==='old')){const before=s.charge;s.charge=Math.min(1,s.charge+dt/4);if(before<1&&s.charge===1)return say(s,'光とかけらが帰り道につながった。トト「ついた！ 向こうに、部屋が見える！」 主人公「待って。そっちに行くから。」 二人を出口へ集めよう。');}
  return '';
 }
 const togetherAtExit=(s:State)=>s.actors.every(p=>p.z<=2&&(s.stage===5?p.x===6:p.x>=3));
