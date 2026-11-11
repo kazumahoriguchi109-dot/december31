@@ -1,6 +1,6 @@
 export const STAGE_ANNOUNCEMENTS = [
  {title:'冒険のはじまり',support:'宝箱をクリックして開けよう',kind:'START'},
- {title:'2Dの世界へようこそ',support:'↑ ↓ / W S で移動　近くの装置をクリック / E',kind:'WORLD UNLOCKED'},
+ {title:'2Dの世界へようこそ',support:'↑ ↓ / W S で移動　白い印でトトに待機をお願いしよう',kind:'WORLD UNLOCKED'},
  {title:'世界に色がついた！',support:'↑ ↓ ← → / WASD で移動　近くのレバーをクリック / E',kind:'WORLD UNLOCKED'},
  {title:'3Dの世界へようこそ',support:'T / 人物切替で、ふたりを動かそう',kind:'WORLD UNLOCKED'},
  {title:'昔と今がつながった',support:'昔の部屋は上下移動　T / 人物切替',kind:'STAGE CLEAR'},

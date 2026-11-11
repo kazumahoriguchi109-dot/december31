@@ -5,7 +5,7 @@ const b=await chromium.launch({headless:true,...(process.env.BROWSER_CHANNEL?{ch
 const read=()=>p.evaluate(key=>JSON.parse(localStorage.getItem(key)),model.SAVE_KEY);
 const rawClick=id=>p.locator(`[data-id="${id}"]`).click();
 async function click(id){
- const before=await read();await rawClick(id);
+ const before=await read();await rawClick(id);if(id==='interact'&&before?.stage===1&&await p.locator('[data-id=inspect-use]').isVisible())await rawClick('inspect-use');
  if(before?.stage>=4&&before.stage<=6){
   const after=await read();
   if(after.stage===before.stage){
@@ -21,7 +21,7 @@ async function walk(x,z){let start=await read();const queue=[[start,[]]],seen=ne
 async function shot(n){await p.screenshot({path:`${out}/${n}.png`});await p.setViewportSize({width:390,height:844});await p.waitForTimeout(250);await p.screenshot({path:`${out}/${n}-mobile.png`});await p.setViewportSize({width:1280,height:820});}
 async function next(n){await dismiss();if((await read()).stage!==n)throw Error('stage mismatch expected '+n);await shot('stage-'+n);console.log('stage',n,'passed');}
 await p.goto(process.env.E2E_URL??'http://127.0.0.1:5188');await click('new');for(let i=0;i<3;i++)await p.getByRole('button',{name:'▼',exact:true}).click();await p.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).click();await shot('dark');await click('interact');await next(1);
-await walk(3,2);await click('interact');await next(2);
+await walk(3,4);await click('wait');await walk(3,2);await click('interact');await walk(3,1);await click('interact');await next(2);
 await walk(1,6);await click('interact');await walk(5,6);await click('interact');await walk(3,1);await click('interact');await next(3);
 await walk(1,5);await click('switch');await walk(5,2);await click('interact');await walk(4,1);await click('switch');await walk(3,1);await click('interact');await next(4);
 await click('up');await click('up');await click('switch');await walk(6,2);await click('interact');await walk(5,1);await click('switch');await walk(4,1);await click('switch');await click('interact');await next(5);

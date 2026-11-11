@@ -15,8 +15,8 @@ describe('observable puzzle guidance',()=>{
   expect(WIRE_ROUTES.map(r=>r[0]!.x)).toEqual([1,3,5]);expect(WIRE_ROUTES.map(r=>r.at(-1)!.x)).toEqual([5,1,3]);
   for(const r of WIRE_ROUTES)for(let i=1;i<r.length;i++)expect(Math.abs(r[i]!.x-r[i-1]!.x)+Math.abs(r[i]!.z-r[i-1]!.z)).toBe(1);
  });
- it('distinguishes closed gear phases and charge waiting reasons',()=>{
-  const s=createState();s.stage=1;const a=getGuidance(s).status;s.gear=1;expect(getGuidance(s).status).not.toBe(a);
+ it('distinguishes waiting gate state and charge waiting reasons',()=>{
+  const s=createState();s.stage=1;const a=getGuidance(s).status;s.totoWaiting=true;s.actors[1].z=5;expect(getGuidance(s).status).not.toBe(a);
   s.stage=6;s.actors=[{x:1,z:6},{x:5,z:6}];expect(getGuidance(s).status).toContain('床 空');s.actors[1]={x:5,z:3};expect(getGuidance(s).status).toContain('床 人がいる');s.gear=2;expect(getGuidance(s).status).toContain('今の部屋へ切替で再開');s.active=1;expect(getGuidance(s).status).toContain('充電中');
  });
  it('names the reversible action at a lever',()=>{

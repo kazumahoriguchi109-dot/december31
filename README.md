@@ -9,7 +9,7 @@
 
 ## 現在の入口：6謎の部屋型試作
 
-白黒の上下移動→色の配線→立体の協力→昔と今の部屋を使い分ける、導入＋6謎を試せます。詳しい判定、座標、保存、未確定事項は [実装仕様](docs/EVOLVING_PUZZLES.md) を参照してください。新保存は `dec31-evolving-puzzles-v1`。以前の試作はタイトルの「前の試作を遊ぶ」から開け、以前の記録は残っています。
+白黒の上下移動とトトの待機→色の配線→立体の協力→昔と今の部屋を使い分ける、導入＋6謎を試せます。詳しい判定、座標、保存、未確定事項は [実装仕様](docs/EVOLVING_PUZZLES.md) を参照してください。新保存は `dec31-evolving-puzzles-v1`。以前の試作はタイトルの「前の試作を遊ぶ」から開け、以前の記録は残っています。
 
 - WASD / 矢印キー：1マス歩く（白黒の部屋では上下のみ）
 - E / Space / 画面の調べるボタン：近くの装置
@@ -134,3 +134,7 @@ WebKit/Firefoxで各入力が一度ずつ会話を進めること、Chromiumで�
 ## Character continuity rule
 
 Character artwork in dialogue must match the current game-world design and era. See [Character continuity](docs/CHARACTER_CONTINUITY.md) before changing character presentation. Run `node tools/test-character-continuity.mjs` against the local development server (default port 4197) for the targeted browser regression.
+
+## 2026-11-11 第1謎の協力操作
+
+第1謎は、白い印でトトに待機をお願いして門を開け、奥の合流レバーで合流してから出口へ進む形に変更。旧来の「歩数で門が開く」仕様は第1謎には適用しません。後半の昔と今の時間ルールは維持。装置クリック・Eでは最初に説明を開き、近くにいる場合のみ実行できます。レトロ調の看板・門・操作パネルへ統一しました。
