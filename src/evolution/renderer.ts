@@ -6,12 +6,13 @@ import { createJourneyActor, pixelActor as approvedPixelActor } from '../journey
 import { poseJourneyActor } from '../journey/acting';
 import { getScene, WIRE_ROUTES, circuitReady, type State } from './model';
 
-export interface EvolutionRenderOptions {room?:boolean;speaker?:'主人公'|'トト';reducedMotion?:boolean;handInHand?:boolean;endingChest?:boolean;lookAtScreen?:boolean;endingCalendar?:boolean;chestClosed?:boolean;chestProgress?:number}
+export interface EvolutionRenderOptions {room?:boolean;speaker?:'主人公'|'トト';reducedMotion?:boolean;handInHand?:boolean;endingChest?:boolean;lookAtScreen?:boolean;openingLookAtScreen?:boolean;endingCalendar?:boolean;chestClosed?:boolean;chestProgress?:number}
 export function createRenderer(canvas:HTMLCanvasElement){
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  const scene=new THREE.Scene();scene.background=new THREE.Color('#111b29');const camera=new THREE.OrthographicCamera(-7,7,7,-7,.1,100);camera.up.set(0,1,0);
  scene.add(new THREE.HemisphereLight(0xe3eeff,0x34303b,2.4));const sun=new THREE.DirectionalLight(0xffe5b0,3);sun.position.set(-4,14,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-12;sun.shadow.camera.right=12;sun.shadow.camera.top=12;sun.shadow.camera.bottom=-12;scene.add(sun);
  const room=new THREE.Group();const roomArt=createRoomArt(room);const screen=roomArt.screen as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>;const originalScreen=screen.material.map;const endCanvas=document.createElement('canvas');endCanvas.width=640;endCanvas.height=360;const endTexture=new THREE.CanvasTexture(endCanvas);endTexture.colorSpace=THREE.SRGBColorSpace;room.visible=false;scene.add(room);
+ const screenCenter=screen.getWorldPosition(new THREE.Vector3());
  const characters=[createJourneyActor('player'),createJourneyActor('toto')];characters.forEach(a=>scene.add(a));
  const pixels=[approvedPixelActor('player'),approvedPixelActor('toto')];pixels.forEach(p=>scene.add(p.sprite));
  const lastPositions=[{x:0,z:0},{x:0,z:0}],facings=[0,0];let lastStage=-1;
@@ -22,7 +23,9 @@ export function createRenderer(canvas:HTMLCanvasElement){
    c.fillStyle='#be915d';c.fillRect(245,210,150,80);c.strokeStyle='#eed1a0';c.lineWidth=8;c.strokeRect(245,210,150,80);c.fillStyle='#ffe9b0';c.globalAlpha=(1-close)*.6;c.fillRect(255,150,130,60);c.globalAlpha=1;c.save();c.translate(245,210);c.rotate(-(1-close)*.8);c.fillStyle='#9c7049';c.fillRect(0,-16,150,22);c.strokeRect(0,-16,150,22);c.restore();c.fillStyle='#efcf8e';c.fillRect(310,215,20,24);endTexture.needsUpdate=true;screen.material.map=endTexture;
   }else screen.material.map=originalScreen;
 signature='';group.visible=false;room.visible=true;canvas.style.filter='';scene.background=new THREE.Color('#263238');pixels.forEach(p=>p.sprite.visible=false);
-  characters.forEach((actor,i)=>{actor.visible=true;actor.scale.setScalar(1.05);actor.position.set((i?.85:-.65)*ROOM_X_SCALE,.52*1.05,.5);actor.rotation.y=options.lookAtScreen?0:i?-Math.PI/2:Math.PI/2;pose(i,options,true);});
+  characters.forEach((actor,i)=>{actor.visible=true;actor.scale.setScalar(1.05);actor.position.set((i?.85:-.65)*ROOM_X_SCALE,.52*1.05,.5);// The character rigs face local -Z. Aim at the TV in world space, not the camera.
+   actor.rotation.y=options.openingLookAtScreen?Math.atan2(actor.position.x-screenCenter.x,actor.position.z-screenCenter.z):options.lookAtScreen?0:i?-Math.PI/2:Math.PI/2;
+   pose(i,options,true);});
   const {width,height,aspect}=resize(),frame=roomCameraFrame(width,height);camera.left=-8*aspect;camera.right=8*aspect;camera.top=8;camera.bottom=-8;camera.zoom=frame.zoom*(options.endingCalendar?1.08:1);camera.up.set(0,1,0);camera.position.set(0,frame.targetY+frame.rise,frame.targetZ+frame.run);camera.lookAt(0,frame.targetY,frame.targetZ);camera.updateProjectionMatrix();renderer.render(scene,camera);
  }
  let group=new THREE.Group();scene.add(group);let signature='';let materials:THREE.Material[]=[],geometries:THREE.BufferGeometry[]=[],textures:THREE.Texture[]=[];
