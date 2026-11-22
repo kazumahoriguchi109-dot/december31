@@ -6,7 +6,7 @@ import { createJourneyActor, pixelActor as approvedPixelActor } from '../journey
 import { poseJourneyActor } from '../journey/acting';
 import { getScene, WIRE_ROUTES, circuitReady, type State } from './model';
 
-export interface EvolutionRenderOptions {room?:boolean;speaker?:'主人公'|'トト';reducedMotion?:boolean;handInHand?:boolean;endingChest?:boolean;lookAtScreen?:boolean;openingLookAtScreen?:boolean;endingCalendar?:boolean;chestClosed?:boolean;chestProgress?:number}
+export interface EvolutionRenderOptions {room?:boolean;speaker?:'主人公'|'トト';reducedMotion?:boolean;handInHand?:boolean;endingChest?:boolean;lookAtScreen?:boolean;openingLookAtScreen?:boolean;operationGuide?:boolean;endingCalendar?:boolean;chestClosed?:boolean;chestProgress?:number}
 export function createRenderer(canvas:HTMLCanvasElement){
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  const scene=new THREE.Scene();scene.background=new THREE.Color('#111b29');const camera=new THREE.OrthographicCamera(-7,7,7,-7,.1,100);camera.up.set(0,1,0);
@@ -64,7 +64,9 @@ signature='';group.visible=false;room.visible=true;canvas.style.filter='';scene.
  v.actors.forEach((a,i)=>{const h=state.riding===i?state.platform:v.tiles.find(t=>t.x===a.x&&t.z===a.z)?.height??0;const previous=lastPositions[i]!;if(lastStage===state.stage&&(a.x!==previous.x||a.z!==previous.z))facings[i]=Math.atan2(a.x-previous.x,a.z-previous.z);else if(lastStage!==state.stage)facings[i]=0;lastPositions[i]={...a};
   const flat=v.view==='mono'||v.view==='color';const actor=characters[i]!,pixel=pixels[i]!;actor.visible=!flat;pixel.sprite.visible=flat;actor.scale.setScalar(.62);actor.position.set(a.x,h+.52*.62,a.z);actor.rotation.y=facings[i]!+Math.PI;pose(i,options);if(options.handInHand){actor.rotation.y=0;const arm=actor.getObjectByName(i?'rig-armL':'rig-armR');if(arm)arm.rotation.z=i?-.95:.95;}pixel.sprite.scale.set(.64,.96,1);pixel.sprite.position.set(a.x,h+.025,a.z);pixel.update(v.view==='color'?1:0,facings[i]!,0,{reducedMotion:options.reducedMotion??false,speaking:options.speaker===(i?'トト':'主人公')});
  });lastStage=state.stage;
- const {aspect}=resize();const horizontalSpan=v.view==='three'?4.8:3.5;const span=aspect<1?Math.max(4.6,horizontalSpan/aspect):4.8;camera.left=-span*aspect;camera.right=span*aspect;camera.top=span;camera.bottom=-span;camera.updateProjectionMatrix();renderer.render(scene,camera);
+ const {aspect,height}=resize();const horizontalSpan=v.view==='three'?4.8:3.5;const span=aspect<1?Math.max(4.6,horizontalSpan/aspect):4.8;camera.left=-span*aspect;camera.right=span*aspect;// Show the chest below the centered guide when the viewport has room.
+ const guidePan=options.operationGuide&&state.stage===0&&height>=440?span*.53:0;
+ camera.top=span+guidePan;camera.bottom=-span+guidePan;camera.updateProjectionMatrix();renderer.render(scene,camera);
  }
  const raycaster=new THREE.Raycaster();
  function pickDevice(clientX:number,clientY:number):string|null {
