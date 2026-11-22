@@ -8,7 +8,7 @@ for (const mode of ['os','saved','data'] as const) test(`title retains its still
  if(mode==='os')await page.emulateMedia({reducedMotion:'reduce'});
  if(mode==='saved')await page.addInitScript(key=>localStorage.setItem(key,JSON.stringify({volume:.7,reducedMotion:true})),prefsKey);
  if(mode==='data')await page.addInitScript(()=>Object.defineProperty(navigator,'connection',{value:{saveData:true,addEventListener(){}}}));
- await page.goto('./');await expect(page.locator('#journey-new')).toBeVisible();
+ await page.goto('./?edition=legacy');await expect(page.locator('#journey-new')).toBeVisible();
  await expect(page.locator(video)).toBeHidden();expect(await page.locator(video).getAttribute('src')).toBeNull();
  await expect(page.locator('.journey-title-art')).toBeVisible();
  await page.locator('#journey-title-heading').click();await page.keyboard.press('ArrowDown');
@@ -18,7 +18,7 @@ for (const mode of ['os','saved','data'] as const) test(`title retains its still
 
 test('muted inline video plays, stops for settings and game, then resumes at the title',async({page})=>{
  await page.emulateMedia({reducedMotion:'no-preference'});
- await page.goto('./');const clip=page.locator(video);
+ await page.goto('./?edition=legacy');const clip=page.locator(video);
  await expect(page.locator('#journey-title-video-toggle, #journey-title-video-status, .journey-title-video-control')).toHaveCount(0);
  expect(await clip.evaluate((v:HTMLVideoElement)=>v.controls)).toBe(false);
  // Unsupported decoders are a legitimate still-image fallback, not a broken menu.
@@ -41,7 +41,7 @@ test('muted inline video plays, stops for settings and game, then resumes at the
 });
 
 test('a hidden page pauses decorative playback and can resume',async({page})=>{
- await page.goto('./');const clip=page.locator(video);
+ await page.goto('./?edition=legacy');const clip=page.locator(video);
  test.skip(!(await clip.evaluate((v:HTMLVideoElement)=>!!v.canPlayType('video/mp4; codecs="avc1.42E01E"'))),'No H.264 decoder');
  await expect(clip).toHaveAttribute('data-playing','true',{timeout:15000});
  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
@@ -54,7 +54,7 @@ for (const failure of ['network','autoplay'] as const) test(`${failure} failure 
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  if(failure==='network')await page.route('**/*.mp4',route=>route.abort());
  else await page.addInitScript(()=>{HTMLMediaElement.prototype.play=function(){return Promise.reject(new DOMException('Autoplay denied','NotAllowedError'));};});
- await page.goto('./');await expect(page.locator('#journey-new')).toBeVisible();await expect(page.locator(video)).toBeHidden();
+ await page.goto('./?edition=legacy');await expect(page.locator('#journey-new')).toBeVisible();await expect(page.locator(video)).toBeHidden();
  await expect(page.locator('.journey-title-art')).toBeVisible();await page.locator('#journey-title-settings-button').click();
  await expect(page.locator('#journey-title-settings')).toBeVisible();await page.locator('#journey-title-settings-close').click();
  expect(await page.evaluate(k=>localStorage.getItem(k),saveKey)).toBeNull();
@@ -67,7 +67,7 @@ for (const gesture of ['pointer','keyboard'] as const) test(`blocked autoplay re
   const state=window as unknown as {titleVideoAttempts:number};state.titleVideoAttempts=0;
   HTMLMediaElement.prototype.play=function(){state.titleVideoAttempts++;if(state.titleVideoAttempts===1)return Promise.reject(new DOMException('Autoplay denied','NotAllowedError'));return play.call(this);};
  });
- await page.goto('./');const clip=page.locator(video);
+ await page.goto('./?edition=legacy');const clip=page.locator(video);
  await expect.poll(()=>page.evaluate(()=>(window as unknown as {titleVideoAttempts:number}).titleVideoAttempts)).toBe(1);
  await expect(clip).toBeHidden();
  await expect(page.locator('#journey-title-video-toggle, #journey-title-video-status, .journey-title-video-control')).toHaveCount(0);
@@ -80,7 +80,7 @@ for (const gesture of ['pointer','keyboard'] as const) test(`blocked autoplay re
 });
 
 test('failed media retries when connectivity returns without a dedicated control',async({page})=>{
- await page.route('**/*.mp4',route=>route.abort());await page.goto('./');
+ await page.route('**/*.mp4',route=>route.abort());await page.goto('./?edition=legacy');
  const clip=page.locator(video);
  await expect.poll(()=>clip.evaluate((v:HTMLVideoElement)=>!!v.error)).toBe(true);await expect(clip).toBeHidden();
  await page.unroute('**/*.mp4');await page.evaluate(()=>window.dispatchEvent(new Event('online')));
@@ -89,7 +89,7 @@ test('failed media retries when connectivity returns without a dedicated control
 });
 
 test('unexpected title pause resumes automatically and the video wraps at its end',async({page})=>{
- await page.goto('./');const clip=page.locator(video);
+ await page.goto('./?edition=legacy');const clip=page.locator(video);
  await expect(clip).toHaveAttribute('data-playing','true',{timeout:15000});
  await clip.evaluate((v:HTMLVideoElement)=>v.pause());
  await expect.poll(()=>clip.evaluate((v:HTMLVideoElement)=>v.paused)).toBe(false);

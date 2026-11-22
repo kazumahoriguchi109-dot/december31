@@ -7,7 +7,7 @@ const saved=async(page:Page)=>page.evaluate((key:string)=>localStorage.getItem(k
 
 test('fresh title offers three choices and keyboard settings never create a game save',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('./');
+ await page.goto('./?edition=legacy');
  await expect(page.locator('#journey-new')).toBeFocused();
  await page.keyboard.press('Shift+Tab');
  expect(await page.evaluate(()=>document.activeElement?.id==='journey-world')).toBe(false);
@@ -36,7 +36,7 @@ test('fresh title offers three choices and keyboard settings never create a game
 });
 
 test('existing progress survives title settings, reload, cancelled restart and continue',async({page})=>{
- await page.goto('./');await page.locator('#journey-new').click();
+ await page.goto('./?edition=legacy');await page.locator('#journey-new').click();
  await expect(page.locator('#journey-dialogue')).toBeVisible();
  await page.keyboard.press('Escape');await page.locator('#journey-pause [data-action="title"]').click();
  await expect(page.locator('#journey-continue')).toBeEnabled();
@@ -54,7 +54,7 @@ test('existing progress survives title settings, reload, cancelled restart and c
 });
 
 test('fresh restart requires and respects confirmation before replacing a record',async({page})=>{
- await page.goto('./');await page.locator('#journey-new').click();await expect(page.locator('#journey-dialogue')).toBeVisible();
+ await page.goto('./?edition=legacy');await page.locator('#journey-new').click();await expect(page.locator('#journey-dialogue')).toBeVisible();
  await page.keyboard.press('Escape');await page.locator('#journey-pause [data-action="title"]').click();
  let confirmed=false;page.once('dialog',async d=>{confirmed=true;await d.accept();});
  await page.locator('#journey-new').click();await expect(page.locator('#journey-dialogue')).toBeVisible();expect(confirmed).toBe(true);
@@ -63,7 +63,7 @@ test('fresh restart requires and respects confirmation before replacing a record
 test('small and short titles retain all menu actions and settings controls',async({page},testInfo)=>{
  await mkdir(out,{recursive:true});
  for(const size of[{width:390,height:844},{width:667,height:375},{width:640,height:360}]){
-  await page.setViewportSize(size);await page.goto('./');await page.locator('.journey-title-art').evaluate((i:HTMLImageElement)=>i.decode());
+  await page.setViewportSize(size);await page.goto('./?edition=legacy');await page.locator('.journey-title-art').evaluate((i:HTMLImageElement)=>i.decode());
   for(const id of ['journey-new','journey-continue','journey-title-settings-button'])await expect(page.locator('#'+id)).toBeInViewport();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   if(testInfo.project.name==='chromium')await page.screenshot({path:`${out}/title-${size.width}x${size.height}.png`});
@@ -77,7 +77,7 @@ test('small and short titles retain all menu actions and settings controls',asyn
 
 test('unusable stored data leaves continue disabled and settings usable',async({page})=>{
  await page.addInitScript(key=>localStorage.setItem(key,'invalid-json'),saveKey);
- await page.goto('./');await expect(page.locator('#journey-continue')).toBeDisabled();
+ await page.goto('./?edition=legacy');await expect(page.locator('#journey-continue')).toBeDisabled();
  await page.locator('#journey-title-settings-button').click();await expect(page.locator('#journey-title-settings')).toBeVisible();
  await page.keyboard.press('Escape');await expect(page.locator('#journey-title-settings-button')).toBeFocused();
  expect(await saved(page)).toBe('invalid-json');
@@ -85,7 +85,7 @@ test('unusable stored data leaves continue disabled and settings usable',async({
 
 test('title is usable when browser storage is unavailable',async({page})=>{
  await page.addInitScript(()=>{Storage.prototype.getItem=function(){throw new DOMException('Blocked','SecurityError')};Storage.prototype.setItem=function(){throw new DOMException('Blocked','SecurityError')};});
- const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('./');
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('./?edition=legacy');
  await expect(page.locator('#journey-continue')).toBeDisabled();await page.locator('#journey-title-settings-button').click();
  await page.locator('#journey-title-volume').fill('0');await page.locator('#journey-title-motion').check();
  await page.locator('#journey-title-settings-close').click();await expect(page.locator('#journey-new')).toBeVisible();expect(errors).toEqual([]);
@@ -93,7 +93,7 @@ test('title is usable when browser storage is unavailable',async({page})=>{
 
 
 test('empty continue is visibly inactive and ignores pointer and keyboard activation',async({page})=>{
- await page.goto('./');
+ await page.goto('./?edition=legacy');
  const button=page.locator('#journey-continue');
  await expect(button).toBeDisabled();await expect(button).toHaveCSS('opacity','0.45');
  await expect(page.locator('#journey-continue-note')).toBeVisible();
@@ -115,7 +115,7 @@ test('empty continue is visibly inactive and ignores pointer and keyboard activa
 });
 
 for(const invalid of [null,'invalid-json','{}'])test(`continue revalidates a stale save (${invalid}) without starting a new game`,async({page})=>{
- await page.goto('./');await page.locator('#journey-new').click();
+ await page.goto('./?edition=legacy');await page.locator('#journey-new').click();
  await expect(page.locator('#journey-dialogue')).toBeVisible();
  await page.keyboard.press('Escape');await page.locator('#journey-pause [data-action="title"]').click();
  const button=page.locator('#journey-continue');await expect(button).toBeEnabled();

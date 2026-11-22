@@ -5,7 +5,7 @@ import {ROOM_X_SCALE,FURNITURE_X_SCALE} from '../../src/journey/roomPresentation
 const key='dec31-evolution-c013:journey';
 test('desk stops sustained and diagonal movement without losing approach, save or interaction',async({page},info)=>{
  test.setTimeout(60000); // Includes the longer authored opening before movement checks.
- await page.goto('./');await page.locator('#journey-new').click();
+ await page.goto('./?edition=legacy');await page.locator('#journey-new').click();
  for(let i=0;i<40&&await page.locator('#journey-dialogue').isVisible();i++){
   await page.locator('#journey-dialogue [data-action="next"]').click();await page.waitForTimeout(100);
  }
@@ -30,7 +30,7 @@ test('desk stops sustained and diagonal movement without losing approach, save o
 });
 
 test('an old save inside the desk resumes outside it without resetting progress',async({page})=>{
- await page.goto('./');await page.locator('#journey-new').click();await page.keyboard.press('Escape');
+ await page.goto('./?edition=legacy');await page.locator('#journey-new').click();await page.keyboard.press('Escape');
  // Seed only coordinates in an isolated test context to reproduce a pre-fix valid save.
  const old=await page.evaluate(k=>{
   const s=JSON.parse(localStorage.getItem(k)!);s.player.x=0;s.player.z=-2.5;s.toto.x=.45;s.toto.z=-2.4;s.steps=27;

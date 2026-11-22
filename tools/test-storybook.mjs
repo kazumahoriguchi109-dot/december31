@@ -6,7 +6,7 @@ for(const [name,engine] of Object.entries({chromium,webkit,firefox})){
  const browser=await engine.launch({headless:true});const p=await browser.newPage({viewport:{width:1280,height:820},reducedMotion:'reduce'});const errors=[];p.on('pageerror',e=>errors.push(e.message));
  const click=id=>p.locator(`[data-id="${id}"]:visible`).click();
  const saved=()=>p.evaluate(()=>localStorage.getItem('dec31-evolving-puzzles-v1'));
- await p.goto(process.env.E2E_URL??'http://127.0.0.1:4192');await click('new');for(let i=0;i<3;i++)await click('next');await p.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).click();
+ await p.goto(process.env.E2E_URL??'http://127.0.0.1:4192');await click('new');for(let i=0;i<3;i++)await click('next');await p.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).click();await p.getByRole('button',{name:'はじめる',exact:true}).click();
  await click('pause');assert.equal(await p.locator('[data-kind=pause] .buttons button').count(),4);
  await p.screenshot({path:`${out}/${name}-pause.png`});
  await p.locator('[data-id=resume]').focus();assert.equal(await p.locator('[data-id=resume]').evaluate(e=>e===document.activeElement),true);

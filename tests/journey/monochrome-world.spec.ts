@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 test('monochrome world keeps live input, responsive UI and actual save across reload',async({page})=>{
  test.setTimeout(90000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  const save=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('dec31-evolution-c013:journey')||'null'));
- await page.goto('./');await page.locator('#journey-new').click();
+ await page.goto('./?edition=legacy');await page.locator('#journey-new').click();
  for(let i=0;i<22;i++)await page.locator('#journey-dialogue [data-action="next"]').click();
  for(let i=0;i<14&&await page.locator('#journey-context-label').innerText()!=='いっしょに始める';i++){
   await page.locator('#journey-world').focus();await page.keyboard.down('KeyW');await page.waitForTimeout(300);await page.keyboard.up('KeyW');await page.waitForTimeout(80);

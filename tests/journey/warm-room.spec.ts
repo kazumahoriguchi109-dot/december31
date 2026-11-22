@@ -5,7 +5,7 @@ const saveKey='dec31-evolution-c013:journey';
 async function dismiss(page:Page){for(let i=0;i<40&&await page.locator('#journey-dialogue').isVisible();i++){await page.locator('#journey-dialogue [data-action="next"]').click();await page.waitForTimeout(100);}}
 test('compact room UI preserves opening, saved position and the real game interaction',async({page},info)=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('./');await page.locator('#journey-new').click();
+ await page.goto('./?edition=legacy');await page.locator('#journey-new').click();
  await expect(page.locator('#journey-line')).toContainText('今年も、もう終わりだね');
  await expect(page.locator('#journey-speaker')).toHaveText('主人公');
  await expect(page.locator('.journey-next')).toBeInViewport();
@@ -38,7 +38,7 @@ test('room HUD and dialogue remain usable on small screens',async({page},info)=>
  page.on('dialog',d=>d.accept());
  await mkdir(out,{recursive:true});
  for(const size of[{width:390,height:844},{width:667,height:375}]){
-  await page.setViewportSize(size);await page.goto('./');
+  await page.setViewportSize(size);await page.goto('./?edition=legacy');
   await page.locator('#journey-new').click();
   await expect(page.locator('.journey-next')).toBeInViewport();await expect(page.locator('#journey-speaker')).toBeInViewport();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);

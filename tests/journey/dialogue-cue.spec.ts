@@ -4,7 +4,7 @@ test('triangle cue retains click, E, Space, Enter and touch without double advan
  test.setTimeout(90000);
  const context=await browser.newContext({viewport:{width:640,height:400},hasTouch:true});const page=await context.newPage();const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  try{
-  await page.goto(process.env.LIVE_URL??'http://127.0.0.1:5175/');await page.locator('#journey-new').click();
+  await page.goto((process.env.LIVE_URL??'http://127.0.0.1:5175/')+'?edition=legacy');await page.locator('#journey-new').click();
   const cue=page.getByRole('button',{name:'つづきを聞く',exact:true}),line=page.locator('#journey-line');
   await expect(cue).toHaveText('▼');await expect(cue.locator('kbd')).toHaveCount(0);await expect(cue).toHaveAttribute('aria-keyshortcuts','E Space Enter');
   let n=0;await expect(line).toHaveText(OPENING_ROOM[n]![1]);

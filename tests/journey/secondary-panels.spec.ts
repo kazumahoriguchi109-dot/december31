@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 
 test('navy settings preserve repeated keyboard dismissal and focus without creating a save',async({page})=>{
- await page.goto('./');
+ await page.goto('./?edition=legacy');
  for(let i=0;i<2;i++){
   await page.locator('#journey-title-settings-button').click();
   const panel=page.locator('#journey-title-settings');
@@ -21,7 +21,7 @@ test('navy settings preserve repeated keyboard dismissal and focus without creat
 test('secondary panels fit narrow and short screens and preserve a paused dialogue',async({page})=>{
  page.on('dialog',dialog=>dialog.accept());
  for(const size of [{width:320,height:640},{width:667,height:375},{width:1280,height:720}]){
-  await page.setViewportSize(size);await page.goto('./');
+  await page.setViewportSize(size);await page.goto('./?edition=legacy');
   await page.locator('#journey-title-settings-button').click();
   await page.locator('#journey-title-settings-close').click();
   const continueButton=page.locator('#journey-continue');

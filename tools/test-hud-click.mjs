@@ -1,6 +1,6 @@
 import {chromium} from '@playwright/test';
 const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1280,height:820},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto('http://127.0.0.1:4198/');await page.locator('[data-id=new]').click();for(let i=0;i<3;i++)await page.locator('[data-id=next]').click();await page.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).click();
+await page.goto(process.env.E2E_URL??'http://127.0.0.1:4198/');await page.locator('[data-id=new]').click();for(let i=0;i<3;i++)await page.locator('[data-id=next]').click();await page.getByRole('button',{name:'映像をスキップしてゲームへ進む'}).click();await page.getByRole('button',{name:'はじめる',exact:true}).click();
 await page.screenshot({path:'/tmp/hud-before-click.png'});
 for(const s of ['.room-heading','.guidance','.keyhelp','.save'])if(await page.locator(s).isVisible())throw Error(s+' visible');
 const key='dec31-evolving-puzzles-v1';
