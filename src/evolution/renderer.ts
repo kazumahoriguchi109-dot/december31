@@ -28,12 +28,23 @@ signature='';group.visible=false;room.visible=true;canvas.style.filter='';scene.
    pose(i,options,true);});
   const {width,height,aspect}=resize(),frame=roomCameraFrame(width,height);camera.left=-8*aspect;camera.right=8*aspect;camera.top=8;camera.bottom=-8;camera.zoom=frame.zoom*(options.endingCalendar?1.08:1);camera.up.set(0,1,0);camera.position.set(0,frame.targetY+frame.rise,frame.targetZ+frame.run);camera.lookAt(0,frame.targetY,frame.targetZ);camera.updateProjectionMatrix();renderer.render(scene,camera);
  }
- let group=new THREE.Group();scene.add(group);let signature='';let materials:THREE.Material[]=[],geometries:THREE.BufferGeometry[]=[],textures:THREE.Texture[]=[];
+ let group=new THREE.Group();scene.add(group);let signature='';let materials:THREE.Material[]=[],geometries:THREE.BufferGeometry[]=[],textures:THREE.Texture[]=[];let labels:{sprite:THREE.Sprite;size:number;ratio:number;home:THREE.Vector3}[]=[];
  function material(color:string|number,glow=false){const m=new THREE.MeshStandardMaterial({color,roughness:.8,emissive:glow?color:0,emissiveIntensity:glow?.3:0});materials.push(m);return m;}
  function box(x:number,y:number,z:number,w:number,h:number,d:number,color:string|number,glow=false){const g=new THREE.BoxGeometry(w,h,d);geometries.push(g);const m=new THREE.Mesh(g,material(color,glow));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;group.add(m);return m;}
- function label(text:string,x:number,y:number,z:number,color='#ffffff',size=.62){const c=document.createElement('canvas');const measure=c.getContext('2d')!;measure.font='600 38px system-ui';c.width=Math.ceil(measure.measureText(text).width+28);c.height=64;const ctx=c.getContext('2d')!;ctx.font='600 38px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#17191b';ctx.fillRect(1,5,c.width-2,54);ctx.strokeStyle='#e7e7df';ctx.lineWidth=2;ctx.strokeRect(3,7,c.width-6,50);ctx.fillStyle=color;ctx.fillText(text,c.width/2,32);const tex=new THREE.CanvasTexture(c);tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestFilter;textures.push(tex);const mat=new THREE.SpriteMaterial({map:tex,depthTest:false});materials.push(mat);const sp=new THREE.Sprite(mat);sp.position.set(x,y,z);sp.scale.set(size*c.width/64,size,1);group.add(sp);}
+ function label(text:string,x:number,y:number,z:number,color='#ffffff',size=.62){const c=document.createElement('canvas');const measure=c.getContext('2d')!;measure.font='600 38px system-ui';c.width=Math.ceil(measure.measureText(text).width+28);c.height=64;const ctx=c.getContext('2d')!;ctx.font='600 38px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#17191b';ctx.fillRect(1,5,c.width-2,54);ctx.strokeStyle='#e7e7df';ctx.lineWidth=2;ctx.strokeRect(3,7,c.width-6,50);ctx.fillStyle=color;ctx.fillText(text,c.width/2,32);const tex=new THREE.CanvasTexture(c);tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestFilter;textures.push(tex);const mat=new THREE.SpriteMaterial({map:tex,depthTest:false});materials.push(mat);const sp=new THREE.Sprite(mat);sp.position.set(x,y,z);sp.scale.set(size*c.width/64,size,1);labels.push({sprite:sp,size,ratio:c.width/64,home:sp.position.clone()});group.add(sp);}
  function actorMarker(x:number,z:number,h:number){const g=new THREE.RingGeometry(.34,.40,32);geometries.push(g);const m=new THREE.MeshBasicMaterial({color:0xffdf9e,side:THREE.DoubleSide,transparent:true,opacity:.8});materials.push(m);const ring=new THREE.Mesh(g,m);ring.rotation.x=-Math.PI/2;ring.position.set(x,h+.025,z);group.add(ring);}
- function render(state:State,options:EvolutionRenderOptions={}){if(options.room){renderRoom(options);return;}room.visible=false;group.visible=true;camera.zoom=1;const v=getScene(state);const sig=JSON.stringify([v,state.stage]);if(sig!==signature){signature=sig;scene.remove(group);materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());materials=[];geometries=[];textures=[];group=new THREE.Group();scene.add(group);
+ // Phone-width labels are larger than the board spacing, so nudge overlapping ones apart in screen space (lowest first, later ones move up).
+ function separateLabels(width:number,height:number,pxPerUnit:number){
+  camera.updateMatrixWorld(true);const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();
+  const rects:{x:number;y:number;w:number;h:number}[]=[];
+  const entries=labels.map(l=>{const n=l.home.clone().project(camera);return {l,x:(n.x*.5+.5)*width,y:(1-(n.y*.5+.5))*height};}).sort((a,b)=>b.y-a.y);
+  for(const e of entries){
+   const w=e.l.sprite.scale.x*pxPerUnit,h=e.l.sprite.scale.y*pxPerUnit;let lift=0;
+   for(let n=0;n<8;n++){const r={x:e.x-w/2,y:e.y-lift-h/2,w,h};const hit=rects.find(o=>r.x<o.x+o.w&&o.x<r.x+r.w&&r.y<o.y+o.h&&o.y<r.y+r.h);if(!hit)break;lift=e.y-(hit.y-h/2)+1;}
+   rects.push({x:e.x-w/2,y:e.y-lift-h/2,w,h});if(lift)e.l.sprite.position.copy(e.l.home).addScaledVector(up,lift/pxPerUnit);
+  }
+ }
+ function render(state:State,options:EvolutionRenderOptions={}){if(options.room){renderRoom(options);return;}room.visible=false;group.visible=true;camera.zoom=1;const v=getScene(state);const sig=JSON.stringify([v,state.stage]);if(sig!==signature){signature=sig;scene.remove(group);materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());materials=[];geometries=[];textures=[];labels=[];group=new THREE.Group();scene.add(group);
   const mono=v.view==='mono',dark=v.view==='dark';canvas.style.filter=mono?'grayscale(1)':'';scene.background=new THREE.Color(dark?'#090e18':mono?'#202328':v.view==='color'?'#627f83':'#738b92');
   for(const tile of v.tiles){if(dark)continue;if(tile.kind==='wire')continue;const wall=tile.kind==='wall';const water=tile.kind==='shaft';const height=wall?0:tile.height??0;const base=mono?(wall?'#60656a':'#b5b5ad'):(wall?'#50677a':water?'#315d71':((tile.x+tile.z)%2?'#dbe0d7':'#d1d9d0'));if(tile.kind==='gate'){box(tile.x,height+.6,tile.z,.9,1.2,.12,mono?'#eeeeee':'#dc9a74');}
    if(tile.label&&['△','○','□'].includes(tile.label))label(tile.label,tile.x,height+.15,tile.z,'#faf6de',.38);if(!water){box(tile.x,height-.18,tile.z,.98,.32,.98,mono?'#777d7c':'#72827c');box(tile.x,height-.015,tile.z,.97,.035,.97,base);if(wall)box(tile.x,(tile.height||1.2)/2,tile.z,.9,tile.height||1.2,.9,base);}else box(tile.x,-.35,tile.z,.96,.12,.96,base);}
@@ -66,7 +77,12 @@ signature='';group.visible=false;room.visible=true;canvas.style.filter='';scene.
  });lastStage=state.stage;
  const {aspect,height}=resize();const horizontalSpan=v.view==='three'?4.8:3.5;const span=aspect<1?Math.max(4.6,horizontalSpan/aspect):4.8;camera.left=-span*aspect;camera.right=span*aspect;// Show the chest below the centered guide when the viewport has room.
  const guidePan=options.operationGuide&&state.stage===0&&height>=440?span*.53:0;
- camera.top=span+guidePan;camera.bottom=-span+guidePan;camera.updateProjectionMatrix();renderer.render(scene,camera);
+ camera.top=span+guidePan;camera.bottom=-span+guidePan;camera.updateProjectionMatrix();
+ // The board shrinks to fit a phone, which shrank the world-space labels to ~7px. Keep them at least 21px tall (about 12px text) there.
+ const pxPerUnit=height/(2*span),narrow=aspect*height<700,minLabel=narrow?21/pxPerUnit:0;
+ for(const l of labels){const size=Math.max(l.size,minLabel);l.sprite.scale.set(size*l.ratio,size,1);l.sprite.position.copy(l.home);}
+ if(narrow)separateLabels(aspect*height,height,pxPerUnit);
+ renderer.render(scene,camera);
  }
  const raycaster=new THREE.Raycaster();
  function pickDevice(clientX:number,clientY:number):string|null {
