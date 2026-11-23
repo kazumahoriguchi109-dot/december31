@@ -7,3 +7,7 @@
 .journey-portal button:focus-visible{outline:3px solid #ffe2a0;outline-offset:4px}
 @media(max-width:480px){.journey-portal footer{left:12px;right:12px;bottom:18px;align-items:flex-end}.journey-portal button{padding:12px}.journey-portal p{max-width:52%;line-height:1.6}}
 .journey-portal button:disabled{opacity:.5;cursor:wait;border-color:#7a776b}
+/* 映像中は左の字幕を出さない（読み上げ用に残す）。スキップは枠なしの文字だけ */
+.journey-portal footer{justify-content:flex-end}
+.journey-portal p{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;background:none}
+.journey-portal footer button,.journey-portal footer button:disabled{background:none;box-shadow:none;border:0;border-radius:6px;text-shadow:0 1px 4px #000,0 0 10px #000}
