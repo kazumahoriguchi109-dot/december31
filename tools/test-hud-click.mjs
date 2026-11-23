@@ -6,8 +6,8 @@ for(const s of ['.room-heading','.keyhelp','.save','.guidance .mechanism-status'
 const key='dec31-evolving-puzzles-v1';
 await page.mouse.click(100,200);if(await page.locator('.stage-announcement').isVisible())throw Error('announcement did not close');
 if(await page.evaluate(k=>JSON.parse(localStorage.getItem(k)).stage,key)!==0)throw Error('background activated chest');
-await page.mouse.move(640,476);if(await page.locator('canvas').evaluate(el=>el.style.cursor)!=='pointer')throw Error('chest hover missing');
-await page.mouse.click(640,476);if(await page.evaluate(k=>JSON.parse(localStorage.getItem(k)).stage,key)!==1)throw Error('chest click failed');
+await page.mouse.move(640,500);if(await page.locator('canvas').evaluate(el=>el.style.cursor)!=='pointer')throw Error('chest hover missing');
+await page.mouse.click(640,500);if(await page.evaluate(k=>JSON.parse(localStorage.getItem(k)).stage,key)!==1)throw Error('chest click failed');
 await page.getByText('2Dの世界へようこそ',{exact:true}).waitFor();await page.screenshot({path:'/tmp/hud-2d-banner.png'});
 await page.waitForTimeout(3200);if(await page.locator('.stage-announcement').isVisible())throw Error('announcement timeout failed');
 await page.reload();await page.locator('[data-id=continue]').click();if(await page.locator('.stage-announcement').isVisible())throw Error('resume repeated banner');

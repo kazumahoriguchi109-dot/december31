@@ -151,3 +151,5 @@
 @media(max-width:700px){.guidance{padding:4px 10px;max-width:calc(100% - 16px)}.guidance .objective{font-size:12px}.stage canvas{padding-top:56px}.wait-reason{font-size:11px}}
 @media(max-width:700px){.stage-announcement{top:96px;padding:8px 14px;gap:3px;width:max-content;max-width:calc(100vw - 16px)}.stage-announcement strong{white-space:nowrap}.stage-announcement strong{font-size:18px;letter-spacing:.04em}.announcement-support{font-size:12px;line-height:1.5}.announcement-kind{font-size:10px}}
 @media(max-width:700px){.stage-announcement{top:6px;z-index:60}}
+/* PC（マウス・十分な幅）では画面の矢印ボタンを出さない。矢印キー/WASDで移動できる。スマホ・タッチ端末では従来どおり表示 */
+@media(hover:hover) and (pointer:fine) and (min-width:701px){.dpad{display:none}}
