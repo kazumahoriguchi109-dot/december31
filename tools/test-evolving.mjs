@@ -6,7 +6,7 @@ const b=await chromium.launch({headless:true,...(process.env.BROWSER_CHANNEL?{ch
 if(TOUCH){const proto=Object.getPrototypeOf(p.locator('body'));proto.click=function(o){return this.tap(o);};}
 const errors=[];p.on('pageerror',e=>errors.push(e.message));const out=process.env.OUTPUT_DIR??'/tmp/evolution-qa';mkdirSync(out,{recursive:true});
 const read=()=>p.evaluate(key=>JSON.parse(localStorage.getItem(key)),model.SAVE_KEY);
-const ARROWS={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'};const rawClick=async id=>{const l=p.locator(`[data-id="${id}"]`);if(ARROWS[id]&&!(await l.isVisible()))return p.keyboard.press(ARROWS[id]);return l.click();};
+const ARROWS={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'};const KEYS={interact:'KeyE',switch:'KeyT'};const rawClick=async id=>{const l=p.locator(`[data-id="${id}"]`),shown=await l.isVisible();if(!shown){if(ARROWS[id])return p.keyboard.press(ARROWS[id]);if(KEYS[id])return p.keyboard.press(KEYS[id]);if(id==='wait'){await p.keyboard.press('KeyE');return p.locator('[data-id=inspect-wait]').click();}}return l.click();};
 async function click(id){
  const before=await read();await rawClick(id);if(id==='interact'&&before?.stage===1&&await p.locator('[data-id=inspect-use]').isVisible())await rawClick('inspect-use');
  if(before?.stage>=4&&before.stage<=6){

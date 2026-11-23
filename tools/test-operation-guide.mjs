@@ -54,7 +54,7 @@ for(const way of ['click','enter','space']){
 }
 // 5. an old save that predates the guide key: continue must not show the guide
 {
-  const {c,p}=await fresh();await toGuide(p);await p.getByRole('button',{name:'はじめる',exact:true}).click();await p.locator('[data-id=interact]').click();await p.waitForTimeout(400);
+  const {c,p}=await fresh();await toGuide(p);await p.getByRole('button',{name:'はじめる',exact:true}).click();await p.keyboard.press('KeyE');await p.waitForTimeout(400);
   await p.evaluate(key=>localStorage.removeItem(key+':operation-guide'),model.SAVE_KEY);
   await p.reload();await p.locator('[data-id="continue"]').click();await p.waitForTimeout(600);
   note('continue-old-save-no-guide-key',{guideVisible:await guideVisible(p),stage:(await read(p)).stage});assert.equal(await guideVisible(p),false,'a save made before the guide existed must not be interrupted');assert.equal((await read(p)).stage,1);

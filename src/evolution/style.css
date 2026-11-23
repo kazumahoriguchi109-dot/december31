@@ -151,5 +151,5 @@
 @media(max-width:700px){.guidance{padding:4px 10px;max-width:calc(100% - 16px)}.guidance .objective{font-size:12px}.stage canvas{padding-top:56px}.wait-reason{font-size:11px}}
 @media(max-width:700px){.stage-announcement{top:96px;padding:8px 14px;gap:3px;width:max-content;max-width:calc(100vw - 16px)}.stage-announcement strong{white-space:nowrap}.stage-announcement strong{font-size:18px;letter-spacing:.04em}.announcement-support{font-size:12px;line-height:1.5}.announcement-kind{font-size:10px}}
 @media(max-width:700px){.stage-announcement{top:6px;z-index:60}}
-/* PC（マウス・十分な幅）では画面の矢印ボタンを出さない。矢印キー/WASDで移動できる。スマホ・タッチ端末では従来どおり表示 */
-@media(hover:hover) and (pointer:fine) and (min-width:701px){.dpad{display:none}}
+/* PC（マウス・十分な幅）では画面下の操作バーを出さない（盤面を全面に使う。第1謎で必要な「トトに待ってもらう」だけは右下に出す）。移動は矢印キー/WASD、調べるはE、人物切替はT。会話・通知はバーなしで下に出る。スマホ・タッチ端末では従来どおり表示 */
+@media(hover:hover) and (pointer:fine) and (min-width:701px){.game .bottom{padding:0;margin:0;border:0;background:none;box-shadow:none;min-height:0}.game .bottom .save,.game .bottom .keyhelp,.game .bottom .dpad,.game .bottom [data-id=interact],.game .bottom [data-id=switch]{display:none}.game .bottom .controls{position:absolute;right:20px;bottom:18px;width:auto;z-index:5}.game .bottom .action-buttons{max-width:none;flex-direction:column;align-items:flex-end;gap:4px}.game .bottom .feedback-block{left:20px;bottom:16px;max-width:min(720px,calc(100% - 40px))}.game[data-presentation=world] .stage canvas{padding-bottom:0}}
