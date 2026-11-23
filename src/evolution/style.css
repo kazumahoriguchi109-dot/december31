@@ -144,3 +144,8 @@
 .bottom .save{justify-self:end}
 @media(max-width:700px){.bottom .controls{width:100%}.feedback-block{padding:7px 9px}.guide-steps li{grid-template-columns:78px minmax(0,1fr);gap:8px;padding-inline:6px}}
 @media(max-height:500px){.overlay[data-kind=operation-guide] .panel{padding:10px 14px}.overlay[data-kind=operation-guide] h2{margin-bottom:6px}.guide-steps li{min-height:49px}.overlay[data-kind=operation-guide] .buttons{margin-top:8px}}
+
+/* 目的の一行表示: 段階表示・会話が消えた後も次の行動を残す。補足行は出さない */
+.guidance .mechanism-status,.guidance .affordance{display:none}.guidance{padding:6px 12px;border-radius:999px;width:max-content}.guidance .objective{font-size:13px;line-height:1.5}
+.wait-reason{flex-basis:100%;font-size:12px;line-height:1.5;color:#f5dba9}
+@media(max-width:700px){.guidance{padding:4px 10px;max-width:calc(100% - 16px)}.guidance .objective{font-size:12px}.stage canvas{padding-top:56px}.wait-reason{font-size:11px}}
