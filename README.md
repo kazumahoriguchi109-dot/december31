@@ -133,7 +133,7 @@ WebKit/Firefoxで各入力が一度ずつ会話を進めること、Chromiumで�
 
 ## Character continuity rule
 
-Character artwork in dialogue must match the current game-world design and era. See [Character continuity](docs/CHARACTER_CONTINUITY.md) before changing character presentation. Run `node tools/test-character-continuity.mjs` against the local development server (default port 4197) for the targeted browser regression.
+Character artwork in dialogue must match the current game-world design and era. See [Character continuity](docs/CHARACTER_CONTINUITY.md) before changing character presentation. (The former `tools/test-character-continuity.mjs` check was removed because it depended on the pre-guide flow; use `tools/test-evolving.mjs` for the playthrough.)
 
 ## 2026-11-11 第1謎の協力操作
 

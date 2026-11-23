@@ -74,7 +74,7 @@ function update(){const v=getScene(state);$('[data-id=wait]').hidden=state.stage
 function ending(){dismissAnnouncement();hideFeedback();endingStarted=performance.now();const beat=ENDING_STORY[endingIndex]!;try{localStorage.setItem(SAVE_KEY+':ending',String(endingIndex));}catch{}
  const heading=beat.scene==='end'?'12月31日 / おしまい':beat.scene==='gate'?'ふたりで帰ろう':beat.scene==='rewind'?'帰り道': 'おかえり。';
  const portrait=beat.speaker?`<div class="dialogue-portrait" aria-hidden="true">${characterPortrait(beat.speaker,'neutral','three')}</div>`:'';
- showPanel('ending',heading,`${portrait}<div class="dialogue-body">${beat.speaker?`<span class="dialogue-speaker">${beat.speaker}</span>`:''}<p class="dialogue-line">${beat.text}</p>${beat.scene==='end'?'<p class="hint">キャラクター・謎・背景は本作独自のものです。制作・使用素材の情報は THIRD_PARTY_NOTICES.md に記載。</p>':''}</div>`,beat.scene==='end'?button('ending-replay','もう一度見る')+button('title','タイトルへ',true):button('ending-next',beat.scene==='rewind'?'演出をスキップ':'つづける',true));
+ showPanel('ending',heading,`${portrait}<div class="dialogue-body">${beat.speaker?`<span class="dialogue-speaker">${beat.speaker}</span>`:''}<p class="dialogue-line">${beat.text}</p>${beat.scene==='end'?'<p class="hint">キャラクター・謎・背景は本作独自のものです。制作・使用素材の情報は、公開リポジトリの THIRD_PARTY_NOTICES.md に記載しています。</p>':''}</div>`,beat.scene==='end'?button('ending-replay','もう一度見る')+button('title','タイトルへ',true):button('ending-next',beat.scene==='rewind'?'演出をスキップ':'つづける',true));
  overlay.dataset['scene']=beat.scene;panel.setAttribute('aria-label',heading+' '+beat.speaker+' '+beat.text);
 }
 
