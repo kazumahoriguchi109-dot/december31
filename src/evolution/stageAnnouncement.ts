@@ -8,3 +8,15 @@ export const STAGE_ANNOUNCEMENTS = [
  {title:'ふたりで、帰り道をつくろう',support:'T / 人物切替で協力しよう',kind:'STAGE CLEAR'},
  {title:'おかえり、12月31日',support:'6つの謎をクリア！',kind:'ALL CLEAR'},
 ] as const;
+
+/** タッチ端末向けの補足文（キーボード表記を使わない）。STAGE_ANNOUNCEMENTS と同じ並び。 */
+export const TOUCH_SUPPORT = [
+ '宝箱をタップして開けよう',
+ '画面の ↑ ↓ で移動　白い印でトトに待機をお願いしよう',
+ '画面の矢印で移動　近くのレバーをタップ',
+ '「トトに切替」で、ふたりを動かそう',
+ '昔の部屋は上下移動　「切替」ボタンで人物を替えよう',
+ '足場の乗り降りは「調べる」ボタン',
+ '「切替」ボタンで協力しよう',
+ '6つの謎をクリア！',
+] as const;

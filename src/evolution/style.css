@@ -149,3 +149,4 @@
 .guidance .mechanism-status,.guidance .affordance{display:none}.guidance{padding:6px 12px;border-radius:999px;width:max-content}.guidance .objective{font-size:13px;line-height:1.5}
 .wait-reason{flex-basis:100%;font-size:12px;line-height:1.5;color:#f5dba9}
 @media(max-width:700px){.guidance{padding:4px 10px;max-width:calc(100% - 16px)}.guidance .objective{font-size:12px}.stage canvas{padding-top:56px}.wait-reason{font-size:11px}}
+@media(max-width:700px){.stage-announcement{top:96px;padding:8px 14px;gap:3px;width:max-content;max-width:calc(100vw - 16px)}.stage-announcement strong{white-space:nowrap}.stage-announcement strong{font-size:18px;letter-spacing:.04em}.announcement-support{font-size:12px;line-height:1.5}.announcement-kind{font-size:10px}}

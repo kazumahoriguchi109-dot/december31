@@ -1,5 +1,5 @@
 import {ENDING_STORY,CHEST_BEAT,endingLine,rewindStage} from './endingStory';
-import {STAGE_ANNOUNCEMENTS} from './stageAnnouncement';
+import {STAGE_ANNOUNCEMENTS,TOUCH_SUPPORT} from './stageAnnouncement';
 import {createState,move,interact,switchActor,tick,resetRoom,restore,getScene,getHint,interactionDevice,waitForToto,SAVE_KEY,type State} from './model';
 import {characterPortrait} from './characterPortrait';
 import {createRenderer} from './renderer';
@@ -16,7 +16,7 @@ const announcement=document.createElement('button');announcement.className='stag
 let endingIndex=0,endingStarted=0;
 let announcementTimer:ReturnType<typeof setTimeout>|undefined;
 function dismissAnnouncement(){clearTimeout(announcementTimer);announcement.hidden=true;}
-function announceStage(){const item=STAGE_ANNOUNCEMENTS[state.stage];if(!item)return;dismissAnnouncement();announcement.querySelector('.announcement-kind')!.textContent=item.kind;announcement.querySelector('strong')!.textContent=item.title;announcement.querySelector('.announcement-support')!.textContent=item.support;announcement.dataset['era']=getScene(state).view;announcement.setAttribute('aria-label',item.title+'。'+item.support+'。お知らせを閉じる');announcement.hidden=false;announcementTimer=setTimeout(dismissAnnouncement,3000);}
+function announceStage(){const item=STAGE_ANNOUNCEMENTS[state.stage];if(!item)return;dismissAnnouncement();announcement.querySelector('.announcement-kind')!.textContent=item.kind;announcement.querySelector('strong')!.textContent=item.title;const support=window.matchMedia('(pointer:coarse)').matches?TOUCH_SUPPORT[state.stage]??item.support:item.support;announcement.querySelector('.announcement-support')!.textContent=support;announcement.dataset['era']=getScene(state).view;announcement.setAttribute('aria-label',item.title+'。'+support+'。お知らせを閉じる');announcement.hidden=false;announcementTimer=setTimeout(dismissAnnouncement,3000);}
 announcement.addEventListener('click',dismissAnnouncement);
 const $=<T extends HTMLElement>(q:string)=>root.querySelector<T>(q)!;
 const game=$('.game'),title=$('.title'),canvas=$<HTMLCanvasElement>('canvas'),overlay=$('.overlay'),panel=$('.panel');
